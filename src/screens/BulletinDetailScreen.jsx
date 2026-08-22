@@ -1,0 +1,752 @@
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  TextInput,
+  RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
+  Clipboard,
+  Alert,
+  Modal,
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { useDispatch, useSelector } from "react-redux";
+import { marked } from "marked";
+import { RenderHTML } from "react-native-render-html";
+
+import { selectDisplayBulletins, selectUserAddress } from "../selectors";
+import {
+  LoadBulletinDetail,
+  BulletinReply,
+  BulletinQuote,
+  BulletinMarkToggle,
+  RequestReplyBulletin,
+  ShowForwardBulletin,
+  SaveBulletinFile,
+} from "../store/sagas/messenger.actions";
+import {
+  ContactAdd as ContactAddAction,
+  ContactToggleIsFriend as ContactToggleIsFriendAction,
+  ContactToggleIsFollow as ContactToggleIsFollowAction,
+} from "../store/sagas/messenger.actions";
+import AvatarImage from "../components/AvatarImage";
+
+function formatTimestamp(ms) {
+  if (!ms) return "";
+  const d = new Date(ms);
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function shortenAddress(addr) {
+  if (!addr || addr.length < 14) return addr || "";
+  return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
+}
+
+/**
+ * Safely convert raw bulletin text to HTML via marked.
+ * Returns { isMarkdown: true, html } on success, { isMarkdown: false, plainText } on failure.
+ */
+function parseBulletinContent(content) {
+  try {
+    const html = marked.parse(content || "(empty)") || "<p>(empty)</p>";
+    return { isMarkdown: true, html };
+  } catch (e) {
+    console.warn(
+      "[BulletinDetail] Markdown parse failed, falling back to plain text:",
+      e.message,
+    );
+    return { isMarkdown: false, plainText: content || "(empty)" };
+  }
+}
+
+/* Shared HTML config for react-native-render-html */
+const bulletinHtmlStyles = {
+  document: {
+    style: {
+      fontSize: 16,
+      lineHeight: 24,
+      color: "#1a1a2e",
+    },
+  },
+};
+
+/**
+ * ReplyCard — compact card for a single reply bulletin in the replies list.
+ * Tapping navigates to the reply's bulletin detail view.
+ */
+function ReplyCard({ bulletin, onPress }) {
+  const preview =
+    bulletin.content.length > 180
+      ? bulletin.content.slice(0, 180) + "…"
+      : bulletin.content;
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={onPress}
+      className="bg-surface-card rounded-xl border border-secondary-light/30 mb-3 p-3"
+    >
+      {/* Author header */}
+      <View className="flex-row items-center gap-2 mb-2">
+        <AvatarImage
+          address={bulletin.address}
+          nickname={bulletin.json?.Nickname}
+          size={28}
+        />
+        <View className="flex-1 min-w-0">
+          <Text className="text-xs font-semibold text-text-primary truncate">
+            {bulletin.json?.Nickname || shortenAddress(bulletin.address)}
+          </Text>
+          <Text className="text-[10px] text-text-secondary/70">
+            {formatTimestamp(bulletin.signed_at)} · #{bulletin.sequence}
+          </Text>
+        </View>
+      </View>
+
+      {/* Content preview */}
+      <Text className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
+        {preview}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+const MAX_REPLY_LENGTH = 2000;
+
+export default function BulletinDetailScreen({ route, navigation }) {
+  const { hash, address, sequence } = route.params ?? {};
+  const dispatch = useDispatch();
+  const { DisplayBulletin: bulletin, DisplayBulletinReplyList: replies } =
+    useSelector(selectDisplayBulletins);
+  const selfAddress = useSelector(selectUserAddress);
+  const followList = useSelector((state) => state.User.FollowList || []);
+  const friendList = useSelector((state) => state.User.FriendList || []);
+
+  const [replyText, setReplyText] = useState("");
+  const [showJsonModal, setShowJsonModal] = useState(false);
+  const refreshingRef = useRef(false);
+
+  useEffect(() => {
+    if (hash || (address && sequence)) {
+      dispatch(LoadBulletinDetail({ hash, address, sequence }));
+    }
+  }, [dispatch, hash, address, sequence]);
+
+  // Load replies once the bulletin is loaded
+  useEffect(() => {
+    if (bulletin?.hash) {
+      dispatch(RequestReplyBulletin({ hash: bulletin.hash, page: 1 }));
+    }
+  }, [dispatch, bulletin?.hash]);
+
+  const goBack = useCallback(() => navigation.goBack(), [navigation]);
+
+  // Forward bulletin — opens the forward contact selector modal
+  const handleForward = useCallback(
+    (e) => {
+      e?.stopPropagation();
+      if (bulletin) {
+        dispatch(ShowForwardBulletin(bulletin));
+      }
+    },
+    [dispatch, bulletin],
+  );
+
+  // Set header back button
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <Text
+          onPress={goBack}
+          className="text-base font-semibold text-primary"
+          style={{ paddingLeft: 8 }}
+        >
+          ← Back
+        </Text>
+      ),
+      title: "Post",
+      headerStyle: { backgroundColor: "#e6b420" },
+      headerTintColor: "#1a1a2e",
+    });
+  }, [navigation, goBack]);
+
+  // Header right: forward + bookmark for the main bulletin
+  React.useLayoutEffect(() => {
+    if (bulletin) {
+      navigation.setOptions({
+        ...navigation.options,
+        headerRight: () => (
+          <View className="flex-row items-center">
+            {/* Forward */}
+            <TouchableOpacity
+              onPress={handleForward}
+              activeOpacity={0.5}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              className="mr-2"
+            >
+              <Ionicons
+                name="arrow-forward-outline"
+                size={24}
+                color="#a89f85"
+              />
+            </TouchableOpacity>
+
+            {/* Bookmark */}
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                dispatch(BulletinMarkToggle({ hash: bulletin.hash }));
+              }}
+              activeOpacity={0.5}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={bulletin.is_marked ? "star" : "star-outline"}
+                size={24}
+                color={bulletin.is_marked ? "#e6b420" : "#a89f85"}
+              />
+            </TouchableOpacity>
+          </View>
+        ),
+      });
+    }
+  }, [
+    navigation,
+    bulletin?.hash,
+    bulletin?.is_marked,
+    dispatch,
+    handleForward,
+  ]);
+
+  const handleReplySend = useCallback(() => {
+    const content = replyText.trim();
+    if (!content) return;
+    dispatch(BulletinReply({ content, quoteHash: bulletin.hash }));
+    setReplyText("");
+  }, [replyText, dispatch, bulletin?.hash]);
+
+  const handleRefreshReplies = useCallback(() => {
+    if (refreshingRef.current || !bulletin?.hash) return;
+    refreshingRef.current = true;
+    dispatch(RequestReplyBulletin({ hash: bulletin.hash, page: 1 }));
+    setTimeout(() => {
+      refreshingRef.current = false;
+    }, 2000);
+  }, [dispatch, bulletin?.hash]);
+
+  const handleBookmarkMain = useCallback(
+    (e) => {
+      e.stopPropagation();
+      dispatch(BulletinMarkToggle({ hash: bulletin.hash }));
+    },
+    [dispatch, bulletin?.hash],
+  );
+
+  // Navigate to tag-filtered bulletin list when a tag is tapped.
+  // TagBulletins is in RootStack: bulletin tab → MainTabs (Tab) → RootStack
+  const handleTagPress = useCallback(
+    (tag) => {
+      navigation.getParent()?.getParent()?.navigate("TagBulletins", { tag });
+    },
+    [navigation],
+  );
+
+  // Navigate to the reply's detail view when a reply card is tapped
+  const handleReplyPress = useCallback(
+    (reply) => {
+      navigation.navigate("BulletinDetail", {
+        hash: reply.hash,
+        address: reply.address,
+        sequence: reply.sequence,
+      });
+    },
+    [navigation],
+  );
+
+  // Download bulletin file attachment
+  const handleFilePress = useCallback(
+    (file) => {
+      dispatch(
+        SaveBulletinFile({
+          hash: file.Hash,
+          size: file.Size,
+          name: file.Name,
+          ext: file.Ext || "",
+        }),
+      );
+    },
+    [dispatch],
+  );
+
+  // Copy bulletin content to clipboard
+  // Quote bulletin — opens the publish composer with this bulletin quoted
+  const handleQuote = useCallback(() => {
+    if (!bulletin) return;
+    dispatch(
+      BulletinQuote({
+        Address: bulletin.address,
+        Sequence: bulletin.sequence,
+        Hash: bulletin.hash,
+      }),
+    );
+  }, [dispatch, bulletin]);
+
+  const handleCopyContent = useCallback(() => {
+    Clipboard.setString(bulletin.content || "");
+    Alert.alert("Copied", "Bulletin content copied to clipboard.", [
+      { text: "OK" },
+    ]);
+  }, [bulletin?.content]);
+
+  // Toggle Friend — first ensure contact exists, then toggle friend status
+  const handleToggleFriend = useCallback(() => {
+    if (!bulletin) return;
+    const authorAddr = bulletin.address;
+    const nickname = bulletin.json?.Nickname || authorAddr;
+    // Step 1: Add contact (idempotent — saga checks existence)
+    dispatch(ContactAddAction({ address: authorAddr, nickname }));
+    // Step 2: Toggle friend status
+    dispatch(ContactToggleIsFriendAction({ contact_address: authorAddr }));
+    const nowFriend = !friendList.includes(authorAddr);
+    Alert.alert(
+      nowFriend ? "Added as Friend" : "Removed from Friends",
+      nickname,
+      [{ text: "OK" }],
+    );
+  }, [dispatch, bulletin, friendList]);
+
+  // Toggle Follow — first ensure contact exists, then toggle follow status
+  const handleToggleFollow = useCallback(() => {
+    if (!bulletin) return;
+    const authorAddr = bulletin.address;
+    const nickname = bulletin.json?.Nickname || authorAddr;
+    dispatch(ContactAddAction({ address: authorAddr, nickname }));
+    dispatch(ContactToggleIsFollowAction({ contact_address: authorAddr }));
+    const nowFollowing = !followList.includes(authorAddr);
+    Alert.alert(nowFollowing ? "Now Following" : "Unfollowed", nickname, [
+      { text: "OK" },
+    ]);
+  }, [dispatch, bulletin, followList]);
+
+  // Navigate to the author's bulletins when tapping the author header
+  const handleAuthorPress = useCallback(() => {
+    navigation.getParent()?.getParent()?.navigate("AddressBulletins", {
+      address: bulletin.address,
+    });
+  }, [navigation, bulletin?.address]);
+
+  // Memoized bulletin content parsing — runs only when content changes
+  const parsedContent = useMemo(
+    () => parseBulletinContent(bulletin?.content || ""),
+    [bulletin?.hash, bulletin?.content],
+  );
+
+  if (!bulletin) {
+    return (
+      <View className="flex-1 bg-surface items-center justify-center">
+        <ActivityIndicator size="large" color="#e6b420" />
+        <Text className="text-sm text-text-secondary mt-3">
+          Loading bulletin…
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+        className="flex-1 bg-surface"
+      >
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ padding: 16, flexGrow: 1 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshingRef.current}
+              onRefresh={handleRefreshReplies}
+              tintColor="#e6b420"
+            />
+          }
+        >
+          {/* Author header — tap to navigate to author's bulletins */}
+          <View className="flex-row items-center gap-3 mb-4">
+            <TouchableOpacity
+              onPress={handleAuthorPress}
+              activeOpacity={0.6}
+              className="flex-row items-center flex-1 min-w-0 gap-2"
+            >
+              <AvatarImage
+                address={bulletin.address}
+                nickname={bulletin.json?.Nickname}
+                size={40}
+              />
+              <View className="flex-1 min-w-0">
+                <Text className="text-base font-semibold text-text-primary">
+                  {bulletin.json?.Nickname || shortenAddress(bulletin.address)}
+                </Text>
+                <Text className="text-xs text-text-secondary/80">
+                  {shortenAddress(bulletin.address)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleAuthorPress}
+              activeOpacity={0.6}
+              className="items-end shrink-0"
+            >
+              <Text className="text-xs text-text-secondary/70">
+                {formatTimestamp(bulletin.signed_at)}
+              </Text>
+              <Text className="text-xs text-text-secondary/50">
+                #{bulletin.sequence}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Inline bookmark toggle for main bulletin */}
+            <TouchableOpacity
+              onPress={handleBookmarkMain}
+              activeOpacity={0.5}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              className="ml-2"
+            >
+              <Ionicons
+                name={bulletin.is_marked ? "star" : "star-outline"}
+                size={24}
+                color={bulletin.is_marked ? "#e6b420" : "#a89f85"}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Divider */}
+          <View className="h-px bg-secondary-light/30 mb-4" />
+
+          {/* Full content — rendered as markdown when possible */}
+          <View className="mb-2">
+            {(() => {
+              const { isMarkdown, html, plainText } = parsedContent;
+              if (isMarkdown) {
+                return (
+                  <RenderHTML
+                    source={{ html }}
+                    tagsStyles={bulletinHtmlStyles}
+                    systemFonts={["HelveticaNeue", "Roboto", "systemFont"]}
+                  />
+                );
+              }
+              return (
+                <Text className="text-base text-text-primary leading-relaxed whitespace-pre-wrap">
+                  {plainText}
+                </Text>
+              );
+            })()}
+          </View>
+
+          {/* Action toolbar: copy, friend, follow */}
+          <View className="flex-row items-center gap-3 mb-4 pb-2 border-b border-secondary-light/30">
+            <TouchableOpacity
+              onPress={handleCopyContent}
+              activeOpacity={0.6}
+              className="flex-row items-center gap-1"
+            >
+              <Ionicons name="copy-outline" size={16} color="#a89f85" />
+              <Text className="text-xs text-text-secondary/70">Copy</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleQuote}
+              activeOpacity={0.6}
+              className="flex-row items-center gap-1"
+            >
+              <Ionicons name="link-outline" size={16} color="#a89f85" />
+              <Text className="text-xs text-text-secondary/70">Quote</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setShowJsonModal(true)}
+              activeOpacity={0.6}
+              className="flex-row items-center gap-1"
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={16}
+                color="#a89f85"
+              />
+              <Text className="text-xs text-text-secondary/70">Details</Text>
+            </TouchableOpacity>
+
+            {/* Friend button — skip for own bulletins */}
+            {bulletin.address !== selfAddress && (
+              <TouchableOpacity
+                onPress={handleToggleFriend}
+                activeOpacity={0.6}
+                className="flex-row items-center gap-1"
+              >
+                <Ionicons
+                  name={
+                    friendList.includes(bulletin.address)
+                      ? "people"
+                      : "people-outline"
+                  }
+                  size={16}
+                  color={
+                    friendList.includes(bulletin.address)
+                      ? "#e6b420"
+                      : "#a89f85"
+                  }
+                />
+                <Text className="text-xs text-text-secondary/70">
+                  {friendList.includes(bulletin.address) ? "Friends" : "Friend"}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Follow button — skip for own bulletins */}
+            {bulletin.address !== selfAddress && (
+              <TouchableOpacity
+                onPress={handleToggleFollow}
+                activeOpacity={0.6}
+                className="flex-row items-center gap-1"
+              >
+                <Ionicons
+                  name={
+                    followList.includes(bulletin.address)
+                      ? "eye"
+                      : "eye-outline"
+                  }
+                  size={16}
+                  color={
+                    followList.includes(bulletin.address)
+                      ? "#e6b420"
+                      : "#a89f85"
+                  }
+                />
+                <Text className="text-xs text-text-secondary/70">
+                  {followList.includes(bulletin.address)
+                    ? "Following"
+                    : "Follow"}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Tags — tap to filter bulletins by tag */}
+          {bulletin.tag && bulletin.tag.length > 0 && (
+            <View className="flex-row flex-wrap gap-2 mb-4">
+              {bulletin.tag.map((tag, i) => (
+                <TouchableOpacity
+                  key={`${tag}-${i}`}
+                  onPress={() => handleTagPress(tag)}
+                  activeOpacity={0.6}
+                  className="px-3 py-1 rounded-full bg-primary/10"
+                >
+                  <Text className="text-sm text-primary-dark">#{tag}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* File attachments — tap to download */}
+          {bulletin.file && bulletin.file.length > 0 && (
+            <View className="mb-4">
+              <Text className="text-sm font-semibold text-text-secondary mb-2">
+                Attachments ({bulletin.file.length})
+              </Text>
+              {bulletin.file.map((f, i) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => handleFilePress(f)}
+                  activeOpacity={0.6}
+                  className="flex-row items-center gap-2 py-2 px-2 rounded-lg bg-surface-alt/50 mb-1"
+                >
+                  <Ionicons name="folder-open" size={18} color="#e6b420" />
+                  <Text className="text-sm text-text-primary flex-1 ml-1">
+                    {f.Name}
+                  </Text>
+                  <Text className="text-xs text-text-secondary/60">
+                    {(f.Size / 1024).toFixed(1)} KB
+                  </Text>
+                  <Ionicons name="download-outline" size={16} color="#a89f85" />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Quotes — clickable links to quoted bulletins when objects */}
+          {bulletin.quote && bulletin.quote.length > 0 && (
+            <View className="mb-4">
+              <Text className="text-sm font-semibold text-text-secondary mb-2">
+                Quotes ({bulletin.quote.length})
+              </Text>
+              {bulletin.quote.map((q, i) => {
+                const isQuoteObj =
+                  typeof q === "object" && q !== null && q.Hash;
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => {
+                      if (isQuoteObj) {
+                        navigation.navigate("BulletinDetail", {
+                          hash: q.Hash,
+                          address: q.Address,
+                          sequence: q.Sequence,
+                        });
+                      }
+                    }}
+                    activeOpacity={0.6}
+                    className={`pl-3 border-l-2 border-primary/40 py-1 mb-1 ${
+                      isQuoteObj ? "bg-surface-alt/50 rounded" : ""
+                    }`}
+                  >
+                    <View className="flex-row items-center gap-1">
+                      <Ionicons
+                        name={isQuoteObj ? "link" : "quote"}
+                        size={14}
+                        color="#e6b420"
+                      />
+                      <Text className="text-xs text-text-secondary">
+                        {typeof q === "string"
+                          ? q
+                          : `#${q.Sequence} ${shortenAddress(q.Address)}`}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Hash reference */}
+          <View className="bg-surface-alt/50 rounded-lg px-3 py-2 mb-4">
+            <Text className="text-xs text-text-secondary/60 font-mono break-all">
+              {bulletin.hash}
+            </Text>
+          </View>
+
+          {/* Divider */}
+          <View className="h-px bg-secondary-light/30 my-4" />
+
+          {/* Replies section */}
+          <View className="mb-4">
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="chatbubble-ellipses" size={20} color="#a89f85" />
+              <Text className="text-base font-semibold text-text-primary ml-2">
+                Replies ({replies.length})
+              </Text>
+            </View>
+
+            {replies.length > 0 ? (
+              replies.map((reply, index) => (
+                <ReplyCard
+                  key={reply.hash || `reply-${index}`}
+                  bulletin={reply}
+                  onPress={() => handleReplyPress(reply)}
+                />
+              ))
+            ) : (
+              <View className="items-center py-8">
+                <Ionicons name="chatbubble-outline" size={48} color="#d4c8a8" />
+                <Text className="text-base text-text-secondary mt-3">
+                  No replies yet
+                </Text>
+                {selfAddress && (
+                  <Text className="text-xs text-text-secondary/50 mt-1 italic">
+                    Be the first to reply
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        </ScrollView>
+
+        {/* Reply input bar at bottom */}
+        <View className="flex-row items-center px-3 py-2 bg-surface-alt border-t border-secondary-light/30">
+          <TextInput
+            value={replyText}
+            onChangeText={setReplyText}
+            placeholder="Write a reply..."
+            placeholderTextColor="#a89f85"
+            className="flex-1 mr-2 bg-surface rounded-full px-4 py-2 text-base text-text-primary border border-secondary-light/30"
+            multiline
+            maxLength={MAX_REPLY_LENGTH}
+            onSubmitEditing={handleReplySend}
+          />
+
+          {/* Send reply button */}
+          <TouchableOpacity
+            onPress={handleReplySend}
+            activeOpacity={0.6}
+            disabled={!replyText.trim()}
+            className={`w-10 h-10 rounded-full items-center justify-center ${
+              replyText.trim() ? "bg-primary" : "bg-secondary-light/40"
+            }`}
+          >
+            <Ionicons
+              name="send"
+              size={20}
+              color={replyText.trim() ? "#ffffff" : "#a89f85"}
+            />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+
+      {/* JSON details modal */}
+      <Modal
+        visible={showJsonModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowJsonModal(false)}
+      >
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-surface rounded-t-2xl max-h-[80%] flex flex-col">
+            <View className="flex-row items-center justify-between px-4 py-3 border-b border-secondary-light/30">
+              <Text className="text-base font-semibold text-text-primary">
+                Bulletin JSON
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowJsonModal(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={24} color="#a89f85" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              className="flex-1 px-4 py-3"
+              contentContainerStyle={{ paddingBottom: 16 }}
+            >
+              <Text
+                className="text-xs font-mono text-text-primary"
+                selectable
+                style={{
+                  padding: 12,
+                  backgroundColor: "#1a1a2e",
+                  borderRadius: 8,
+                  color: "#e0e0e0",
+                }}
+              >
+                {JSON.stringify(bulletin?.json ?? bulletin, null, 2)}
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}

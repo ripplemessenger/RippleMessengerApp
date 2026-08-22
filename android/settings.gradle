@@ -1,0 +1,23 @@
+pluginManagement {
+    includeBuild('../node_modules/@react-native/gradle-plugin')
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+// Apply React settings plugin for autolinking native module Gradle projects
+plugins {
+    id("com.facebook.react.settings")
+}
+
+rootProject.name = 'RippleMessengerApp'
+
+include ':app'
+
+include ':app'
+
+// Autolink all native modules - includes their android/ directories as Gradle subprojects
+reactSettings.autolinkLibrariesFromCommand()

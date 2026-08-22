@@ -1,0 +1,412 @@
+/**
+ * messenger.file.js (mobile)
+ *
+ * File transfer saga generators for RMS mobile app.
+ * Implements: bulletin file download, private chat file download/upload,
+ * group chat file download/upload, and file chunk reassembly via WebSocket binary messages.
+ */
+
+import RNFS from 'react-native-fs'
+
+import { call, put, select } from 'redux-saga/effects'
+
+import { dbAPI } from '../../db'
+import * as fileService from '../../services/fileService'
+import {
+  FLASH_DURATION_MS,
+  FileChunkSize,
+  FileMaxSize,
+  DefaultPartition,
+  SessionType
+} from '../../lib/AppConst'
+import { filesize_format } from '../../lib/AppUtil'
+import Logger from '../../lib/Logger'
+import { mgAPI } from '../../lib/MessageGenerator'
+import { FileRequestType, MessageObjectType } from '../../lib/MessengerConst'
+import {
+  DHSequence,
+  PrivateFileEHash,
+  GroupFileEHash,
+  FileHash,
+  base64ToUint8Array,
+} from '../../lib/MessengerUtil'
+import { setFlashNoticeMessage } from '../slices/CommonSlice'
+
+// Core messaging — SendMessage, file request list helpers
+import {
+  SendMessage,
+  getFileRequestList,
+  setFileRequestList,
+  pushFileRequest,
+  genFileNonce
+} from './messenger.core'
+
+// MessengerSaga — SendContent dispatcher and saveLocalFile re-export
+import { SendContent } from './MessengerSaga'
+
+const FILE_REQUEST_TTL_MS = 120 * 1000 // 2 minutes per request entry
+
+/**
+ * Fetch the next chunk of a bulletin attachment from connected peers via server relay.
+ */
+export function* FetchBulletinFile({ payload }) {
+  try {
+    const seed = yield select(state => state.User.Seed)
+    if (!seed) return
+
+    let file = yield call(() => dbAPI.getFileByHash(payload.hash))
+    if (file === null) {
+      if (!payload.size) return
+      const chunk_length = Math.ceil(payload.size / FileChunkSize)
+      yield call(() => dbAPI.addFile(payload.hash, payload.size, Date.now(), chunk_length, 0, false))
+      file = yield call(() => dbAPI.getFileByHash(payload.hash))
+    }
+    if (file.is_saved) return
+
+    const nonce = genFileNonce()
+    const cursor = file.chunk_cursor + 1
+
+    // Clean stale requests and push new one
+    setFileRequestList(
+      getFileRequestList().filter(r => r.Timestamp + FILE_REQUEST_TTL_MS > Date.now() && r.Hash !== file.hash)
+    )
+    pushFileRequest({
+      Type: FileRequestType.File,
+      Nonce: nonce,
+      Hash: file.hash,
+      ChunkCursor: cursor,
+      Timestamp: Date.now()
+    })
+
+    const file_request = yield call(() => mgAPI.genFileRequest(seed, FileRequestType.File, file.hash, nonce, cursor))
+    yield call(SendMessage, { msg: file_request })
+  } catch (e) {
+    Logger.error('[FetchBulletinFile] FAILED for', payload.hash, e.message, e.stack)
+  }
+}
+
+/**
+ * Save a bulletin file to the device document directory.
+ * If already downloaded, copies to shared location. Otherwise requests from server.
+ */
+export function* SaveBulletinFile({ payload }) {
+  try {
+    const file = yield call(() => dbAPI.getFileByHash(payload.hash))
+    if (file && file.is_saved) {
+      // File is fully downloaded — copy to shared location
+      const sourcePath = fileService.getFileFullPath(payload.hash)
+      const content = yield call(() => fileService.readFile(sourcePath))
+      const destPath = `${RNFS.DocumentDirectoryPath}/ripplemessenger/files/${payload.name}${payload.ext}`
+      yield call(() => fileService.writeFile(destPath, content))
+      yield put(setFlashNoticeMessage({ message: 'File saved to documents', duration: 2000 }))
+    } else if (file) {
+      yield put(setFlashNoticeMessage(
+        { message: `Fetching file (${file.chunk_cursor}/${file.chunk_length})...`, duration: 2000 }
+      ))
+      yield call(FetchBulletinFile, { payload: { hash: payload.hash, size: payload.size } })
+    } else {
+      yield put(setFlashNoticeMessage(
+        { message: 'File record not found, fetching from server...', duration: 2000 }
+      ))
+      yield call(FetchBulletinFile, { payload: { hash: payload.hash, size: payload.size } })
+    }
+  } catch (e) {
+    Logger.error('[SaveBulletinFile] FAILED:', e.message, e.stack)
+  }
+}
+
+/**
+ * Fetch the next chunk of a private chat file from the remote peer.
+ */
+export function* FetchPrivateChatFile({ payload }) {
+  try {
+    const seed = yield select(state => state.User.Seed)
+    if (!seed) return
+
+    const self_address = yield select(state => state.User.Address)
+    const ehash = PrivateFileEHash(self_address, payload.remote, payload.hash)
+
+    let private_chat_file = yield call(() => dbAPI.getPrivateFileByEHash(ehash))
+    if (private_chat_file === null) {
+      yield call(() => dbAPI.addPrivateFile(ehash, self_address, payload.remote, payload.hash, payload.size))
+    }
+
+    const chunk_length = Math.ceil(payload.size / FileChunkSize)
+    let file = yield call(() => dbAPI.getFileByHash(payload.hash))
+    if (file === null) {
+      yield call(() => dbAPI.addFile(payload.hash, payload.size, Date.now(), chunk_length, 0, false))
+    }
+
+    file = yield call(() => dbAPI.getFileByHash(payload.hash))
+    if (file && !file.is_saved) {
+      const timestamp = Date.now()
+      const ecdh_sequence = DHSequence(DefaultPartition, timestamp, self_address, payload.remote)
+      const ecdh = yield call(() => dbAPI.getHandshake(self_address, payload.remote, DefaultPartition, ecdh_sequence))
+
+      if (ecdh?.aes_key) {
+        const nonce = genFileNonce()
+        setFileRequestList(
+          getFileRequestList().filter(r => r.Timestamp + FILE_REQUEST_TTL_MS > Date.now() && r.EHash !== ehash)
+        )
+        pushFileRequest({
+          Type: FileRequestType.PrivateChatFile,
+          Nonce: nonce,
+          EHash: ehash,
+          Hash: payload.hash,
+          Size: payload.size,
+          ChunkCursor: file.chunk_cursor + 1,
+          Address: payload.remote,
+          aes_key: ecdh.aes_key,
+          Timestamp: timestamp
+        })
+
+        const file_request = yield call(() =>
+          mgAPI.genFileRequest(seed, FileRequestType.PrivateChatFile, ehash, nonce, file.chunk_cursor + 1, payload.remote)
+        )
+        yield call(SendMessage, { key: payload.key, msg: file_request })
+      }
+    }
+  } catch (e) {
+    Logger.error('[FetchPrivateChatFile] failed:', e.message)
+  }
+}
+
+/**
+ * Fetch the next chunk of a group chat file from any available group member.
+ */
+export function* FetchGroupChatFile({ payload }) {
+  try {
+    const seed = yield select(state => state.User.Seed)
+    if (!seed) return
+
+    const self_address = yield select(state => state.User.Address)
+    const ehash = GroupFileEHash(payload.group_hash, payload.hash)
+
+    let group_chat_file = yield call(() => dbAPI.getGroupFileByEHash(ehash))
+    if (group_chat_file === null) {
+      yield call(() => dbAPI.addGroupFile(ehash, payload.group_hash, payload.hash, payload.size))
+    }
+
+    const chunk_length = Math.ceil(payload.size / FileChunkSize)
+    let file = yield call(() => dbAPI.getFileByHash(payload.hash))
+    if (file === null) {
+      yield call(() => dbAPI.addFile(payload.hash, payload.size, Date.now(), chunk_length, 0, false))
+    }
+
+    file = yield call(() => dbAPI.getFileByHash(payload.hash))
+    if (file && !file.is_saved) {
+      const timestamp = Date.now()
+      const nonce = genFileNonce()
+      const group_member_map = yield select(state => state.Messenger.GroupMemberMap)
+
+      setFileRequestList(
+        getFileRequestList().filter(r => r.Timestamp + FILE_REQUEST_TTL_MS > Date.now() && r.EHash !== ehash)
+      )
+      pushFileRequest({
+        Type: FileRequestType.GroupChatFile,
+        Nonce: nonce,
+        EHash: ehash,
+        Hash: payload.hash,
+        Size: payload.size,
+        ChunkCursor: file.chunk_cursor + 1,
+        GroupHash: payload.group_hash,
+        GroupMember: group_member_map[payload.group_hash],
+        SelfAddress: self_address,
+        Timestamp: timestamp
+      })
+
+      const file_request = yield call(() =>
+        mgAPI.genGroupFileRequest(seed, payload.group_hash, ehash, nonce, file.chunk_cursor + 1)
+      )
+      yield call(SendMessage, { key: payload.key, msg: file_request })
+    }
+  } catch (e) {
+    Logger.error('[FetchGroupChatFile] failed:', e.message)
+  }
+}
+
+/**
+ * Entry point for fetching chat files — routes to private or group handler.
+ */
+export function* FetchChatFile({ payload }) {
+  try {
+    const current_session = yield select(state => state.Messenger.CurrentSession)
+    if (current_session.type === SessionType.Private) {
+      yield call(FetchPrivateChatFile, {
+        payload: { key: payload.key, remote: current_session.remote, hash: payload.hash, size: payload.size }
+      })
+    } else if (current_session.type === SessionType.Group) {
+      yield call(FetchGroupChatFile, {
+        payload: { key: payload.key, group_hash: current_session.hash, hash: payload.hash, size: payload.size }
+      })
+    }
+  } catch (e) {
+    Logger.error('[FetchChatFile] failed:', e.message)
+  }
+}
+
+/**
+ * Save a chat file to the device document directory.
+ */
+export function* SaveChatFile({ payload }) {
+  try {
+    const file = yield call(() => dbAPI.getFileByHash(payload.hash))
+    if (file && file.is_saved) {
+      const sourcePath = fileService.getFileFullPath(payload.hash)
+      const content = yield call(() => fileService.readFile(sourcePath))
+      const destPath = `${RNFS.DocumentDirectoryPath}/ripplemessenger/files/${payload.name}${payload.ext}`
+      yield call(() => fileService.writeFile(destPath, content))
+      yield put(setFlashNoticeMessage({ message: 'File saved to documents', duration: 2000 }))
+    } else if (file) {
+      yield put(setFlashNoticeMessage(
+        { message: `Fetching file (${file.chunk_cursor}/${file.chunk_length}) from contact...`, duration: FLASH_DURATION_MS }
+      ))
+      yield call(FetchChatFile, { payload: { hash: payload.hash, size: payload.size } })
+    } else {
+      yield put(setFlashNoticeMessage(
+        { message: 'File record not found, fetching from contact...', duration: FLASH_DURATION_MS }
+      ))
+      yield call(FetchChatFile, { payload: { hash: payload.hash, size: payload.size } })
+    }
+  } catch (e) {
+    Logger.error('[SaveChatFile] failed:', e.message)
+  }
+}
+
+/**
+ * Send a file to the current chat session (private or group).
+ * Reads the file from the given URI, computes hash, stores locally, then sends metadata message.
+ * Payload: { file_uri: string } — a mobile-compatible URI
+ */
+export function* SendFile({ payload }) {
+  try {
+    const self_address = yield select(state => state.User.Address)
+    const currentSession = yield select(state => state.Messenger.CurrentSession)
+
+    const file_uri = payload.file_uri || payload.file_path
+    if (!file_uri) {
+      yield put(setFlashNoticeMessage({ message: 'No file URI provided', duration: FLASH_DURATION_MS }))
+      return
+    }
+
+    // Get file info and read content
+    const fileExists = yield call(() => RNFS.exists(file_uri))
+    if (!fileExists) {
+      yield put(setFlashNoticeMessage({ message: 'File not found', duration: FLASH_DURATION_MS }))
+      return
+    }
+
+    const fileInfo = yield call(() => RNFS.stat(file_uri))
+    if (fileInfo.size > FileMaxSize) {
+      yield put(setFlashNoticeMessage(
+        { message: `File too large (more than ${filesize_format(FileMaxSize)})`, duration: FLASH_DURATION_MS }
+      ))
+      return
+    }
+
+    const fileName = file_uri.split('/').pop() || 'file'
+    const extIndex = fileName.lastIndexOf('.')
+    const ext = extIndex >= 0 ? `.${fileName.slice(extIndex + 1)}` : ''
+    const name = extIndex >= 0 ? fileName.slice(0, extIndex) : fileName
+
+    // Read binary content as base64, convert to Uint8Array
+    const fileBase64 = yield call(() => RNFS.readFile(file_uri, 'base64'))
+    const content = base64ToUint8Array(fileBase64)
+
+    const hash = FileHash(content)
+    // saveLocalFile is defined below — forward reference via saga call
+    yield call(saveLocalFile, hash, content)
+
+    const chunk_length = Math.ceil(fileInfo.size / FileChunkSize)
+    let file = yield call(() => dbAPI.getFileByHash(hash))
+    if (file === null) {
+      yield call(() => dbAPI.addFile(hash, fileInfo.size, Date.now(), chunk_length, chunk_length, true))
+    } else {
+      yield call(() => dbAPI.localFileSaved(hash, chunk_length, Date.now()))
+    }
+
+    if (currentSession.type === SessionType.Private) {
+      const ehash = PrivateFileEHash(self_address, currentSession.remote, hash)
+      let private_chat_file = yield call(() => dbAPI.getPrivateFileByEHash(ehash))
+      if (private_chat_file === null) {
+        yield call(() => dbAPI.addPrivateFile(ehash, self_address, currentSession.remote, hash, fileInfo.size))
+      }
+      yield call(SendContent, {
+        payload: {
+          content: {
+            ObjectType: MessageObjectType.PrivateChatFile,
+            Name: name,
+            Ext: ext,
+            Size: fileInfo.size,
+            Hash: hash
+          }
+        }
+      })
+    } else if (currentSession.type === SessionType.Group) {
+      const ehash = GroupFileEHash(currentSession.hash, hash)
+      let group_chat_file = yield call(() => dbAPI.getGroupFileByEHash(ehash))
+      if (group_chat_file === null) {
+        yield call(() => dbAPI.addGroupFile(ehash, currentSession.hash, hash, fileInfo.size))
+      }
+      yield call(SendContent, {
+        payload: {
+          content: {
+            ObjectType: MessageObjectType.GroupChatFile,
+            Name: name,
+            Ext: ext,
+            Size: fileInfo.size,
+            Hash: hash
+          }
+        }
+      })
+    }
+  } catch (e) {
+    Logger.error('[SendFile] failed:', e.message)
+  }
+}
+
+/**
+ * saveLocalFile — save raw file bytes to the RMS document storage directory.
+ * Used by both SendFile and BulletinFileAdd.
+ */
+export function* saveLocalFile(hash, content) {
+  try {
+    const filePath = fileService.getFileFullPath(hash)
+    yield call(() => fileService.writeFile(filePath, content))
+  } catch (e) {
+    Logger.error('[saveLocalFile] failed for', hash, e.message)
+  }
+}
+
+/**
+ * Shared helper: save a file chunk to disk, update cursor, then either
+ * request the next chunk or verify the completed file.
+ * Used by binary message handlers when receiving chunks from peers.
+ */
+function* receiveFileChunk({ filePath, content, request, file, fetchNext, fetchNextPayload }) {
+  if (file.chunk_cursor < file.chunk_length && file.chunk_cursor + 1 === request.ChunkCursor) {
+    // Append chunk to file on disk
+    yield call(() => fileService.writeFile(filePath, content, true))
+
+    setFileRequestList(getFileRequestList().filter(r => r.Nonce !== request.Nonce))
+    const current_chunk_cursor = file.chunk_cursor + 1
+    yield call(() => dbAPI.updateFileChunkCursor(request.Hash, current_chunk_cursor, Date.now()))
+
+    if (current_chunk_cursor < file.chunk_length) {
+      // More chunks needed — request next one
+      yield call(fetchNext, { payload: fetchNextPayload })
+    } else {
+      // All chunks received — verify hash
+      const verifiedHash = FileHash(yield call(() => fileService.readFile(filePath)))
+      if (verifiedHash === request.Hash) {
+        yield call(() => dbAPI.remoteFileSaved(request.Hash, Date.now()))
+      } else {
+        Logger.error('[receiveFileChunk] Hash mismatch for', request.Hash, 'got', verifiedHash)
+        yield call(() => fileService.deleteFile(filePath))
+        yield call(() => dbAPI.updateFileChunkCursor(request.Hash, 0, Date.now()))
+        // Re-request from start
+        yield call(fetchNext, { payload: fetchNextPayload })
+      }
+    }
+  }
+}

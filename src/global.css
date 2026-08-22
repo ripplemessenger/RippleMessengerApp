@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Dark mode via CSS variables (NativeWind v4 / react-native-css-interop).
+ *
+ * - `:root` defines the light palette (default).
+ * - `.dark:root` overrides the palette when the app root View carries the
+ *   `dark` class (applied in App.tsx based on the useDarkMode preference).
+ * - tailwind.config.js maps the semantic color names to these variables,
+ *   so every screen using bg-surface / text-text-primary / etc. switches
+ *   automatically — no per-screen `dark:` classes needed.
+ */
+:root {
+ --primary-light: 250 245 229;
+ --secondary-light: 212 200 168;
+ --secondary: 184 168 120;
+ --secondary-dark: 138 122 90;
+ --surface: 250 247 239;
+ --surface-card: 255 255 255;
+ --surface-alt: 245 237 216;
+ --text-primary: 26 26 46;
+ --text-secondary: 107 99 88;
+}
+
+.dark:root {
+ --primary-light: 30 30 46;
+ --secondary-light: 94 82 56;
+ --secondary: 94 82 56;
+ --secondary-dark: 62 52 40;
+ --surface: 13 13 21;
+ --surface-card: 22 22 34;
+ --surface-alt: 30 30 46;
+ --text-primary: 240 234 214;
+ --text-secondary: 168 159 133;
+}
