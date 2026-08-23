@@ -17,7 +17,6 @@ const selectPortalBulletinTotalPage = (state) =>
   state.Messenger.PortalBulletinTotalPage;
 const selectShowPublishFlag = (state) => state.Messenger.ShowPublishFlag;
 const selectShowForwardFlag = (state) => state.Messenger.ShowForwardFlag;
-const selectShowPasteFlag = (state) => state.Messenger.ShowPasteFlag;
 const selectFollowBulletinList = (state) => state.Messenger.FollowBulletinList;
 const selectFollowBulletinPage = (state) => state.Messenger.FollowBulletinPage;
 const selectFollowBulletinTotalPage = (state) =>
@@ -119,11 +118,10 @@ export const selectPortalBulletins = createSelector(
 
 // Portal publish UI flags — used by PortalPage
 export const selectPublishFlags = createSelector(
-  [selectShowPublishFlag, selectShowForwardFlag, selectShowPasteFlag],
-  (showPublish, showForward, showPaste) => ({
+  [selectShowPublishFlag, selectShowForwardFlag],
+  (showPublish, showForward) => ({
     showPublish,
     showForward,
-    showPaste,
   }),
 );
 

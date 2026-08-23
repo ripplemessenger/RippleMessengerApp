@@ -15,13 +15,11 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import BulletinCard from "../components/Bulletin/BulletinCard";
 import PublishModal from "../components/Bulletin/PublishModal";
-import PasteModal from "../components/Bulletin/PasteModal";
 import { selectPortalBulletins, selectMessengerConnStatus } from "../selectors";
 import { LoadPortalBulletin } from "../store/sagas/messenger.actions";
 import {
   setPublishFlag,
   setPublishTagList,
-  setPasteFlag,
 } from "../store/slices/MessengerSlice";
 
 /**
@@ -118,19 +116,14 @@ export default function BulletinScreen({ navigation }) {
 
   const hasMore = reduxPage < totalPage || localPage < totalPage;
 
-  // Publish/Paste modal state & handlers
+  // Publish modal state & handlers
   const showPublishModal = useSelector(
     (state) => state.Messenger.ShowPublishFlag,
   );
-  const showPasteModal = useSelector((state) => state.Messenger.ShowPasteFlag);
 
   const handleOpenPublish = useCallback(() => {
     dispatch(setPublishTagList([]));
     dispatch(setPublishFlag(true));
-  }, [dispatch]);
-
-  const handleOpenPaste = useCallback(() => {
-    dispatch(setPasteFlag(true));
   }, [dispatch]);
 
   // Tag search state & handlers
@@ -218,32 +211,7 @@ export default function BulletinScreen({ navigation }) {
         }
       />
 
-      {/* Floating Action Buttons — publish (bottom) and paste (above) */}
-      <TouchableOpacity
-        onPress={handleOpenPaste}
-        activeOpacity={0.8}
-        style={{
-          position: "absolute",
-          right: 20,
-          bottom: 100,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          backgroundColor: "#a89f85",
-          justifyContent: "center",
-          alignItems: "center",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: 0.3,
-          shadowRadius: 5,
-          elevation: 6,
-        }}
-      >
-        <Text style={{ fontSize: 24, fontWeight: "700", color: "#fff" }}>
-          📋
-        </Text>
-      </TouchableOpacity>
-
+      {/* Floating Action Button — publish */}
       <TouchableOpacity
         onPress={handleOpenPublish}
         activeOpacity={0.8}
@@ -274,9 +242,6 @@ export default function BulletinScreen({ navigation }) {
         visible={showPublishModal}
         onClose={() => dispatch(setPublishFlag(false))}
       />
-
-      {/* Paste Bulletin Modal */}
-      <PasteModal visible={showPasteModal} />
 
       {/* Tag Search Modal */}
       <Modal

@@ -2,11 +2,13 @@ import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
   Modal,
   Switch,
+  Keyboard,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -17,8 +19,8 @@ import useDarkMode from "../hooks/useDarkMode";
 import * as fileService from "../services/fileService";
 import { pickImage } from "../services/mediaPicker";
 import { selectUserTabMe, selectConnectedServerCount } from "../selectors";
-import { logoutStart } from "../store/slices/UserSlice";
-import { SaveSelfAvatar } from "../store/sagas/messenger.actions";
+import { logoutStart, setNickname } from "../store/slices/UserSlice";
+import { SaveSelfAvatar, ContactAdd } from "../store/sagas/messenger.actions";
 import { FileHash, base64ToUint8Array } from "../lib/MessengerUtil";
 import {
   getSettingBool,
@@ -110,6 +112,34 @@ export default function SettingScreen({ navigation }) {
   const connectedCount = useSelector(selectConnectedServerCount);
   const { isDark, toggle } = useDarkMode();
 
+  // --- Nickname edit ---
+  const [showNicknameModal, setShowNicknameModal] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState("");
+  // Keyboard height (measured via Keyboard events) so the dialog is pushed
+  // above the keyboard. adjustResize does not reliably reach RN Modals on
+  // Android, so we measure the keyboard ourselves.
+  const [kbHeight, setKbHeight] = useState(0);
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKbHeight(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
+      setKbHeight(0),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+  const handleNicknameSave = useCallback(() => {
+    const value = nicknameInput.trim();
+    if (value && Address) {
+      dispatch(ContactAdd({ address: Address, nickname: value }));
+      dispatch(setNickname(value));
+    }
+    setShowNicknameModal(false);
+  }, [nicknameInput, Address, dispatch]);
+
   // --- Avatar change ---
   const [avatarLoading, setAvatarLoading] = useState(false);
   const handleAvatarPress = useCallback(async () => {
@@ -162,15 +192,26 @@ export default function SettingScreen({ navigation }) {
   const [messageSound, setMessageSound] = useState("chime");
   const [showSoundSheet, setShowSoundSheet] = useState(false);
 
+  // --- Auto-download settings (persisted via SettingsUtil) ---
+  const [autoDownloadFollow, setAutoDownloadFollow] = useState(true);
+  const [autoDownloadPrivate, setAutoDownloadPrivate] = useState(true);
+  const [autoDownloadGroup, setAutoDownloadGroup] = useState(true);
+
   useEffect(() => {
     (async () => {
       try {
-        const [notif, sound] = await Promise.all([
+        const [notif, sound, follow, priv, group] = await Promise.all([
           getSettingBool("enableNotifications", true),
           getSettingString("messageSound", "chime"),
+          getSettingBool("autoDownloadFollowFiles", true),
+          getSettingBool("autoDownloadPrivateFiles", true),
+          getSettingBool("autoDownloadGroupFiles", true),
         ]);
         setEnableNotifications(notif);
         setMessageSound(sound);
+        setAutoDownloadFollow(follow);
+        setAutoDownloadPrivate(priv);
+        setAutoDownloadGroup(group);
       } catch {
         // use defaults
       }
@@ -181,6 +222,33 @@ export default function SettingScreen({ navigation }) {
     setEnableNotifications(value);
     try {
       await setSetting("enableNotifications", value);
+    } catch {
+      // fail silently
+    }
+  }, []);
+
+  const handleAutoDownloadFollowToggle = useCallback(async (value) => {
+    setAutoDownloadFollow(value);
+    try {
+      await setSetting("autoDownloadFollowFiles", value);
+    } catch {
+      // fail silently
+    }
+  }, []);
+
+  const handleAutoDownloadPrivateToggle = useCallback(async (value) => {
+    setAutoDownloadPrivate(value);
+    try {
+      await setSetting("autoDownloadPrivateFiles", value);
+    } catch {
+      // fail silently
+    }
+  }, []);
+
+  const handleAutoDownloadGroupToggle = useCallback(async (value) => {
+    setAutoDownloadGroup(value);
+    try {
+      await setSetting("autoDownloadGroupFiles", value);
     } catch {
       // fail silently
     }
@@ -221,9 +289,19 @@ export default function SettingScreen({ navigation }) {
             </View>
           </TouchableOpacity>
           <View className="flex-1 min-w-0">
-            <Text className="text-lg font-semibold text-text-primary truncate">
-              {Nickname || "No nickname"}
-            </Text>
+            <TouchableOpacity
+              className="flex-row items-center gap-1"
+              onPress={() => {
+                setNicknameInput(Nickname || "");
+                setShowNicknameModal(true);
+              }}
+              hitSlop={8}
+            >
+              <Text className="text-lg font-semibold text-text-primary truncate">
+                {Nickname || "No nickname"}
+              </Text>
+              <Ionicons name="create-outline" size={16} color="#a89f85" />
+            </TouchableOpacity>
             {Address ? (
               <Text className="text-xs font-mono text-text-secondary/70 truncate">
                 {Address.slice(0, 10)}...{Address.slice(-6)}
@@ -254,6 +332,27 @@ export default function SettingScreen({ navigation }) {
             label="Message Sound"
             value={soundLabel}
             onPress={() => setShowSoundSheet(true)}
+          />
+          <Divider />
+          <SwitchRow
+            icon="cloud-download-outline"
+            label="Auto-download Followed Files"
+            value={autoDownloadFollow}
+            onValueChange={handleAutoDownloadFollowToggle}
+          />
+          <Divider />
+          <SwitchRow
+            icon="chatbox-ellipses-outline"
+            label="Auto-download Private Chat Files"
+            value={autoDownloadPrivate}
+            onValueChange={handleAutoDownloadPrivateToggle}
+          />
+          <Divider />
+          <SwitchRow
+            icon="people-outline"
+            label="Auto-download Group Chat Files"
+            value={autoDownloadGroup}
+            onValueChange={handleAutoDownloadGroupToggle}
           />
         </View>
 
@@ -391,6 +490,50 @@ export default function SettingScreen({ navigation }) {
                 Cancel
               </Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Nickname edit modal */}
+      <Modal
+        visible={showNicknameModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNicknameModal(false)}
+      >
+        <View
+          className="flex-1 bg-black/50 px-6"
+          style={{
+            justifyContent: "flex-end",
+            paddingBottom: kbHeight + 24,
+          }}
+        >
+          <View className="bg-surface-card rounded-2xl p-5">
+            <Text className="text-lg font-semibold text-text-primary mb-3">
+              Edit Nickname
+            </Text>
+            <TextInput
+              value={nicknameInput}
+              onChangeText={setNicknameInput}
+              placeholder="Enter nickname..."
+              placeholderTextColor="#999"
+              className="border border-secondary-light rounded-xl px-4 py-3 text-base text-text-primary mb-4"
+              autoFocus
+            />
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => setShowNicknameModal(false)}
+                className="flex-1 py-3 rounded-xl border border-secondary-light items-center"
+              >
+                <Text className="text-base text-text-secondary">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleNicknameSave}
+                className="flex-1 py-3 rounded-xl bg-primary items-center"
+              >
+                <Text className="text-base font-medium text-white">Save</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

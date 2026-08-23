@@ -44,7 +44,7 @@ class ErrorBoundary extends Component<
   }
 }
 const styles = StyleSheet.create({
-  errorBox: { flex: 1, padding: 16, backgroundColor: "#1a1a2e" },
+  errorBox: { flex: 1, padding: 16, backgroundColor: "#1e1e26" },
   errorTitle: {
     color: "#ff4444",
     fontSize: 20,
@@ -78,7 +78,10 @@ function AppShell() {
         <ErrorBoundary>
           <AppNavigator />
         </ErrorBoundary>
-        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={isDark ? "#1e1e26" : "#e6b420"}
+        />
       </NavigationContainer>
     </View>
   );

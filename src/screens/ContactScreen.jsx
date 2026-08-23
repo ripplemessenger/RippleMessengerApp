@@ -20,7 +20,6 @@ import {
   ContactDel as ContactDelAction,
   ContactToggleIsFollow,
 } from "../store/sagas/messenger.actions";
-import { SessionType } from "../lib/AppConst";
 
 /**
  * ContactScreen — contact list for the Contact tab (3rd bottom tab).
@@ -202,10 +201,10 @@ export default function ContactScreen({ navigation }) {
     }, 3000);
   }, [dispatch]);
 
-  const handleChat = useCallback(
+  const handleTap = useCallback(
     (contact) => {
-      navigation.navigate("ChatDetail", {
-        session: { type: SessionType.Private, address: contact.address },
+      navigation.navigate("AddressBulletins", {
+        address: contact.address,
       });
     },
     [navigation],
@@ -248,12 +247,12 @@ export default function ContactScreen({ navigation }) {
     ({ item }) => (
       <ContactCard
         contact={item}
-        onChat={handleChat}
+        onChat={handleTap}
         onToggleFollow={handleToggleFollow}
         onDelete={handleDelete}
       />
     ),
-    [handleChat, handleToggleFollow, handleDelete],
+    [handleTap, handleToggleFollow, handleDelete],
   );
 
   const keyExtractor = useCallback((item) => item.address, []);

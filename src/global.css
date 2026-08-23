@@ -25,13 +25,13 @@
 }
 
 .dark:root {
- --primary-light: 30 30 46;
- --secondary-light: 94 82 56;
- --secondary: 94 82 56;
- --secondary-dark: 62 52 40;
- --surface: 13 13 21;
- --surface-card: 22 22 34;
- --surface-alt: 30 30 46;
+ --primary-light: 42 42 52;
+ --secondary-light: 92 86 68;
+ --secondary: 74 70 54;
+ --secondary-dark: 58 54 40;
+ --surface: 30 30 38;
+ --surface-card: 42 42 52;
+ --surface-alt: 52 52 63;
  --text-primary: 240 234 214;
- --text-secondary: 168 159 133;
+ --text-secondary: 179 171 148;
 }

@@ -49,7 +49,6 @@ export const BulletinMarkToggle = createAction('BulletinMarkToggle')
 
 // ==================== Bulletin Local ====================
 export const UploadBulletin = createAction('UploadBulletin')
-export const PasteBulletin = createAction('PasteBulletin')
 
 // ==================== Session ====================
 export const LoadSessionList = createAction('LoadSessionList')

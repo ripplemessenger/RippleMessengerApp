@@ -10,6 +10,7 @@ import {
   ShowForwardBulletin,
 } from "../../store/sagas/messenger.actions";
 import AvatarImage from "../AvatarImage";
+import useDarkMode from "../../hooks/useDarkMode";
 
 /**
  * Format a timestamp (ms epoch) into a human-readable relative string.
@@ -61,16 +62,19 @@ function parseBulletinPreview(content) {
   }
 }
 
-/* Shared HTML config for react-native-render-html */
-const bulletinPreviewStyles = {
-  document: {
-    style: {
-      fontSize: 14,
-      lineHeight: 20,
-      color: "#1a1a2e",
+/* Shared HTML config for react-native-render-html — text color must follow
+ * the theme (hardcoded #1a1a2e was invisible on the dark surface-card). */
+function bulletinPreviewStyles(isDark) {
+  return {
+    document: {
+      style: {
+        fontSize: 14,
+        lineHeight: 20,
+        color: isDark ? "#f0ead6" : "#1a1a2e",
+      },
     },
-  },
-};
+  };
+}
 
 /**
  * BulletinCard — single bulletin item for the FlatList feed.
@@ -86,6 +90,7 @@ export default React.memo(function BulletinCard({
   onTagPress,
 }) {
   const dispatch = useDispatch();
+  const { isDark } = useDarkMode();
 
   const handleBookmark = React.useCallback(
     (e) => {
@@ -173,7 +178,10 @@ export default React.memo(function BulletinCard({
         {isMd ? (
           <RenderHTML
             source={{ html }}
-            tagsStyles={bulletinPreviewStyles}
+            tagsStyles={bulletinPreviewStyles(isDark)}
+            defaultTextProps={{
+              style: { color: isDark ? "#f0ead6" : "#1a1a2e" },
+            }}
             systemFonts={["HelveticaNeue", "Roboto", "systemFont"]}
           />
         ) : (
@@ -198,10 +206,9 @@ export default React.memo(function BulletinCard({
                 onTagPress?.(tag);
               }}
               activeOpacity={0.6}
-              className="px-2 py-1 rounded-full bg-primary/10"
+              className="flex-row px-2 py-1 rounded-full bg-primary/10"
             >
-              <Text className="text-xs text-primary-dark">#</Text>
-              <Text className="text-xs text-primary-dark">{tag}</Text>
+              <Text className="text-xs text-primary-dark">#{tag}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>

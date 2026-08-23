@@ -43,7 +43,6 @@ import {
   FetchChatFile as FetchChatFileAction,
   BulletinFileAdd as BulletinFileAddAction,
   BulletinFileDel as BulletinFileDelAction,
-  PasteBulletin as PasteBulletinAction,
   BulletinTagAdd as BulletinTagAddAction,
   BulletinTagDel as BulletinTagDelAction,
   BulletinQuoteAdd as BulletinQuoteAddAction,
@@ -72,7 +71,6 @@ import {
   RequestRandomBulletin as RequestRandomBulletinHandler,
   BulletinFileAdd as BulletinFileAddHandler,
   BulletinFileDel as BulletinFileDelHandler,
-  PasteBulletin as PasteBulletinHandler,
   BulletinTagAdd as BulletinTagAddHandler,
   BulletinTagDel as BulletinTagDelHandler,
   BulletinQuoteAdd as BulletinQuoteAddHandler,
@@ -239,9 +237,6 @@ export function* watchMessenger() {
   // Chat file download & save — triggered from chat detail UI
   yield takeLatest(SaveChatFileAction.type, SaveChatFileHandler);
   yield takeLatest(FetchChatFileAction.type, FetchChatFileHandler);
-
-  // Paste bulletin — validate and cache raw JSON
-  yield takeLatest(PasteBulletinAction.type, PasteBulletinHandler);
 
   // Upload bulletin — cache a bulletin from external source
   yield takeEvery(UploadBulletinAction.type, UploadBulletinHandler);

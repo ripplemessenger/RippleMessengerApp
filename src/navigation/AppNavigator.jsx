@@ -6,7 +6,6 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { selectIsAuth } from "../selectors";
 import ForwardModal from "../components/Bulletin/ForwardModal";
-import PasteModal from "../components/Bulletin/PasteModal";
 
 // Screen imports
 import LoginScreen from "../screens/LoginScreen";
@@ -165,7 +164,6 @@ function AuthenticatedNav() {
   const showForwardFlag = useSelector(
     (state) => state.Messenger.ShowForwardFlag,
   );
-  const showPasteFlag = useSelector((state) => state.Messenger.ShowPasteFlag);
   return (
     <>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
@@ -199,9 +197,6 @@ function AuthenticatedNav() {
 
       {/* Forward bulletin modal — available from any screen */}
       <ForwardModal visible={showForwardFlag} />
-
-      {/* Paste bulletin modal — available from any screen */}
-      <PasteModal visible={showPasteFlag} />
     </>
   );
 }

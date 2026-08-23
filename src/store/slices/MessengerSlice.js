@@ -12,7 +12,6 @@ const MessengerSlice = createSlice({
     // bulletin publish
     ShowPublishFlag: false,
     ShowForwardFlag: false,
-    ShowPasteFlag: false,
     ForwardBulletin: null,
     CurrentBulletinSequence: 0,
     PublishTagList: [],
@@ -91,9 +90,6 @@ const MessengerSlice = createSlice({
     },
     setForwardFlag: (state, action) => {
       state.ShowForwardFlag = action.payload;
-    },
-    setPasteFlag: (state, action) => {
-      state.ShowPasteFlag = action.payload;
     },
     setForwardBulletin: (state, action) => {
       state.ForwardBulletin = action.payload;
@@ -216,7 +212,6 @@ export const {
 
   setPublishFlag,
   setForwardFlag,
-  setPasteFlag,
   setForwardBulletin,
   setCurrentBulletinSequence,
   setPublishTagList,

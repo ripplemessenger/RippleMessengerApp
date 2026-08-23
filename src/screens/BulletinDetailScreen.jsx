@@ -40,6 +40,7 @@ import {
   ContactToggleIsFollow as ContactToggleIsFollowAction,
 } from "../store/sagas/messenger.actions";
 import AvatarImage from "../components/AvatarImage";
+import useDarkMode from "../hooks/useDarkMode";
 
 function formatTimestamp(ms) {
   if (!ms) return "";
@@ -75,16 +76,19 @@ function parseBulletinContent(content) {
   }
 }
 
-/* Shared HTML config for react-native-render-html */
-const bulletinHtmlStyles = {
-  document: {
-    style: {
-      fontSize: 16,
-      lineHeight: 24,
-      color: "#1a1a2e",
+/* Shared HTML config for react-native-render-html — text color must follow
+ * the theme (hardcoded #1a1a2e was invisible on the dark surface-card). */
+function bulletinHtmlStyles(isDark) {
+  return {
+    document: {
+      style: {
+        fontSize: 16,
+        lineHeight: 24,
+        color: isDark ? "#f0ead6" : "#1a1a2e",
+      },
     },
-  },
-};
+  };
+}
 
 /**
  * ReplyCard — compact card for a single reply bulletin in the replies list.
@@ -132,6 +136,7 @@ const MAX_REPLY_LENGTH = 2000;
 export default function BulletinDetailScreen({ route, navigation }) {
   const { hash, address, sequence } = route.params ?? {};
   const dispatch = useDispatch();
+  const { isDark } = useDarkMode();
   const { DisplayBulletin: bulletin, DisplayBulletinReplyList: replies } =
     useSelector(selectDisplayBulletins);
   const selfAddress = useSelector(selectUserAddress);
@@ -446,7 +451,10 @@ export default function BulletinDetailScreen({ route, navigation }) {
                 return (
                   <RenderHTML
                     source={{ html }}
-                    tagsStyles={bulletinHtmlStyles}
+                    tagsStyles={bulletinHtmlStyles(isDark)}
+                    defaultTextProps={{
+                      style: { color: isDark ? "#f0ead6" : "#1a1a2e" },
+                    }}
                     systemFonts={["HelveticaNeue", "Roboto", "systemFont"]}
                   />
                 );

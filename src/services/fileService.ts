@@ -30,7 +30,10 @@ async function writeFileBase(
   content: Uint8Array | string,
 ): Promise<void> {
   const dir = path.substring(0, path.lastIndexOf('/') + 1)
-  await ensureDir()
+  const exists = await RNFS.exists(dir)
+  if (!exists) {
+    await RNFS.mkdir(dir)
+  }
 
   if (typeof content === 'string') {
     await RNFS.writeFile(path, content)

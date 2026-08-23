@@ -1,19 +1,19 @@
-import Elliptic from 'elliptic'
-import * as rippleKeyPairs from 'ripple-keypairs'
+import Elliptic from "elliptic";
+import * as rippleKeyPairs from "ripple-keypairs";
 
 // Module-level EC curve singleton — avoids re-initializing on every ECDH handshake.
-const ec = new Elliptic.ec('secp256k1')
+const ec = new Elliptic.ec("secp256k1");
 
-import { cancelled, call, fork, put, select, take } from 'redux-saga/effects'
+import { cancelled, call, fork, put, select, take } from "redux-saga/effects";
 
-import { dbAPI } from '../../db'
-import * as fileService from '../../services/fileService'
+import { dbAPI } from "../../db";
+import * as fileService from "../../services/fileService";
 import {
   FLASH_DURATION_MS,
   SessionType,
   DefaultPartition,
-  FileChunkSize
-} from '../../lib/AppConst'
+  FileChunkSize,
+} from "../../lib/AppConst";
 import {
   AesDecrypt,
   AesEncrypt,
@@ -21,11 +21,22 @@ import {
   AesDecryptBuffer,
   genAESKey,
   HalfSHA512,
-  QuarterSHA512Message
-} from '../../lib/AppUtil'
-import Logger from '../../lib/Logger'
-import { mgAPI } from '../../lib/MessageGenerator'
-import { ActionCode, FileRequestType, GenesisHash, ObjectType, Epoch, MessageObjectType, MessageCode, ControlActionCode, ErrorMessageMap } from '../../lib/MessengerConst'
+  QuarterSHA512Message,
+} from "../../lib/AppUtil";
+import Logger from "../../lib/Logger";
+import { getSettingBool } from "../../lib/SettingsUtil";
+import { mgAPI } from "../../lib/MessageGenerator";
+import {
+  ActionCode,
+  FileRequestType,
+  GenesisHash,
+  ObjectType,
+  Epoch,
+  MessageObjectType,
+  MessageCode,
+  ControlActionCode,
+  ErrorMessageMap,
+} from "../../lib/MessengerConst";
 import {
   DHSequence,
   FileHash,
@@ -34,15 +45,20 @@ import {
   getMemberByIndex,
   Uint32ToBuffer,
   ArrayBufferToUint32,
-  concatUint8Arrays
-} from '../../lib/MessengerUtil'
-import { globalWsChannel } from '../../lib/WebsocketUtil'
-import { setServerAddressList, setDisplayBulletinReplyList, setTagBulletinList, setRandomBulletinList } from '../slices/MessengerSlice'
-import { setFlashNoticeMessage } from '../slices/CommonSlice'
+  concatUint8Arrays,
+} from "../../lib/MessengerUtil";
+import { globalWsChannel } from "../../lib/WebsocketUtil";
+import {
+  setServerAddressList,
+  setDisplayBulletinReplyList,
+  setTagBulletinList,
+  setRandomBulletinList,
+} from "../slices/MessengerSlice";
+import { setFlashNoticeMessage } from "../slices/CommonSlice";
 
 // Push notification service (TypeScript module, importable from JS)
-import { showPushNotification } from '../../services/notificationService'
-import { playNotificationSound } from '../../lib/SoundUtil'
+import { showPushNotification } from "../../services/notificationService";
+import { playNotificationSound } from "../../lib/SoundUtil";
 
 // Schema validators used by WS handlers
 import {
@@ -64,30 +80,55 @@ import {
   checkAvatarListSchema,
   checkRandomBulletinListSchema,
   checkServerAddressListSchema,
-} from '../../lib/MessageSchemaVerifier'
+} from "../../lib/MessageSchemaVerifier";
 
 // Core messaging
-import { SendMessage, getFileRequestList, setFileRequestList, safeFork } from './messenger.core'
+import {
+  SendMessage,
+  getFileRequestList,
+  setFileRequestList,
+  safeFork,
+} from "./messenger.core";
 
 // Bulletin & avatar
-import { CacheBulletin, RequestNextBulletin, AvatarRequest, RequestAvatarFile, SubscribeFollow, FetchFollowBulletin } from './messenger.bulletin'
+import {
+  CacheBulletin,
+  RequestNextBulletin,
+  AvatarRequest,
+  RequestAvatarFile,
+  SubscribeFollow,
+  FetchFollowBulletin,
+} from "./messenger.bulletin";
 
 // File transfer
-import { FetchBulletinFile, FetchPrivateChatFile, FetchGroupChatFile } from './messenger.file'
+import {
+  FetchBulletinFile,
+  FetchPrivateChatFile,
+  FetchGroupChatFile,
+} from "./messenger.file";
 
 // Private chat
-import { AutoSyncPrivateMessages, SyncPrivateMessage, InitHandshake, RefreshPrivateMessageList } from './messenger.private'
+import {
+  AutoSyncPrivateMessages,
+  SyncPrivateMessage,
+  InitHandshake,
+  RefreshPrivateMessageList,
+} from "./messenger.private";
 
 // Group chat
-import { RefreshGroupMessageList, GroupSync } from './messenger.group'
+import { RefreshGroupMessageList, GroupSync } from "./messenger.group";
 
 // Session management
-import { LoadSessionList } from './messenger.session'
+import { LoadSessionList } from "./messenger.session";
 
 // Server management & group list (defined in MessengerSaga)
-import { UpdateConnStatus, LoadGroupList, LoadGroupRequestList } from './MessengerSaga'
+import {
+  UpdateConnStatus,
+  LoadGroupList,
+  LoadGroupRequestList,
+} from "./MessengerSaga";
 
-const FILE_REQUEST_TTL_MS = 120 * 1000 // 2 minutes per request entry
+const FILE_REQUEST_TTL_MS = 120 * 1000; // 2 minutes per request entry
 
 // ---------- Binary message handlers (file chunk reception) ----------
 
@@ -97,13 +138,13 @@ const FILE_REQUEST_TTL_MS = 120 * 1000 // 2 minutes per request entry
  */
 function* handleBinaryBulletinFile(request, content) {
   try {
-    const filePath = fileService.getFileFullPath(request.Hash)
-    const file = yield call(() => dbAPI.getFileByHash(request.Hash))
-    if (file === null) return
+    const filePath = fileService.getFileFullPath(request.Hash);
+    const file = yield call(() => dbAPI.getFileByHash(request.Hash));
+    if (file === null) return;
 
     // First chunk — ensure directory exists
     if (request.ChunkCursor === 1) {
-      yield call(() => fileService.ensureDir('files'))
+      yield call(() => fileService.ensureDir("files"));
     }
 
     yield call(receiveFileChunk, {
@@ -112,10 +153,15 @@ function* handleBinaryBulletinFile(request, content) {
       request,
       file,
       fetchNext: FetchBulletinFile,
-      fetchNextPayload: { hash: request.Hash }
-    })
+      fetchNextPayload: { hash: request.Hash },
+    });
   } catch (e) {
-    Logger.error('[handleBinaryBulletinFile] failed for', request.Hash, e.message, e.stack)
+    Logger.error(
+      "[handleBinaryBulletinFile] failed for",
+      request.Hash,
+      e.message,
+      e.stack,
+    );
   }
 }
 
@@ -125,26 +171,34 @@ function* handleBinaryBulletinFile(request, content) {
  */
 function* handleBinaryPrivateFile(request, content) {
   try {
-    const filePath = fileService.getFileFullPath(request.Hash)
-    const file = yield call(() => dbAPI.getFileByHash(request.Hash))
-    if (file === null) return
+    const filePath = fileService.getFileFullPath(request.Hash);
+    const file = yield call(() => dbAPI.getFileByHash(request.Hash));
+    if (file === null) return;
 
     if (request.ChunkCursor === 1) {
-      yield call(() => fileService.ensureDir('files'))
+      yield call(() => fileService.ensureDir("files"));
     }
 
     // Decrypt chunk using ECDH AES key
-    const decryptedContent = AesDecryptBuffer(content, request.aes_key)
+    const decryptedContent = AesDecryptBuffer(content, request.aes_key);
     yield call(receiveFileChunk, {
       filePath,
       content: decryptedContent,
       request,
       file,
       fetchNext: FetchPrivateChatFile,
-      fetchNextPayload: { hash: request.Hash, size: request.Size, remote: request.Address }
-    })
+      fetchNextPayload: {
+        hash: request.Hash,
+        size: request.Size,
+        remote: request.Address,
+      },
+    });
   } catch (e) {
-    Logger.error('[handleBinaryPrivateFile] failed for', request.Hash, e.message)
+    Logger.error(
+      "[handleBinaryPrivateFile] failed for",
+      request.Hash,
+      e.message,
+    );
   }
 }
 
@@ -155,33 +209,56 @@ function* handleBinaryPrivateFile(request, content) {
  */
 function* handleBinaryGroupFile(request, content, action) {
   try {
-    const file = yield call(() => dbAPI.getFileByHash(request.Hash))
-    if (file === null || !(file.chunk_cursor < file.chunk_length && file.chunk_cursor + 1 === request.ChunkCursor)) return
+    const file = yield call(() => dbAPI.getFileByHash(request.Hash));
+    if (
+      file === null ||
+      !(
+        file.chunk_cursor < file.chunk_length &&
+        file.chunk_cursor + 1 === request.ChunkCursor
+      )
+    )
+      return;
 
     // Extract sender index from bytes 4-8 of the raw binary message
-    const rawData = action.data
-    const senderIndex = ArrayBufferToUint32(rawData.slice(4, 8))
-    const from = getMemberByIndex(request.GroupMember, senderIndex)
-    const ecdh_sequence = DHSequence(DefaultPartition, Date.now(), request.SelfAddress, from)
-    const ecdh = yield call(() => dbAPI.getHandshake(request.SelfAddress, from, DefaultPartition, ecdh_sequence))
+    const rawData = action.data;
+    const senderIndex = ArrayBufferToUint32(rawData.slice(4, 8));
+    const from = getMemberByIndex(request.GroupMember, senderIndex);
+    const ecdh_sequence = DHSequence(
+      DefaultPartition,
+      Date.now(),
+      request.SelfAddress,
+      from,
+    );
+    const ecdh = yield call(() =>
+      dbAPI.getHandshake(
+        request.SelfAddress,
+        from,
+        DefaultPartition,
+        ecdh_sequence,
+      ),
+    );
 
     if (ecdh?.aes_key) {
-      const filePath = fileService.getFileFullPath(request.Hash)
+      const filePath = fileService.getFileFullPath(request.Hash);
       if (request.ChunkCursor === 1) {
-        yield call(() => fileService.ensureDir('files'))
+        yield call(() => fileService.ensureDir("files"));
       }
-      const decryptedContent = AesDecryptBuffer(content, ecdh.aes_key)
+      const decryptedContent = AesDecryptBuffer(content, ecdh.aes_key);
       yield call(receiveFileChunk, {
         filePath,
         content: decryptedContent,
         request,
         file,
         fetchNext: FetchGroupChatFile,
-        fetchNextPayload: { hash: request.Hash, size: request.Size, group_hash: request.GroupHash }
-      })
+        fetchNextPayload: {
+          hash: request.Hash,
+          size: request.Size,
+          group_hash: request.GroupHash,
+        },
+      });
     }
   } catch (e) {
-    Logger.error('[handleBinaryGroupFile] failed for', request.Hash, e.message)
+    Logger.error("[handleBinaryGroupFile] failed for", request.Hash, e.message);
   }
 }
 
@@ -190,41 +267,77 @@ function* handleBinaryGroupFile(request, content, action) {
  * request the next chunk or verify the completed file.
  * Re-imported from messenger.file.js (defined there as an internal function).
  */
-function* receiveFileChunk({ filePath, content, request, file, fetchNext, fetchNextPayload }) {
-  if (file.chunk_cursor < file.chunk_length && file.chunk_cursor + 1 === request.ChunkCursor) {
+function* receiveFileChunk({
+  filePath,
+  content,
+  request,
+  file,
+  fetchNext,
+  fetchNextPayload,
+}) {
+  if (
+    file.chunk_cursor < file.chunk_length &&
+    file.chunk_cursor + 1 === request.ChunkCursor
+  ) {
     // Append chunk to file on disk
-    yield call(() => fileService.writeFile(filePath, content, true))
+    yield call(() => fileService.writeFile(filePath, content, true));
 
-    setFileRequestList(getFileRequestList().filter(r => r.Nonce !== request.Nonce))
-    const current_chunk_cursor = file.chunk_cursor + 1
-    yield call(() => dbAPI.updateFileChunkCursor(request.Hash, current_chunk_cursor, Date.now()))
+    setFileRequestList(
+      getFileRequestList().filter((r) => r.Nonce !== request.Nonce),
+    );
+    const current_chunk_cursor = file.chunk_cursor + 1;
+    yield call(() =>
+      dbAPI.updateFileChunkCursor(
+        request.Hash,
+        current_chunk_cursor,
+        Date.now(),
+      ),
+    );
 
     if (current_chunk_cursor < file.chunk_length) {
       // More chunks needed — request next one
-      yield call(fetchNext, { payload: fetchNextPayload })
+      yield call(fetchNext, { payload: fetchNextPayload });
     } else {
       // All chunks received — verify hash
-      const verifiedHash = FileHash(yield call(() => fileService.readFile(filePath)))
+      const verifiedHash = FileHash(
+        yield call(() => fileService.readFile(filePath)),
+      );
       if (verifiedHash === request.Hash) {
-        yield call(() => dbAPI.remoteFileSaved(request.Hash, Date.now()))
+        yield call(() => dbAPI.remoteFileSaved(request.Hash, Date.now()));
       } else {
-        Logger.error('[receiveFileChunk] Hash mismatch for', request.Hash, 'got', verifiedHash)
-        yield call(() => fileService.deleteFile(filePath))
-        yield call(() => dbAPI.updateFileChunkCursor(request.Hash, 0, Date.now()))
+        Logger.error(
+          "[receiveFileChunk] Hash mismatch for",
+          request.Hash,
+          "got",
+          verifiedHash,
+        );
+        yield call(() => fileService.deleteFile(filePath));
+        yield call(() =>
+          dbAPI.updateFileChunkCursor(request.Hash, 0, Date.now()),
+        );
         // Re-request from start
-        yield call(fetchNext, { payload: fetchNextPayload })
+        yield call(fetchNext, { payload: fetchNextPayload });
       }
     }
-
   } else if (file.chunk_cursor + 1 !== request.ChunkCursor) {
     // Out-of-order chunk — re-request the expected cursor instead of silently dropping
-    Logger.warn('[receiveFileChunk] Unexpected chunk order for', request.Hash, ': db_cursor=', file.chunk_cursor, ', received_chunk=', request.ChunkCursor)
-    setFileRequestList(getFileRequestList().filter(r => r.Nonce !== request.Nonce))
-    yield call(fetchNext, { payload: fetchNextPayload }) // Re-request expected chunk
-
+    Logger.warn(
+      "[receiveFileChunk] Unexpected chunk order for",
+      request.Hash,
+      ": db_cursor=",
+      file.chunk_cursor,
+      ", received_chunk=",
+      request.ChunkCursor,
+    );
+    setFileRequestList(
+      getFileRequestList().filter((r) => r.Nonce !== request.Nonce),
+    );
+    yield call(fetchNext, { payload: fetchNextPayload }); // Re-request expected chunk
   } else {
     // File already fully fetched — no-op (silent success)
-    setFileRequestList(getFileRequestList().filter(r => r.Nonce !== request.Nonce))
+    setFileRequestList(
+      getFileRequestList().filter((r) => r.Nonce !== request.Nonce),
+    );
   }
 }
 
@@ -234,20 +347,34 @@ function* receiveFileChunk({ filePath, content, request, file, fetchNext, fetchN
  */
 function* handleBinaryAvatar(request, content) {
   try {
-    const avatarPath = fileService.getAvatarPath(request.Address)
-    yield call(() => fileService.ensureDir('avatars'))
-    yield call(() => fileService.writeFile(avatarPath, content))
+    const avatarPath = fileService.getAvatarPath(request.Address);
+    yield call(() => fileService.ensureDir("avatars"));
+    yield call(() => fileService.writeFile(avatarPath, content));
 
     // Verify hash if we have it
-    const receivedHash = FileHash(content)
+    const receivedHash = FileHash(content);
     if (receivedHash === request.Hash) {
-      yield call(() => dbAPI.updateAvatarIsSaved(request.Address, true, Date.now()))
+      yield call(() =>
+        dbAPI.updateAvatarIsSaved(request.Address, true, Date.now()),
+      );
     } else {
-      Logger.error('[handleBinaryAvatar] Hash mismatch for', request.Address, 'expected', request.Hash, 'got', receivedHash)
-      yield call(() => fileService.deleteFile(avatarPath))
+      Logger.error(
+        "[handleBinaryAvatar] Hash mismatch for",
+        request.Address,
+        "expected",
+        request.Hash,
+        "got",
+        receivedHash,
+      );
+      yield call(() => fileService.deleteFile(avatarPath));
     }
   } catch (e) {
-    Logger.error('[handleBinaryAvatar] failed for', request.Address, e.message, e.stack)
+    Logger.error(
+      "[handleBinaryAvatar] failed for",
+      request.Address,
+      e.message,
+      e.stack,
+    );
   }
 }
 
@@ -258,37 +385,64 @@ function* handleBinaryAvatar(request, content) {
  */
 function* handleBinaryMessage(action) {
   try {
-    const nonce = ArrayBufferToUint32(action.data.slice(0, 4))
+    const nonce = ArrayBufferToUint32(action.data.slice(0, 4));
 
     // Filter stale file requests
-    setFileRequestList(getFileRequestList().filter(r => r.Timestamp + FILE_REQUEST_TTL_MS > Date.now()))
-    const fileRequests = getFileRequestList()
+    setFileRequestList(
+      getFileRequestList().filter(
+        (r) => r.Timestamp + FILE_REQUEST_TTL_MS > Date.now(),
+      ),
+    );
+    const fileRequests = getFileRequestList();
 
     for (let i = 0; i < fileRequests.length; i++) {
-      const request = fileRequests[i]
+      const request = fileRequests[i];
       if (request.Nonce === nonce) {
         switch (request.Type) {
           case FileRequestType.Avatar:
-            yield call(handleBinaryAvatar, request, new Uint8Array(action.data.slice(4)))
-            break
+            yield call(
+              handleBinaryAvatar,
+              request,
+              new Uint8Array(action.data.slice(4)),
+            );
+            break;
           case FileRequestType.File:
-            yield call(handleBinaryBulletinFile, request, new Uint8Array(action.data.slice(4)))
-            break
+            yield call(
+              handleBinaryBulletinFile,
+              request,
+              new Uint8Array(action.data.slice(4)),
+            );
+            break;
           case FileRequestType.PrivateChatFile:
-            yield call(handleBinaryPrivateFile, request, new Uint8Array(action.data.slice(4)))
-            break
+            yield call(
+              handleBinaryPrivateFile,
+              request,
+              new Uint8Array(action.data.slice(4)),
+            );
+            break;
           case FileRequestType.GroupChatFile:
-            yield call(handleBinaryGroupFile, request, new Uint8Array(action.data.slice(8)), action)
-            break
+            yield call(
+              handleBinaryGroupFile,
+              request,
+              new Uint8Array(action.data.slice(8)),
+              action,
+            );
+            break;
           default:
-            Logger.warn('[handleBinaryMessage] unknown FileRequestType', request.Type)
+            Logger.warn(
+              "[handleBinaryMessage] unknown FileRequestType",
+              request.Type,
+            );
         }
-        return // Only handle one nonce per binary message
+        return; // Only handle one nonce per binary message
       }
     }
-    Logger.debug('[handleBinaryMessage] no matching file request for nonce', nonce)
+    Logger.debug(
+      "[handleBinaryMessage] no matching file request for nonce",
+      nonce,
+    );
   } catch (e) {
-    Logger.error('[handleBinaryMessage] failed:', e.message, e.stack)
+    Logger.error("[handleBinaryMessage] failed:", e.message, e.stack);
   }
 }
 
@@ -297,49 +451,69 @@ function* handleBinaryMessage(action) {
 function* handleAvatarRequestAction(json, action) {
   try {
     if (checkAvatarRequestSchema(json) && VerifyJsonSignature(json)) {
-      let new_list = []
+      let new_list = [];
       for (let i = 0; i < json.List.length; i++) {
-        const avatar = json.List[i]
-        const db_avatar = yield call(() => dbAPI.getAvatarByAddress(avatar.Address))
+        const avatar = json.List[i];
+        const db_avatar = yield call(() =>
+          dbAPI.getAvatarByAddress(avatar.Address),
+        );
         if (db_avatar !== null && db_avatar.signed_at > avatar.SignedAt) {
-          new_list.push(db_avatar.json)
+          new_list.push(db_avatar.json);
         }
       }
       if (new_list.length > 0) {
-        let avatar_response = { ObjectType: ObjectType.AvatarList, List: new_list }
-        yield call(SendMessage, { key: action.key, msg: JSON.stringify(avatar_response) })
+        let avatar_response = {
+          ObjectType: ObjectType.AvatarList,
+          List: new_list,
+        };
+        yield call(SendMessage, {
+          key: action.key,
+          msg: JSON.stringify(avatar_response),
+        });
       }
     }
   } catch (e) {
-    Logger.error('[handleAvatarRequestAction] failed:', e.message)
+    Logger.error("[handleAvatarRequestAction] failed:", e.message);
   }
 }
 
 function* handleBulletinRequestAction(json, action, address, seed) {
   try {
     if (checkBulletinRequestSchema(json) && VerifyJsonSignature(json)) {
-      let bulletin = null
+      let bulletin = null;
       if (json.Hash) {
-        bulletin = yield call(() => dbAPI.getBulletinByHash(json.Hash))
+        bulletin = yield call(() => dbAPI.getBulletinByHash(json.Hash));
       } else {
-        bulletin = yield call(() => dbAPI.getBulletinBySequence(json.Address, json.Sequence))
+        bulletin = yield call(() =>
+          dbAPI.getBulletinBySequence(json.Address, json.Sequence),
+        );
       }
       if (bulletin !== null) {
-        yield call(SendMessage, { key: action.key, msg: JSON.stringify(bulletin.json) })
+        yield call(SendMessage, {
+          key: action.key,
+          msg: JSON.stringify(bulletin.json),
+        });
       } else if (json.Address === address) {
-        const last_bulletin = yield call(() => dbAPI.getLastBulletin(json.Address))
+        const last_bulletin = yield call(() =>
+          dbAPI.getLastBulletin(json.Address),
+        );
         if (last_bulletin === null) {
           if (json.Sequence > 1) {
-            const msg = yield call(() => mgAPI.genBulletinRequest(seed, address, 1, address))
-            yield call(SendMessage, { key: action.key, msg: msg })
+            const msg = yield call(() =>
+              mgAPI.genBulletinRequest(seed, address, 1, address),
+            );
+            yield call(SendMessage, { key: action.key, msg: msg });
           }
         } else if (last_bulletin.sequence + 1 < json.Sequence) {
-          yield call(RequestNextBulletin, { key: action.key, payload: { address: address } })
+          yield call(RequestNextBulletin, {
+            key: action.key,
+            payload: { address: address },
+          });
         }
       }
     }
   } catch (e) {
-    Logger.error('[handleBulletinRequestAction] failed:', e.message)
+    Logger.error("[handleBulletinRequestAction] failed:", e.message);
   }
 }
 
@@ -350,22 +524,36 @@ function* handleBulletinRequestAction(json, action, address, seed) {
  */
 function* handleFileRequestAction(json, action, address, ob_address) {
   try {
-    if (!checkFileRequestSchema(json) || !VerifyJsonSignature(json)) return
+    if (!checkFileRequestSchema(json) || !VerifyJsonSignature(json)) return;
 
-    const nonceBytes = Uint32ToBuffer(json.Nonce)
+    const nonceBytes = Uint32ToBuffer(json.Nonce);
 
     if (json.FileType === FileRequestType.File) {
       // Bulletin file — no encryption
-      yield call(sendBulletinFileChunk, json, action, address, nonceBytes)
+      yield call(sendBulletinFileChunk, json, action, address, nonceBytes);
     } else if (json.FileType === FileRequestType.PrivateChatFile) {
       // Private chat file — AES encrypted per peer pair
-      yield call(sendPrivateChatFileChunk, json, action, address, ob_address, nonceBytes)
+      yield call(
+        sendPrivateChatFileChunk,
+        json,
+        action,
+        address,
+        ob_address,
+        nonceBytes,
+      );
     } else if (json.FileType === FileRequestType.GroupChatFile) {
       // Group chat file — AES encrypted + sender index prefix
-      yield call(sendGroupChatFileChunk, json, action, address, ob_address, nonceBytes)
+      yield call(
+        sendGroupChatFileChunk,
+        json,
+        action,
+        address,
+        ob_address,
+        nonceBytes,
+      );
     }
   } catch (e) {
-    Logger.error('[handleFileRequestAction] failed:', e.message, e.stack)
+    Logger.error("[handleFileRequestAction] failed:", e.message, e.stack);
   }
 }
 
@@ -374,58 +562,73 @@ function* handleFileRequestAction(json, action, address, ob_address) {
  * No encryption — raw bytes over WebSocket.
  */
 function* sendBulletinFileChunk(json, action, _address, nonceBytes) {
-  const file = yield call(() => dbAPI.getFileByHash(json.Hash))
-  if (!file || !file.is_saved) return
+  const file = yield call(() => dbAPI.getFileByHash(json.Hash));
+  if (!file || !file.is_saved) return;
 
-  const filePath = fileService.getFileFullPath(json.Hash)
+  const filePath = fileService.getFileFullPath(json.Hash);
 
-  let content
+  let content;
   if (file.size <= FileChunkSize) {
-    content = yield call(() => fileService.readFile(filePath))
+    content = yield call(() => fileService.readFile(filePath));
   } else {
     // Read specific chunk from the full file
-    const allContent = yield call(() => fileService.readFile(filePath))
-    const start = (json.ChunkCursor - 1) * FileChunkSize
-    const length = Math.min(FileChunkSize, file.size - start)
-    content = allContent.slice(start, start + length)
+    const allContent = yield call(() => fileService.readFile(filePath));
+    const start = (json.ChunkCursor - 1) * FileChunkSize;
+    const length = Math.min(FileChunkSize, file.size - start);
+    content = allContent.slice(start, start + length);
   }
 
   // Send: [nonce][content]
-  const message = concatUint8Arrays([nonceBytes, content])
-  yield call(SendMessage, { key: action.key, msg: message })
+  const message = concatUint8Arrays([nonceBytes, content]);
+  yield call(SendMessage, { key: action.key, msg: message });
 }
 
 /**
  * Send a private chat file chunk to the requesting peer.
  * Encrypts using the ECDH AES key for this peer pair.
  */
-function* sendPrivateChatFileChunk(json, action, address, ob_address, nonceBytes) {
-  const private_chat_file = yield call(() => dbAPI.getPrivateFileByEHash(json.Hash))
-  if (!private_chat_file) return
+function* sendPrivateChatFileChunk(
+  json,
+  action,
+  address,
+  ob_address,
+  nonceBytes,
+) {
+  const private_chat_file = yield call(() =>
+    dbAPI.getPrivateFileByEHash(json.Hash),
+  );
+  if (!private_chat_file) return;
 
-  const file = yield call(() => dbAPI.getFileByHash(private_chat_file.hash))
-  if (!file || !file.is_saved) return
+  const file = yield call(() => dbAPI.getFileByHash(private_chat_file.hash));
+  if (!file || !file.is_saved) return;
 
-  const filePath = fileService.getFileFullPath(file.hash)
+  const filePath = fileService.getFileFullPath(file.hash);
 
-  let content
+  let content;
   if (file.size <= FileChunkSize) {
-    content = yield call(() => fileService.readFile(filePath))
+    content = yield call(() => fileService.readFile(filePath));
   } else {
-    const allContent = yield call(() => fileService.readFile(filePath))
-    const start = (json.ChunkCursor - 1) * FileChunkSize
-    const length = Math.min(FileChunkSize, file.size - start)
-    content = allContent.slice(start, start + length)
+    const allContent = yield call(() => fileService.readFile(filePath));
+    const start = (json.ChunkCursor - 1) * FileChunkSize;
+    const length = Math.min(FileChunkSize, file.size - start);
+    content = allContent.slice(start, start + length);
   }
 
   // Encrypt with ECDH AES key
-  const ecdh_sequence = DHSequence(DefaultPartition, json.Timestamp, address, ob_address)
-  const ecdh = yield call(() => dbAPI.getHandshake(address, ob_address, DefaultPartition, ecdh_sequence))
-  if (!ecdh?.aes_key) return
+  const ecdh_sequence = DHSequence(
+    DefaultPartition,
+    json.Timestamp,
+    address,
+    ob_address,
+  );
+  const ecdh = yield call(() =>
+    dbAPI.getHandshake(address, ob_address, DefaultPartition, ecdh_sequence),
+  );
+  if (!ecdh?.aes_key) return;
 
-  const encryptedContent = AesEncryptBuffer(content, ecdh.aes_key)
-  const message = concatUint8Arrays([nonceBytes, encryptedContent])
-  yield call(SendMessage, { key: action.key, msg: message })
+  const encryptedContent = AesEncryptBuffer(content, ecdh.aes_key);
+  const message = concatUint8Arrays([nonceBytes, encryptedContent]);
+  yield call(SendMessage, { key: action.key, msg: message });
 }
 
 /**
@@ -433,170 +636,288 @@ function* sendPrivateChatFileChunk(json, action, address, ob_address, nonceBytes
  * Encrypts using per-peer ECDH AES key and includes sender index.
  * Format: [nonce][sender_index_4bytes][AES_encrypted_chunk]
  */
-function* sendGroupChatFileChunk(json, action, address, ob_address, nonceBytes) {
-  const group_member_map = yield select(state => state.Messenger.GroupMemberMap)
-  const members = group_member_map[json.GroupHash]
-  if (!members || !members.includes(ob_address)) return
+function* sendGroupChatFileChunk(
+  json,
+  action,
+  address,
+  ob_address,
+  nonceBytes,
+) {
+  const group_member_map = yield select(
+    (state) => state.Messenger.GroupMemberMap,
+  );
+  const members = group_member_map[json.GroupHash];
+  if (!members || !members.includes(ob_address)) return;
 
-  const senderIndex = getMemberIndex(members, address)
-  const indexBytes = Uint32ToBuffer(senderIndex)
+  const senderIndex = getMemberIndex(members, address);
+  const indexBytes = Uint32ToBuffer(senderIndex);
 
-  const group_chat_file = yield call(() => dbAPI.getGroupFileByEHash(json.Hash))
-  if (!group_chat_file) return
+  const group_chat_file = yield call(() =>
+    dbAPI.getGroupFileByEHash(json.Hash),
+  );
+  if (!group_chat_file) return;
 
-  const file = yield call(() => dbAPI.getFileByHash(group_chat_file.hash))
-  if (!file || !file.is_saved) return
+  const file = yield call(() => dbAPI.getFileByHash(group_chat_file.hash));
+  if (!file || !file.is_saved) return;
 
-  const filePath = fileService.getFileFullPath(file.hash)
+  const filePath = fileService.getFileFullPath(file.hash);
 
-  let content
+  let content;
   if (file.size <= FileChunkSize) {
-    content = yield call(() => fileService.readFile(filePath))
+    content = yield call(() => fileService.readFile(filePath));
   } else {
-    const allContent = yield call(() => fileService.readFile(filePath))
-    const start = (json.ChunkCursor - 1) * FileChunkSize
-    const length = Math.min(FileChunkSize, file.size - start)
-    content = allContent.slice(start, start + length)
+    const allContent = yield call(() => fileService.readFile(filePath));
+    const start = (json.ChunkCursor - 1) * FileChunkSize;
+    const length = Math.min(FileChunkSize, file.size - start);
+    content = allContent.slice(start, start + length);
   }
 
   // Encrypt with per-peer ECDH AES key
   // Use json.Timestamp to match the requester's ECDH sequence
-  const ecdh_sequence = DHSequence(DefaultPartition, json.Timestamp, address, ob_address)
-  const ecdh = yield call(() => dbAPI.getHandshake(address, ob_address, DefaultPartition, ecdh_sequence))
-  if (!ecdh?.aes_key) return
+  const ecdh_sequence = DHSequence(
+    DefaultPartition,
+    json.Timestamp,
+    address,
+    ob_address,
+  );
+  const ecdh = yield call(() =>
+    dbAPI.getHandshake(address, ob_address, DefaultPartition, ecdh_sequence),
+  );
+  if (!ecdh?.aes_key) return;
 
-  const encryptedContent = AesEncryptBuffer(content, ecdh.aes_key)
-  const message = concatUint8Arrays([nonceBytes, indexBytes, encryptedContent])
-  yield call(SendMessage, { key: action.key, msg: message })
+  const encryptedContent = AesEncryptBuffer(content, ecdh.aes_key);
+  const message = concatUint8Arrays([nonceBytes, indexBytes, encryptedContent]);
+  yield call(SendMessage, { key: action.key, msg: message });
 }
 
 function* handlePrivateMessageSyncAction(json, action, address, ob_address) {
   try {
     if (checkPrivateMessageSyncSchema(json) && VerifyJsonSignature(json)) {
-      const friend = yield call(() => dbAPI.getFriend(address, ob_address))
+      const friend = yield call(() => dbAPI.getFriend(address, ob_address));
       if (friend !== null) {
-        const unsyncMessageList = yield call(() => dbAPI.getUnsyncPrivateSession(address, ob_address, json.PairSequence, json.SelfSequence))
+        const unsyncMessageList = yield call(() =>
+          dbAPI.getUnsyncPrivateSession(
+            address,
+            ob_address,
+            json.PairSequence,
+            json.SelfSequence,
+          ),
+        );
         for (let i = 0; i < unsyncMessageList.length; i++) {
-          const msg = unsyncMessageList[i]
-          yield call(SendMessage, { key: action.key, msg: msg.json })
+          const msg = unsyncMessageList[i];
+          yield call(SendMessage, { key: action.key, msg: msg.json });
         }
       }
     }
   } catch (e) {
-    Logger.error('[handlePrivateMessageSyncAction] failed:', e.message)
+    Logger.error("[handlePrivateMessageSyncAction] failed:", e.message);
   }
 }
 
 function* handleGroupSyncAction(json, action) {
   try {
     if (checkGroupSyncSchema(json) && VerifyJsonSignature(json)) {
-      const group_list = yield select(state => state.Messenger.GroupList)
-      let tmp_list = []
+      const group_list = yield select((state) => state.Messenger.GroupList);
+      let tmp_list = [];
       for (let i = 0; i < group_list.length; i++) {
-        const group = group_list[i]
+        const group = group_list[i];
         if (group.delete_json !== null) {
-          tmp_list.push(group.delete_json)
+          tmp_list.push(group.delete_json);
         } else {
-          tmp_list.push(group.create_json)
+          tmp_list.push(group.create_json);
         }
       }
       if (tmp_list.length > 0) {
-        let group_response = { ObjectType: ObjectType.GroupList, List: tmp_list }
-        yield call(SendMessage, { key: action.key, msg: JSON.stringify(group_response) })
+        let group_response = {
+          ObjectType: ObjectType.GroupList,
+          List: tmp_list,
+        };
+        yield call(SendMessage, {
+          key: action.key,
+          msg: JSON.stringify(group_response),
+        });
       }
     }
   } catch (e) {
-    Logger.error('[handleGroupSyncAction] failed:', e.message)
+    Logger.error("[handleGroupSyncAction] failed:", e.message);
   }
 }
 
-function* handleGroupMessageSyncAction(json, action, address, ob_address, seed) {
+function* handleGroupMessageSyncAction(
+  json,
+  action,
+  address,
+  ob_address,
+  seed,
+) {
   try {
     if (checkGroupMessageSyncSchema(json) && VerifyJsonSignature(json)) {
-      let timestamp = Date.now()
-      const group = yield call(() => dbAPI.getGroupByHash(json.Hash))
+      let timestamp = Date.now();
+      const group = yield call(() => dbAPI.getGroupByHash(json.Hash));
       if (group === null) {
-        yield call(GroupSync, { key: action.key })
-      } else if (group.is_accepted === true && (group.created_by === ob_address || group.member.includes(ob_address))) {
-        const ecdh_sequence = DHSequence(DefaultPartition, timestamp, address, ob_address)
-        let ecdh = yield call(() => dbAPI.getHandshake(address, ob_address, DefaultPartition, ecdh_sequence))
+        yield call(GroupSync, { key: action.key });
+      } else if (
+        group.is_accepted === true &&
+        (group.created_by === ob_address || group.member.includes(ob_address))
+      ) {
+        const ecdh_sequence = DHSequence(
+          DefaultPartition,
+          timestamp,
+          address,
+          ob_address,
+        );
+        let ecdh = yield call(() =>
+          dbAPI.getHandshake(
+            address,
+            ob_address,
+            DefaultPartition,
+            ecdh_sequence,
+          ),
+        );
         if (ecdh === null && address !== ob_address) {
-          yield call(InitHandshake, { ecdh_sequence: ecdh_sequence, pair_address: ob_address })
-          ecdh = yield call(() => dbAPI.getHandshake(address, ob_address, DefaultPartition, ecdh_sequence))
+          yield call(InitHandshake, {
+            ecdh_sequence: ecdh_sequence,
+            pair_address: ob_address,
+          });
+          ecdh = yield call(() =>
+            dbAPI.getHandshake(
+              address,
+              ob_address,
+              DefaultPartition,
+              ecdh_sequence,
+            ),
+          );
         }
         if (ecdh === null || ecdh.aes_key === null) {
           if (ecdh) {
-            yield fork(safeFork, SendMessage, { key: action.key, msg: JSON.stringify(ecdh.self_json) })
+            yield fork(safeFork, SendMessage, {
+              key: action.key,
+              msg: JSON.stringify(ecdh.self_json),
+            });
           }
         } else {
-          let tmp_msg_list = []
+          let tmp_msg_list = [];
           if (json.Sequence === 0) {
-            tmp_msg_list = yield call(() => dbAPI.getUnsyncGroupSession(json.Hash, Epoch))
+            tmp_msg_list = yield call(() =>
+              dbAPI.getUnsyncGroupSession(json.Hash, Epoch),
+            );
           } else {
-            const current_msg = yield call(() => dbAPI.getGroupMessageBySequence(json.Hash, json.Address, json.Sequence))
+            const current_msg = yield call(() =>
+              dbAPI.getGroupMessageBySequence(
+                json.Hash,
+                json.Address,
+                json.Sequence,
+              ),
+            );
             if (current_msg !== null) {
-              tmp_msg_list = yield call(() => dbAPI.getUnsyncGroupSession(json.Hash, current_msg.signed_at))
+              tmp_msg_list = yield call(() =>
+                dbAPI.getUnsyncGroupSession(json.Hash, current_msg.signed_at),
+              );
             } else {
-              const last_group_member_msg = yield call(() => dbAPI.getLastGroupMemberMessage(json.Hash, json.Address))
-              let group_member_sequence = 0
+              const last_group_member_msg = yield call(() =>
+                dbAPI.getLastGroupMemberMessage(json.Hash, json.Address),
+              );
+              let group_member_sequence = 0;
               if (last_group_member_msg !== null) {
-                group_member_sequence = last_group_member_msg.sequence
+                group_member_sequence = last_group_member_msg.sequence;
               }
-              const group_msg_sync_request = yield call(() => mgAPI.genGroupMessageSync(seed, json.Hash, json.Address, group_member_sequence, json.Address))
-              yield call(SendMessage, { key: action.key, msg: JSON.stringify(group_msg_sync_request) })
+              const group_msg_sync_request = yield call(() =>
+                mgAPI.genGroupMessageSync(
+                  seed,
+                  json.Hash,
+                  json.Address,
+                  group_member_sequence,
+                  json.Address,
+                ),
+              );
+              yield call(SendMessage, {
+                key: action.key,
+                msg: JSON.stringify(group_msg_sync_request),
+              });
             }
           }
           if (tmp_msg_list.length > 0) {
-            let list = []
+            let list = [];
             for (let i = 0; i < tmp_msg_list.length; i++) {
-              const tmp_msg = tmp_msg_list[i]
-              let tmp_msg_json = JSON.parse(tmp_msg.json)
+              const tmp_msg = tmp_msg_list[i];
+              let tmp_msg_json = JSON.parse(tmp_msg.json);
               // Re-encrypt with our ECDH key for this peer
-              let encrypt_content = AesEncrypt(tmp_msg_json.Content, ecdh.aes_key)
-              tmp_msg_json.Content = encrypt_content
-              delete tmp_msg_json["ObjectType"]
-              delete tmp_msg_json["GroupHash"]
-              list.push(tmp_msg_json)
+              let encrypt_content = AesEncrypt(
+                tmp_msg_json.Content,
+                ecdh.aes_key,
+              );
+              tmp_msg_json.Content = encrypt_content;
+              delete tmp_msg_json["ObjectType"];
+              delete tmp_msg_json["GroupHash"];
+              list.push(tmp_msg_json);
             }
-            const group_msg_list_json = yield call(() => mgAPI.genGroupMessageList(seed, json.Hash, ob_address, list, timestamp))
-            yield call(SendMessage, { key: action.key, msg: JSON.stringify(group_msg_list_json) })
+            const group_msg_list_json = yield call(() =>
+              mgAPI.genGroupMessageList(
+                seed,
+                json.Hash,
+                ob_address,
+                list,
+                timestamp,
+              ),
+            );
+            yield call(SendMessage, {
+              key: action.key,
+              msg: JSON.stringify(group_msg_list_json),
+            });
           }
         }
       }
     }
   } catch (e) {
-    Logger.error('[handleGroupMessageSyncAction] failed:', e.message)
+    Logger.error("[handleGroupMessageSyncAction] failed:", e.message);
   }
 }
 
 // ---------- Action message dispatcher ----------
 function* handleActionMessage(json, action, address, seed) {
   try {
-    let ob_address = rippleKeyPairs.deriveAddress(json.PublicKey)
+    let ob_address = rippleKeyPairs.deriveAddress(json.PublicKey);
     switch (json.Action) {
       case ActionCode.AvatarRequest:
-        yield call(handleAvatarRequestAction, json, action)
-        break
+        yield call(handleAvatarRequestAction, json, action);
+        break;
       case ActionCode.BulletinRequest:
-        yield call(handleBulletinRequestAction, json, action, address, seed)
-        break
+        yield call(handleBulletinRequestAction, json, action, address, seed);
+        break;
       case ActionCode.FileRequest:
-        yield call(handleFileRequestAction, json, action, address, ob_address)
-        break
+        yield call(handleFileRequestAction, json, action, address, ob_address);
+        break;
       case ActionCode.PrivateMessageSync:
-        yield call(handlePrivateMessageSyncAction, json, action, address, ob_address)
-        break
+        yield call(
+          handlePrivateMessageSyncAction,
+          json,
+          action,
+          address,
+          ob_address,
+        );
+        break;
       case ActionCode.GroupSync:
-        yield call(handleGroupSyncAction, json, action)
-        break
+        yield call(handleGroupSyncAction, json, action);
+        break;
       case ActionCode.GroupMessageSync:
-        yield call(handleGroupMessageSyncAction, json, action, address, ob_address, seed)
-        break
+        yield call(
+          handleGroupMessageSyncAction,
+          json,
+          action,
+          address,
+          ob_address,
+          seed,
+        );
+        break;
       default:
-        Logger.warn('[handleActionMessage] unknown ActionCode', json.Action)
+        Logger.warn("[handleActionMessage] unknown ActionCode", json.Action);
     }
   } catch (e) {
-    Logger.error('[handleActionMessage] failed for Action', json.Action, e.message)
+    Logger.error(
+      "[handleActionMessage] failed for Action",
+      json.Action,
+      e.message,
+    );
   }
 }
 
@@ -604,23 +925,31 @@ function* handleActionMessage(json, action, address, seed) {
 
 function* handleBulletinObject(json) {
   try {
-    if (!checkBulletinSchema(json) || !VerifyJsonSignature(json)) return null
-    const ob_address = rippleKeyPairs.deriveAddress(json.PublicKey)
-    const bulletin = yield call(CacheBulletin, json)
-    const address = yield select(state => state.User.Address)
-    const follow_list = yield select(state => state.User.FollowList)
+    if (!checkBulletinSchema(json) || !VerifyJsonSignature(json)) return null;
+    const ob_address = rippleKeyPairs.deriveAddress(json.PublicKey);
+    const autoDownload = yield call(
+      getSettingBool,
+      "autoDownloadFollowFiles",
+      true,
+    );
+    const bulletin = yield call(CacheBulletin, json, autoDownload);
+    const address = yield select((state) => state.User.Address);
+    const follow_list = yield select((state) => state.User.FollowList);
     if (follow_list.includes(ob_address) || ob_address === address) {
-      yield fork(RequestNextBulletin, { key: null, payload: { address: ob_address } })
+      yield fork(RequestNextBulletin, {
+        key: null,
+        payload: { address: ob_address },
+      });
     }
-    return bulletin
+    return bulletin;
   } catch (e) {
-    Logger.error('[handleBulletinObject] failed for', json.Hash, e.message)
+    Logger.error("[handleBulletinObject] failed for", json.Hash, e.message);
   }
 }
 
 function* handleServerAddressListObject(json) {
   if (checkServerAddressListSchema(json)) {
-    yield put(setServerAddressList(json))
+    yield put(setServerAddressList(json));
   }
 }
 
@@ -632,276 +961,534 @@ function* handleServerAddressListObject(json) {
  * @param {function} dispatchAction - Redux action creator to dispatch results
  */
 function* processBulletinList(json, schemaCheck, dispatchAction) {
-  if (!schemaCheck(json)) return
-  const bulletins = []
+  if (!schemaCheck(json)) return;
+  const bulletins = [];
   for (let i = 0; i < json.List.length; i++) {
-    const bulletin = json.List[i]
+    const bulletin = json.List[i];
     if (VerifyJsonSignature(bulletin)) {
-      const b = yield call(CacheBulletin, bulletin)
+      const b = yield call(CacheBulletin, bulletin, false);
       if (b) {
-        bulletins.push(b)
+        bulletins.push(b);
       }
     }
   }
-  yield put(dispatchAction(bulletins, json))
+  yield put(dispatchAction(bulletins, json));
 }
 
 function* handleReplyBulletinListObject(json) {
   try {
-    yield call(processBulletinList, json, checkReplyBulletinListSchema,
-      (list, j) => setDisplayBulletinReplyList({ List: list, Page: j.Page, TotalPage: j.TotalPage }))
+    yield call(
+      processBulletinList,
+      json,
+      checkReplyBulletinListSchema,
+      (list, j) =>
+        setDisplayBulletinReplyList({
+          List: list,
+          Page: j.Page,
+          TotalPage: j.TotalPage,
+        }),
+    );
   } catch (e) {
-    Logger.error('[handleReplyBulletinListObject] failed:', e.message)
+    Logger.error("[handleReplyBulletinListObject] failed:", e.message);
   }
 }
 
 function* handleTagBulletinListObject(json) {
   try {
-    yield call(processBulletinList, json, checkTagBulletinListSchema,
-      (list, j) => setTagBulletinList({ List: list, Page: j.Page, TotalPage: j.TotalPage }))
+    yield call(
+      processBulletinList,
+      json,
+      checkTagBulletinListSchema,
+      (list, j) =>
+        setTagBulletinList({
+          List: list,
+          Page: j.Page,
+          TotalPage: j.TotalPage,
+        }),
+    );
   } catch (e) {
-    Logger.error('[handleTagBulletinListObject] failed:', e.message)
+    Logger.error("[handleTagBulletinListObject] failed:", e.message);
   }
 }
 
 function* handleRandomBulletinListObject(json) {
   try {
-    yield call(processBulletinList, json, checkRandomBulletinListSchema,
-      (list) => setRandomBulletinList(list))
+    yield call(
+      processBulletinList,
+      json,
+      checkRandomBulletinListSchema,
+      (list) => setRandomBulletinList(list),
+    );
   } catch (e) {
-    Logger.error('[handleRandomBulletinListObject] failed:', e.message)
+    Logger.error("[handleRandomBulletinListObject] failed:", e.message);
   }
 }
 
 function* handleAvatarListObject(json) {
   try {
-    if (!checkAvatarListSchema(json)) return
+    if (!checkAvatarListSchema(json)) return;
     for (let i = 0; i < json.List.length; i++) {
-      const avatar = json.List[i]
+      const avatar = json.List[i];
       if (VerifyJsonSignature(avatar)) {
-        const avatar_address = rippleKeyPairs.deriveAddress(avatar.PublicKey)
-        const db_avatar = yield call(() => dbAPI.getAvatarByAddress(avatar_address))
+        const avatar_address = rippleKeyPairs.deriveAddress(avatar.PublicKey);
+        const db_avatar = yield call(() =>
+          dbAPI.getAvatarByAddress(avatar_address),
+        );
         if (db_avatar !== null) {
           if (db_avatar.signed_at < avatar.Timestamp) {
             if (db_avatar.hash === avatar.Hash) {
-              yield call(() => dbAPI.updateAvatar(avatar_address, avatar.Hash, avatar.Size, avatar.Timestamp, Date.now(), avatar, true))
+              yield call(() =>
+                dbAPI.updateAvatar(
+                  avatar_address,
+                  avatar.Hash,
+                  avatar.Size,
+                  avatar.Timestamp,
+                  Date.now(),
+                  avatar,
+                  true,
+                ),
+              );
             } else {
-              yield call(() => dbAPI.updateAvatar(avatar_address, avatar.Hash, avatar.Size, avatar.Timestamp, Date.now(), avatar, false))
-              yield call(RequestAvatarFile, { key: null, address: avatar_address, hash: avatar.Hash })
+              yield call(() =>
+                dbAPI.updateAvatar(
+                  avatar_address,
+                  avatar.Hash,
+                  avatar.Size,
+                  avatar.Timestamp,
+                  Date.now(),
+                  avatar,
+                  false,
+                ),
+              );
+              yield call(RequestAvatarFile, {
+                key: null,
+                address: avatar_address,
+                hash: avatar.Hash,
+              });
             }
-          } else if (db_avatar.signed_at === avatar.Timestamp && db_avatar.is_saved === false) {
-            yield call(RequestAvatarFile, { key: null, address: avatar_address, hash: avatar.Hash })
+          } else if (
+            db_avatar.signed_at === avatar.Timestamp &&
+            db_avatar.is_saved === false
+          ) {
+            yield call(RequestAvatarFile, {
+              key: null,
+              address: avatar_address,
+              hash: avatar.Hash,
+            });
           }
         }
       }
     }
   } catch (e) {
-    Logger.error('[handleAvatarListObject] failed:', e.message)
+    Logger.error("[handleAvatarListObject] failed:", e.message);
   }
 }
 
 function* handleECDHHandshakeObject(json, address, seed) {
   try {
-    if (!checkECDHHandshakeSchema(json) || json.To !== address || !VerifyJsonSignature(json)) return
-    const ob_address = rippleKeyPairs.deriveAddress(json.PublicKey)
-    const friend = yield call(() => dbAPI.getFriend(address, ob_address))
-    const total_member_list = yield select(state => state.Messenger.TotalGroupMemberList)
+    if (
+      !checkECDHHandshakeSchema(json) ||
+      json.To !== address ||
+      !VerifyJsonSignature(json)
+    )
+      return;
+    const ob_address = rippleKeyPairs.deriveAddress(json.PublicKey);
+    const friend = yield call(() => dbAPI.getFriend(address, ob_address));
+    const total_member_list = yield select(
+      (state) => state.Messenger.TotalGroupMemberList,
+    );
     if (friend !== null || total_member_list.includes(ob_address)) {
-      const ecdh = yield call(() => dbAPI.getHandshake(address, ob_address, DefaultPartition, json.Sequence))
+      const ecdh = yield call(() =>
+        dbAPI.getHandshake(
+          address,
+          ob_address,
+          DefaultPartition,
+          json.Sequence,
+        ),
+      );
       if (ecdh === null) {
-        const ecdh_sk = HalfSHA512(GenesisHash + seed + address + json.Sequence)
-        const self_key_pair = ec.keyFromPrivate(ecdh_sk, 'hex')
-        const ecdh_pk = self_key_pair.getPublic('hex')
-        const timestamp = Date.now()
-        const self_json = yield call(() => mgAPI.genECDHHandshake(seed, DefaultPartition, json.Sequence, ecdh_pk, json.Self, ob_address, timestamp))
-        const pair_key_pair = ec.keyFromPublic(json.Self, 'hex')
+        const ecdh_sk = HalfSHA512(
+          GenesisHash + seed + address + json.Sequence,
+        );
+        const self_key_pair = ec.keyFromPrivate(ecdh_sk, "hex");
+        const ecdh_pk = self_key_pair.getPublic("hex");
+        const timestamp = Date.now();
+        const self_json = yield call(() =>
+          mgAPI.genECDHHandshake(
+            seed,
+            DefaultPartition,
+            json.Sequence,
+            ecdh_pk,
+            json.Self,
+            ob_address,
+            timestamp,
+          ),
+        );
+        const pair_key_pair = ec.keyFromPublic(json.Self, "hex");
         if (!pair_key_pair.validate().result) {
-          Logger.error('[handleECDHHandshakeObject] Remote ECDH public key not on secp256k1 curve')
-          return
+          Logger.error(
+            "[handleECDHHandshakeObject] Remote ECDH public key not on secp256k1 curve",
+          );
+          return;
         }
-        const shared_key = self_key_pair.derive(pair_key_pair.getPublic()).toString('hex')
-        const aes_key = genAESKey(shared_key, address, ob_address, json.Sequence)
-        yield call(() => dbAPI.initHandshakeFromRemote(address, ob_address, DefaultPartition, json.Sequence, aes_key, ecdh_sk, ecdh_pk, self_json, json))
-        yield call(SendMessage, { msg: JSON.stringify(self_json) })
+        const shared_key = self_key_pair
+          .derive(pair_key_pair.getPublic())
+          .toString("hex");
+        const aes_key = genAESKey(
+          shared_key,
+          address,
+          ob_address,
+          json.Sequence,
+        );
+        yield call(() =>
+          dbAPI.initHandshakeFromRemote(
+            address,
+            ob_address,
+            DefaultPartition,
+            json.Sequence,
+            aes_key,
+            ecdh_sk,
+            ecdh_pk,
+            self_json,
+            json,
+          ),
+        );
+        yield call(SendMessage, { msg: JSON.stringify(self_json) });
       } else {
-        const self_key_pair = ec.keyFromPrivate(ecdh.private_key, 'hex')
-        const timestamp = Date.now()
-        const self_json = yield call(() => mgAPI.genECDHHandshake(seed, DefaultPartition, json.Sequence, ecdh.public_key, json.Self, ob_address, timestamp))
-        const pair_key_pair = ec.keyFromPublic(json.Self, 'hex')
+        const self_key_pair = ec.keyFromPrivate(ecdh.private_key, "hex");
+        const timestamp = Date.now();
+        const self_json = yield call(() =>
+          mgAPI.genECDHHandshake(
+            seed,
+            DefaultPartition,
+            json.Sequence,
+            ecdh.public_key,
+            json.Self,
+            ob_address,
+            timestamp,
+          ),
+        );
+        const pair_key_pair = ec.keyFromPublic(json.Self, "hex");
         if (!pair_key_pair.validate().result) {
-          Logger.error('[handleECDHHandshakeObject] Remote ECDH public key not on secp256k1 curve (update)')
-          return
+          Logger.error(
+            "[handleECDHHandshakeObject] Remote ECDH public key not on secp256k1 curve (update)",
+          );
+          return;
         }
-        const shared_key = self_key_pair.derive(pair_key_pair.getPublic()).toString('hex')
-        const aes_key = genAESKey(shared_key, address, ob_address, json.Sequence)
-        yield call(() => dbAPI.updateHandshake(address, ob_address, DefaultPartition, json.Sequence, aes_key, self_json, json))
+        const shared_key = self_key_pair
+          .derive(pair_key_pair.getPublic())
+          .toString("hex");
+        const aes_key = genAESKey(
+          shared_key,
+          address,
+          ob_address,
+          json.Sequence,
+        );
+        yield call(() =>
+          dbAPI.updateHandshake(
+            address,
+            ob_address,
+            DefaultPartition,
+            json.Sequence,
+            aes_key,
+            self_json,
+            json,
+          ),
+        );
         if (json.Pair === "") {
-          yield call(SendMessage, { msg: JSON.stringify(self_json) })
+          yield call(SendMessage, { msg: JSON.stringify(self_json) });
         }
       }
     }
   } catch (e) {
-    Logger.error('[handleECDHHandshakeObject] failed:', e.message)
+    Logger.error("[handleECDHHandshakeObject] failed:", e.message);
   }
 }
 
 function* handlePrivateMessageObject(json, address) {
   try {
-    if (!checkPrivateMessageSchema(json) || !VerifyJsonSignature(json)) return
-    let ob_address = rippleKeyPairs.deriveAddress(json.PublicKey)
-    if (json.To !== address && ob_address !== address) return
+    if (!checkPrivateMessageSchema(json) || !VerifyJsonSignature(json)) return;
+    let ob_address = rippleKeyPairs.deriveAddress(json.PublicKey);
+    if (json.To !== address && ob_address !== address) return;
 
-    yield call(processPrivateMessage, json, address, ob_address)
+    yield call(processPrivateMessage, json, address, ob_address);
   } catch (e) {
-    Logger.error('[handlePrivateMessageObject] failed:', e.message)
+    Logger.error("[handlePrivateMessageObject] failed:", e.message);
   }
 }
 
 function* processPrivateMessage(json, address, ob_address) {
   try {
-    const is_self = (ob_address === address)
-    const remote = is_self ? json.To : ob_address
+    const is_self = ob_address === address;
+    const remote = is_self ? json.To : ob_address;
 
-    const friend = yield call(() => dbAPI.getFriend(address, remote))
-    if (friend === null) return
+    const friend = yield call(() => dbAPI.getFriend(address, remote));
+    if (friend === null) return;
 
-    const ecdh_sequence = DHSequence(DefaultPartition, json.Timestamp, address, remote)
-    const ecdh = yield call(() => dbAPI.getHandshake(address, remote, DefaultPartition, ecdh_sequence))
+    const ecdh_sequence = DHSequence(
+      DefaultPartition,
+      json.Timestamp,
+      address,
+      remote,
+    );
+    const ecdh = yield call(() =>
+      dbAPI.getHandshake(address, remote, DefaultPartition, ecdh_sequence),
+    );
     if (ecdh === null || ecdh.aes_key === null) {
-      yield call(InitHandshake, { key: null, ecdh_sequence: ecdh_sequence, pair_address: remote })
-      return
+      yield call(InitHandshake, {
+        key: null,
+        ecdh_sequence: ecdh_sequence,
+        pair_address: remote,
+      });
+      return;
     }
 
-    let content = AesDecrypt(json.Content, ecdh.aes_key)
+    let content = AesDecrypt(json.Content, ecdh.aes_key);
     if (content === null) {
-      Logger.error('[PrivateMessage] Failed to decrypt message content')
-      return
+      Logger.error("[PrivateMessage] Failed to decrypt message content");
+      return;
     }
-    let content_json = deriveJson(content)
+    let content_json = deriveJson(content);
     if (content_json && checkMessageObjectSchema(content_json)) {
-      content = content_json
+      content = content_json;
     }
 
-    if (typeof content === 'object' && content.ObjectType === MessageObjectType.PrivateChatFile) {
-      yield fork(safeFork, FetchPrivateChatFile, { payload: { remote: remote, hash: content.Hash, size: content.Size } })
+    if (
+      typeof content === "object" &&
+      content.ObjectType === MessageObjectType.PrivateChatFile
+    ) {
+      const autoDownload = yield call(
+        getSettingBool,
+        "autoDownloadPrivateFiles",
+        true,
+      );
+      if (autoDownload) {
+        yield fork(safeFork, FetchPrivateChatFile, {
+          payload: { remote: remote, hash: content.Hash, size: content.Size },
+        });
+      }
     }
 
-    const CurrentSession = yield select(state => state.Messenger.CurrentSession)
-    let is_readed = false
-    if (CurrentSession && CurrentSession.type === SessionType.Private && CurrentSession.remote === remote) {
-      is_readed = true
+    const CurrentSession = yield select(
+      (state) => state.Messenger.CurrentSession,
+    );
+    let is_readed = false;
+    if (
+      CurrentSession &&
+      CurrentSession.type === SessionType.Private &&
+      CurrentSession.remote === remote
+    ) {
+      is_readed = true;
     }
 
-    const session_msgs = yield call(() => dbAPI.getPrivateSession(address, remote))
-    let last_msg = (session_msgs && session_msgs.length > 0) ? session_msgs.reduce((a, b) => a.sequence > b.sequence ? a : b) : null
-    let add_result = false
+    const session_msgs = yield call(() =>
+      dbAPI.getPrivateSession(address, remote),
+    );
+    let last_msg =
+      session_msgs && session_msgs.length > 0
+        ? session_msgs.reduce((a, b) => (a.sequence > b.sequence ? a : b))
+        : null;
+    let add_result = false;
     if (last_msg === null || json.Sequence === 1) {
       if (json.Sequence === 1 && json.PreHash === GenesisHash) {
-        add_result = yield call(() => dbAPI.addPrivateMessage(
-          QuarterSHA512Message(json), ob_address, json.To, json.Sequence, json.PreHash,
-          content, json, json.Timestamp, false, false, is_readed, typeof content === 'object'
-        ))
+        add_result = yield call(() =>
+          dbAPI.addPrivateMessage(
+            QuarterSHA512Message(json),
+            ob_address,
+            json.To,
+            json.Sequence,
+            json.PreHash,
+            content,
+            json,
+            json.Timestamp,
+            false,
+            false,
+            is_readed,
+            typeof content === "object",
+          ),
+        );
       } else if (last_msg !== null) {
-        yield call(SyncPrivateMessage, { payload: { key: null, local: address, remote: remote } })
+        yield call(SyncPrivateMessage, {
+          payload: { key: null, local: address, remote: remote },
+        });
       }
     } else {
-      if (last_msg.sequence + 1 === json.Sequence && last_msg.hash === json.PreHash) {
-        add_result = yield call(() => dbAPI.addPrivateMessage(
-          QuarterSHA512Message(json), ob_address, json.To, json.Sequence, json.PreHash,
-          content, json, json.Timestamp, false, false, is_readed, typeof content === 'object'
-        ))
+      if (
+        last_msg.sequence + 1 === json.Sequence &&
+        last_msg.hash === json.PreHash
+      ) {
+        add_result = yield call(() =>
+          dbAPI.addPrivateMessage(
+            QuarterSHA512Message(json),
+            ob_address,
+            json.To,
+            json.Sequence,
+            json.PreHash,
+            content,
+            json,
+            json.Timestamp,
+            false,
+            false,
+            is_readed,
+            typeof content === "object",
+          ),
+        );
       } else if (last_msg.sequence + 1 < json.Sequence) {
-        yield call(SyncPrivateMessage, { payload: { key: null, local: address, remote: remote } })
+        yield call(SyncPrivateMessage, {
+          payload: { key: null, local: address, remote: remote },
+        });
       }
     }
 
     if (add_result) {
-      if (CurrentSession && CurrentSession.type === SessionType.Private && CurrentSession.remote === remote) {
-        yield call(RefreshPrivateMessageList)
+      if (
+        CurrentSession &&
+        CurrentSession.type === SessionType.Private &&
+        CurrentSession.remote === remote
+      ) {
+        yield call(RefreshPrivateMessageList);
       }
-      yield call(LoadSessionList)
+      yield call(LoadSessionList);
       // Mobile adaptation: replace Tauri invoke('start_message_flash') with Redux action
-      yield put(setFlashNoticeMessage({ message: 'New message', duration: FLASH_DURATION_MS }))
+      yield put(
+        setFlashNoticeMessage({
+          message: "New message",
+          duration: FLASH_DURATION_MS,
+        }),
+      );
       // Push notification for private messages — title "New message", body = contact nickname or address
-      const notifBody = json.Nickname || remote
-      showPushNotification('New message', notifBody)
-      playNotificationSound()
+      const notifBody = json.Nickname || remote;
+      showPushNotification("New message", notifBody);
+      playNotificationSound();
     }
   } catch (e) {
-    Logger.error('[processPrivateMessage] failed:', e.message)
+    Logger.error("[processPrivateMessage] failed:", e.message);
   }
 }
 
 function* handleGroupListObject(json, address) {
   try {
-    if (!checkGroupListSchema(json)) return
+    if (!checkGroupListSchema(json)) return;
     for (let i = 0; i < json.List.length; i++) {
-      const group_json = json.List[i]
-      const db_g = yield call(() => dbAPI.getGroupByHash(group_json.Hash))
-      if (group_json.ObjectType === ObjectType.GroupCreate && VerifyJsonSignature(group_json)) {
+      const group_json = json.List[i];
+      const db_g = yield call(() => dbAPI.getGroupByHash(group_json.Hash));
+      if (
+        group_json.ObjectType === ObjectType.GroupCreate &&
+        VerifyJsonSignature(group_json)
+      ) {
         if (db_g === null) {
-          const created_by = rippleKeyPairs.deriveAddress(group_json.PublicKey)
+          const created_by = rippleKeyPairs.deriveAddress(group_json.PublicKey);
           if (created_by === address) {
-            yield call(() => dbAPI.createGroup(group_json.Hash, group_json.Name, created_by, group_json.Member, group_json.Timestamp, group_json, true))
-            yield call(LoadSessionList)
-            yield call(LoadGroupList)
+            yield call(() =>
+              dbAPI.createGroup(
+                group_json.Hash,
+                group_json.Name,
+                created_by,
+                group_json.Member,
+                group_json.Timestamp,
+                group_json,
+                true,
+              ),
+            );
+            yield call(LoadSessionList);
+            yield call(LoadGroupList);
           } else if (group_json.Member.includes(address)) {
-            yield call(() => dbAPI.createGroup(group_json.Hash, group_json.Name, created_by, group_json.Member, group_json.Timestamp, group_json, false))
-            yield call(LoadGroupRequestList)
+            yield call(() =>
+              dbAPI.createGroup(
+                group_json.Hash,
+                group_json.Name,
+                created_by,
+                group_json.Member,
+                group_json.Timestamp,
+                group_json,
+                false,
+              ),
+            );
+            yield call(LoadGroupRequestList);
           }
         }
-      } else if (group_json.ObjectType === ObjectType.GroupDelete && VerifyJsonSignature(group_json)) {
+      } else if (
+        group_json.ObjectType === ObjectType.GroupDelete &&
+        VerifyJsonSignature(group_json)
+      ) {
         if (db_g !== null) {
-          yield call(() => dbAPI.updateGroupDelete(group_json.Hash, group_json))
+          yield call(() =>
+            dbAPI.updateGroupDelete(group_json.Hash, group_json),
+          );
         }
       }
     }
   } catch (e) {
-    Logger.error('[handleGroupListObject] failed:', e.message)
+    Logger.error("[handleGroupListObject] failed:", e.message);
   }
 }
 
 function* handleGroupMessageListObject(json, address, seed) {
   try {
-    if (!checkGroupMessageListSchema(json)) return
-    const ob_address = rippleKeyPairs.deriveAddress(json.PublicKey)
-    const group = yield call(() => dbAPI.getGroupByHash(json.GroupHash))
+    if (!checkGroupMessageListSchema(json)) return;
+    const ob_address = rippleKeyPairs.deriveAddress(json.PublicKey);
+    const group = yield call(() => dbAPI.getGroupByHash(json.GroupHash));
     if (group === null) {
-      yield call(GroupSync, { key: null })
-      return
+      yield call(GroupSync, { key: null });
+      return;
     }
-    if (group.is_accepted !== true) return
+    if (group.is_accepted !== true) return;
 
-    const ecdh_sequence = DHSequence(DefaultPartition, json.Timestamp, address, ob_address)
-    let ecdh = yield call(() => dbAPI.getHandshake(address, ob_address, DefaultPartition, ecdh_sequence))
+    const ecdh_sequence = DHSequence(
+      DefaultPartition,
+      json.Timestamp,
+      address,
+      ob_address,
+    );
+    let ecdh = yield call(() =>
+      dbAPI.getHandshake(address, ob_address, DefaultPartition, ecdh_sequence),
+    );
     if (ecdh === null) {
-      yield call(InitHandshake, { key: null, ecdh_sequence: ecdh_sequence, pair_address: ob_address })
-      ecdh = yield call(() => dbAPI.getHandshake(address, ob_address, DefaultPartition, ecdh_sequence))
-      if (ecdh === null) return
+      yield call(InitHandshake, {
+        key: null,
+        ecdh_sequence: ecdh_sequence,
+        pair_address: ob_address,
+      });
+      ecdh = yield call(() =>
+        dbAPI.getHandshake(
+          address,
+          ob_address,
+          DefaultPartition,
+          ecdh_sequence,
+        ),
+      );
+      if (ecdh === null) return;
     }
     if (ecdh.aes_key === null) {
-      yield fork(safeFork, SendMessage, { msg: JSON.stringify(ecdh.self_json) })
-      return
+      yield fork(safeFork, SendMessage, {
+        msg: JSON.stringify(ecdh.self_json),
+      });
+      return;
     }
 
-    let unCachedMessageAddress = []
+    let unCachedMessageAddress = [];
     for (let i = 0; i < json.List.length; i++) {
-      const group_msg = json.List[i]
-      const msg_address = rippleKeyPairs.deriveAddress(group_msg.PublicKey)
-      const pre_message = yield call(() => dbAPI.getGroupMessageByHash(json.GroupHash, group_msg.PreHash))
-      if (pre_message === undefined && !(group_msg.Sequence === 1 && group_msg.PreHash === GenesisHash)) {
-        unCachedMessageAddress.push(msg_address)
-        continue
+      const group_msg = json.List[i];
+      const msg_address = rippleKeyPairs.deriveAddress(group_msg.PublicKey);
+      const pre_message = yield call(() =>
+        dbAPI.getGroupMessageByHash(json.GroupHash, group_msg.PreHash),
+      );
+      if (
+        pre_message === undefined &&
+        !(group_msg.Sequence === 1 && group_msg.PreHash === GenesisHash)
+      ) {
+        unCachedMessageAddress.push(msg_address);
+        continue;
       }
 
-      let content = AesDecrypt(group_msg.Content, ecdh.aes_key)
+      let content = AesDecrypt(group_msg.Content, ecdh.aes_key);
       if (content === null) {
-        Logger.error('[GroupMessage] Failed to decrypt message content')
-        continue
+        Logger.error("[GroupMessage] Failed to decrypt message content");
+        continue;
       }
-      let content_json = deriveJson(content)
+      let content_json = deriveJson(content);
       if (content_json && checkMessageObjectSchema(content_json)) {
-        content = content_json
+        content = content_json;
       }
 
       let verify_json = {
@@ -913,56 +1500,114 @@ function* handleGroupMessageListObject(json, address, seed) {
         Content: content,
         Timestamp: group_msg.Timestamp,
         PublicKey: group_msg.PublicKey,
-        Signature: group_msg.Signature
-      }
+        Signature: group_msg.Signature,
+      };
       if (verify_json.Confirm === undefined) {
-        delete verify_json["Confirm"]
+        delete verify_json["Confirm"];
       }
 
-      if (!VerifyJsonSignature(verify_json)) continue
+      if (!VerifyJsonSignature(verify_json)) continue;
 
-      const hash = QuarterSHA512Message(verify_json)
-      if (typeof verify_json.Content === 'object' && verify_json.Content.ObjectType === MessageObjectType.GroupChatFile) {
-        yield call(FetchGroupChatFile, { payload: { key: null, group_hash: json.GroupHash, hash: verify_json.Content.Hash, size: verify_json.Content.Size } })
-      }
-
-      let is_readed = false
-      const CurrentSession = yield select(state => state.Messenger.CurrentSession)
-      if (CurrentSession && CurrentSession.type === SessionType.Group && CurrentSession.hash === json.GroupHash) {
-        is_readed = true
-      }
-
-      const add_result = yield call(() => dbAPI.addGroupMessage(
-        hash, json.GroupHash, msg_address, verify_json.Sequence, verify_json.PreHash,
-        verify_json.Content, verify_json, verify_json.Timestamp, false, false, is_readed, typeof verify_json.Content === 'object'
-      ))
-      if (add_result) {
-        if (CurrentSession && CurrentSession.type === SessionType.Group && CurrentSession.hash === json.GroupHash) {
-          yield call(RefreshGroupMessageList)
+      const hash = QuarterSHA512Message(verify_json);
+      if (
+        typeof verify_json.Content === "object" &&
+        verify_json.Content.ObjectType === MessageObjectType.GroupChatFile
+      ) {
+        const autoDownload = yield call(
+          getSettingBool,
+          "autoDownloadGroupFiles",
+          true,
+        );
+        if (autoDownload) {
+          yield call(FetchGroupChatFile, {
+            payload: {
+              key: null,
+              group_hash: json.GroupHash,
+              hash: verify_json.Content.Hash,
+              size: verify_json.Content.Size,
+            },
+          });
         }
-        yield call(LoadSessionList)
+      }
+
+      let is_readed = false;
+      const CurrentSession = yield select(
+        (state) => state.Messenger.CurrentSession,
+      );
+      if (
+        CurrentSession &&
+        CurrentSession.type === SessionType.Group &&
+        CurrentSession.hash === json.GroupHash
+      ) {
+        is_readed = true;
+      }
+
+      const add_result = yield call(() =>
+        dbAPI.addGroupMessage(
+          hash,
+          json.GroupHash,
+          msg_address,
+          verify_json.Sequence,
+          verify_json.PreHash,
+          verify_json.Content,
+          verify_json,
+          verify_json.Timestamp,
+          false,
+          false,
+          is_readed,
+          typeof verify_json.Content === "object",
+        ),
+      );
+      if (add_result) {
+        if (
+          CurrentSession &&
+          CurrentSession.type === SessionType.Group &&
+          CurrentSession.hash === json.GroupHash
+        ) {
+          yield call(RefreshGroupMessageList);
+        }
+        yield call(LoadSessionList);
         // Mobile adaptation: replace Tauri invoke('start_message_flash') with Redux action
-        yield put(setFlashNoticeMessage({ message: 'New group message', duration: FLASH_DURATION_MS }))
+        yield put(
+          setFlashNoticeMessage({
+            message: "New group message",
+            duration: FLASH_DURATION_MS,
+          }),
+        );
         // Push notification for group messages — title "Group message", body = group name + sender
-        const groupNotifBody = `${group.Name}: ${msg_address.slice(0, 8)}...${msg_address.slice(-6)}`
-        showPushNotification('Group message', groupNotifBody)
-        playNotificationSound()
+        const groupNotifBody = `${group.Name}: ${msg_address.slice(0, 8)}...${msg_address.slice(-6)}`;
+        showPushNotification("Group message", groupNotifBody);
+        playNotificationSound();
       }
     }
 
-    unCachedMessageAddress = [...new Set(unCachedMessageAddress)]
+    unCachedMessageAddress = [...new Set(unCachedMessageAddress)];
     for (let i = 0; i < unCachedMessageAddress.length; i++) {
-      const msg_address = unCachedMessageAddress[i]
-      const last_msg = yield call(() => dbAPI.getMemberLastGroupMessage(json.GroupHash, msg_address))
-      let sequence = 0
+      const msg_address = unCachedMessageAddress[i];
+      const last_msg = yield call(() =>
+        dbAPI.getMemberLastGroupMessage(json.GroupHash, msg_address),
+      );
+      let sequence = 0;
       if (last_msg !== null) {
-        sequence = last_msg.sequence
+        sequence = last_msg.sequence;
       }
-      const group_msg_sync_request = yield call(() => mgAPI.genGroupMessageSync(seed, json.GroupHash, msg_address, sequence, ob_address))
-      yield call(SendMessage, { msg: JSON.stringify(group_msg_sync_request) })
+      const group_msg_sync_request = yield call(() =>
+        mgAPI.genGroupMessageSync(
+          seed,
+          json.GroupHash,
+          msg_address,
+          sequence,
+          ob_address,
+        ),
+      );
+      yield call(SendMessage, { msg: JSON.stringify(group_msg_sync_request) });
     }
   } catch (e) {
-    Logger.error('[handleGroupMessageListObject] failed for group', json.GroupHash, e.message)
+    Logger.error(
+      "[handleGroupMessageListObject] failed for group",
+      json.GroupHash,
+      e.message,
+    );
   }
 }
 
@@ -970,30 +1615,34 @@ function* handleGroupMessageListObject(json, address, seed) {
 function* handleObjectMessage(json, _action, address, seed) {
   try {
     if (json.ObjectType === ObjectType.Bulletin) {
-      yield call(handleBulletinObject, json)
+      yield call(handleBulletinObject, json);
     } else if (json.ObjectType === ObjectType.ServerAddressList) {
-      yield call(handleServerAddressListObject, json)
+      yield call(handleServerAddressListObject, json);
     } else if (json.ObjectType === ObjectType.ReplyBulletinList) {
-      yield call(handleReplyBulletinListObject, json)
+      yield call(handleReplyBulletinListObject, json);
     } else if (json.ObjectType === ObjectType.TagBulletinList) {
-      yield call(handleTagBulletinListObject, json)
+      yield call(handleTagBulletinListObject, json);
     } else if (json.ObjectType === ObjectType.RandomBulletinList) {
-      yield call(handleRandomBulletinListObject, json)
+      yield call(handleRandomBulletinListObject, json);
     } else if (json.ObjectType === ObjectType.AvatarList) {
-      yield call(handleAvatarListObject, json)
+      yield call(handleAvatarListObject, json);
     } else if (json.ObjectType === ObjectType.ECDH) {
-      yield call(handleECDHHandshakeObject, json, address, seed)
+      yield call(handleECDHHandshakeObject, json, address, seed);
     } else if (json.ObjectType === ObjectType.PrivateMessage) {
-      yield call(handlePrivateMessageObject, json, address)
+      yield call(handlePrivateMessageObject, json, address);
     } else if (json.ObjectType === ObjectType.GroupList) {
-      yield call(handleGroupListObject, json, address)
+      yield call(handleGroupListObject, json, address);
     } else if (json.ObjectType === ObjectType.GroupMessageList) {
-      yield call(handleGroupMessageListObject, json, address, seed)
+      yield call(handleGroupMessageListObject, json, address, seed);
     } else {
-      Logger.warn('[handleObjectMessage] unknown ObjectType', json.ObjectType)
+      Logger.warn("[handleObjectMessage] unknown ObjectType", json.ObjectType);
     }
   } catch (e) {
-    Logger.error('[handleObjectMessage] failed for ObjectType', json.ObjectType, e.message)
+    Logger.error(
+      "[handleObjectMessage] failed for ObjectType",
+      json.ObjectType,
+      e.message,
+    );
   }
 }
 
@@ -1006,129 +1655,185 @@ function* handleObjectMessage(json, _action, address, seed) {
  * - 730-732: File transfer progress -> FlashNotice update
  */
 function handleControlMessage(json) {
-  const msgCode = json.MessageCode
-  const msgText = json.ErrorMessage || ErrorMessageMap[msgCode]
+  const msgCode = json.MessageCode;
+  const msgText = json.ErrorMessage || ErrorMessageMap[msgCode];
 
   // Error codes (701-704): Show FlashNotice warning
   if (msgCode >= 701 && msgCode <= 704) {
-    Logger.warn(`[ServerNotify] Error ${msgCode}: ${msgText}`, json)
-    return setFlashNoticeMessage({ message: msgText, duration: FLASH_DURATION_MS * 2 })
+    Logger.warn(`[ServerNotify] Error ${msgCode}: ${msgText}`, json);
+    return setFlashNoticeMessage({
+      message: msgText,
+      duration: FLASH_DURATION_MS * 2,
+    });
   }
 
   // Notification codes (710-712): Show FlashNotice info
   if (msgCode >= 710 && msgCode <= 712) {
-    Logger.info(`[ServerNotify] Notification ${msgCode}: ${msgText}`, json)
-    return setFlashNoticeMessage({ message: msgText, duration: FLASH_DURATION_MS })
+    Logger.info(`[ServerNotify] Notification ${msgCode}: ${msgText}`, json);
+    return setFlashNoticeMessage({
+      message: msgText,
+      duration: FLASH_DURATION_MS,
+    });
   }
 
   // Cache confirmation codes (720/721/723): Silent — server just confirming storage
-  if (msgCode === MessageCode.BulletinCached || msgCode === MessageCode.PrivateMsgCached || msgCode === MessageCode.HandshakeCached) {
-    Logger.debug(`[ServerNotify] Cache confirmation ${msgCode}`)
-    return null // No UI update needed
+  if (
+    msgCode === MessageCode.BulletinCached ||
+    msgCode === MessageCode.PrivateMsgCached ||
+    msgCode === MessageCode.HandshakeCached
+  ) {
+    Logger.debug(`[ServerNotify] Cache confirmation ${msgCode}`);
+    return null; // No UI update needed
   }
 
   // File transfer progress codes (730-732)
   if (msgCode >= 730 && msgCode <= 732) {
-    Logger.info(`[ServerNotify] File transfer ${msgCode}: ${json.Hash || 'unknown'}`, json)
-    let progressText = ''
+    Logger.info(
+      `[ServerNotify] File transfer ${msgCode}: ${json.Hash || "unknown"}`,
+      json,
+    );
+    let progressText = "";
     if (msgCode === MessageCode.FileChunkReceived && json.ProgressInfo) {
-      const { ReceivedBytes, TotalBytes } = json.ProgressInfo
-      const pct = TotalBytes ? Math.round((ReceivedBytes / TotalBytes) * 100) : '?'
-      progressText = `Upload chunk: ${pct}% (${ReceivedBytes}/${TotalBytes} bytes)`
+      const { ReceivedBytes, TotalBytes } = json.ProgressInfo;
+      const pct = TotalBytes
+        ? Math.round((ReceivedBytes / TotalBytes) * 100)
+        : "?";
+      progressText = `Upload chunk: ${pct}% (${ReceivedBytes}/${TotalBytes} bytes)`;
     } else if (msgCode === MessageCode.FileTransferComplete) {
-      progressText = 'File transfer complete'
+      progressText = "File transfer complete";
     } else if (msgCode === MessageCode.FileTransferFailed) {
-      progressText = 'File transfer failed'
+      progressText = "File transfer failed";
     }
     if (progressText) {
-      return setFlashNoticeMessage({ message: progressText, duration: FLASH_DURATION_MS })
+      return setFlashNoticeMessage({
+        message: progressText,
+        duration: FLASH_DURATION_MS,
+      });
     }
   }
 
   // Unknown MessageCode
-  Logger.warn(`[ServerNotify] Unknown MessageCode: ${msgCode}`, json)
-  return null
+  Logger.warn(`[ServerNotify] Unknown MessageCode: ${msgCode}`, json);
+  return null;
 }
 
 // ---------- WebSocket Listener ----------
 export function* WebsocketListener() {
-  const channel = globalWsChannel
-  let cachedSeed = null
-  let cachedAddress = null
-  let isFirstMessage = true
+  const channel = globalWsChannel;
+  let cachedSeed = null;
+  let cachedAddress = null;
+  let isFirstMessage = true;
 
   try {
     while (true) {
       try {
-        const action = yield take(channel)
+        const action = yield take(channel);
         switch (action.type) {
-          case 'status':
-            Logger.info('!!!conn status change:', action)
+          case "status":
+            Logger.info("!!!conn status change:", action);
             if (action.status === WebSocket.OPEN) {
-              yield call(UpdateConnStatus, action)
-              cachedSeed = yield select(state => state.User.Seed)
-              cachedAddress = yield select(state => state.User.Address)
+              yield call(UpdateConnStatus, action);
+              cachedSeed = yield select((state) => state.User.Seed);
+              cachedAddress = yield select((state) => state.User.Address);
               if (!cachedSeed) {
-                continue
+                continue;
               }
-              const msg = yield call(() => mgAPI.genDeclare(cachedSeed))
-              yield call(SendMessage, { key: action.key, msg: msg })
-              Logger.info(`[WS] Declare sent to ${action.key}`)
+              const msg = yield call(() => mgAPI.genDeclare(cachedSeed));
+              yield call(SendMessage, { key: action.key, msg: msg });
+              Logger.info(`[WS] Declare sent to ${action.key}`);
               // Background-sync private messages with ALL friends after Declare
-              yield fork(AutoSyncPrivateMessages)
-              yield call(AvatarRequest, { payload: { flag: true } })
-              yield call(SubscribeFollow)
-              yield call(FetchFollowBulletin)
+              yield fork(AutoSyncPrivateMessages);
+              yield call(AvatarRequest, { payload: { flag: true } });
+              yield call(SubscribeFollow);
+              yield call(FetchFollowBulletin);
             } else if (action.status === WebSocket.CLOSED) {
-              yield call(UpdateConnStatus, action)
-              cachedSeed = null
-              cachedAddress = null
-            } else if (action.status === 'error') {
-              yield call(UpdateConnStatus, action)
-            } else if (action.status === 'retries_exhausted') {
-              Logger.warn(`[WS] Retries exhausted for ${action.key}, cleared declared state`)
+              yield call(UpdateConnStatus, action);
+              cachedSeed = null;
+              cachedAddress = null;
+            } else if (action.status === "error") {
+              yield call(UpdateConnStatus, action);
+            } else if (action.status === "retries_exhausted") {
+              Logger.warn(
+                `[WS] Retries exhausted for ${action.key}, cleared declared state`,
+              );
             }
-            break
-          case 'message':
-            Logger.debug('!!!received message: ', action)
+            break;
+          case "message":
+            Logger.debug("!!!received message: ", action);
             if (isFirstMessage) {
-              Logger.info('[WS] First message received from server:', action.key)
-              isFirstMessage = false
+              Logger.info(
+                "[WS] First message received from server:",
+                action.key,
+              );
+              isFirstMessage = false;
             }
             if (!cachedSeed) {
-              continue
+              continue;
             }
             if (action.isBinary) {
-              yield call(handleBinaryMessage, action)
+              yield call(handleBinaryMessage, action);
             } else {
-              const json = action.data
+              const json = action.data;
               // Control-plane messages (ActionCode 8xx) — server notifications/errors
-              if (json.ActionCode === ControlActionCode.ServerNotify || json.ActionCode === ControlActionCode.ServerNotifyAckReq) {
-                const controlAction = handleControlMessage(json)
+              if (
+                json.ActionCode === ControlActionCode.ServerNotify ||
+                json.ActionCode === ControlActionCode.ServerNotifyAckReq
+              ) {
+                const controlAction = handleControlMessage(json);
                 if (controlAction) {
-                  yield put(controlAction)
+                  yield put(controlAction);
                 }
                 // If ServerNotifyAckReq, send ACK back
                 if (json.ActionCode === ControlActionCode.ServerNotifyAckReq) {
-                  yield call(SendMessage, { key: action.key, msg: JSON.stringify({ ActionCode: ControlActionCode.ClientAck, AckFor: json.MessageCode }) })
+                  yield call(SendMessage, {
+                    key: action.key,
+                    msg: JSON.stringify({
+                      ActionCode: ControlActionCode.ClientAck,
+                      AckFor: json.MessageCode,
+                    }),
+                  });
                 }
-              } else if (json.Action && (json.To === undefined || json.To === cachedAddress)) {
-                yield call(handleActionMessage, json, action, cachedAddress, cachedSeed)
+              } else if (
+                json.Action &&
+                (json.To === undefined || json.To === cachedAddress)
+              ) {
+                yield call(
+                  handleActionMessage,
+                  json,
+                  action,
+                  cachedAddress,
+                  cachedSeed,
+                );
               } else if (json.ObjectType) {
-                yield call(handleObjectMessage, json, action, cachedAddress, cachedSeed)
+                yield call(
+                  handleObjectMessage,
+                  json,
+                  action,
+                  cachedAddress,
+                  cachedSeed,
+                );
               } else {
-                Logger.warn('[WS] DROPPED text message — no Action/ObjectType/ActionCode', typeof json, 'keys:', Object.keys(json).slice(0, 8).join(','))
+                Logger.warn(
+                  "[WS] DROPPED text message — no Action/ObjectType/ActionCode",
+                  typeof json,
+                  "keys:",
+                  Object.keys(json).slice(0, 8).join(","),
+                );
               }
             }
-            break
+            break;
         }
       } catch (e) {
-        Logger.error('[WebsocketListener] unhandled error processing message:', e.message, e.stack)
+        Logger.error(
+          "[WebsocketListener] unhandled error processing message:",
+          e.message,
+          e.stack,
+        );
       }
     }
   } finally {
     if (yield cancelled()) {
-      Logger.info('[WebsocketListener] saga cancelled, terminating cleanly')
+      Logger.info("[WebsocketListener] saga cancelled, terminating cleanly");
     }
   }
 }
