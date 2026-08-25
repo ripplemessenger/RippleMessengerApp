@@ -21,7 +21,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
-import { marked } from "marked";
+import { parseBulletinMarkdown } from "../lib/markdown";
 import { RenderHTML } from "react-native-render-html";
 
 import { selectDisplayBulletins, selectUserAddress } from "../selectors";
@@ -40,7 +40,9 @@ import {
   ContactToggleIsFollow as ContactToggleIsFollowAction,
 } from "../store/sagas/messenger.actions";
 import AvatarImage from "../components/AvatarImage";
+import InlineImage from "../components/InlineImage";
 import useDarkMode from "../hooks/useDarkMode";
+import { ACCENT } from "../lib/theme";
 
 function formatTimestamp(ms) {
   if (!ms) return "";
@@ -57,23 +59,6 @@ function formatTimestamp(ms) {
 function shortenAddress(addr) {
   if (!addr || addr.length < 14) return addr || "";
   return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
-}
-
-/**
- * Safely convert raw bulletin text to HTML via marked.
- * Returns { isMarkdown: true, html } on success, { isMarkdown: false, plainText } on failure.
- */
-function parseBulletinContent(content) {
-  try {
-    const html = marked.parse(content || "(empty)") || "<p>(empty)</p>";
-    return { isMarkdown: true, html };
-  } catch (e) {
-    console.warn(
-      "[BulletinDetail] Markdown parse failed, falling back to plain text:",
-      e.message,
-    );
-    return { isMarkdown: false, plainText: content || "(empty)" };
-  }
 }
 
 /* Shared HTML config for react-native-render-html — text color must follow
@@ -186,7 +171,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
         </Text>
       ),
       title: "Post",
-      headerStyle: { backgroundColor: "#e6b420" },
+      headerStyle: { backgroundColor: ACCENT },
       headerTintColor: "#1a1a2e",
     });
   }, [navigation, goBack]);
@@ -224,7 +209,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
               <Ionicons
                 name={bulletin.is_marked ? "star" : "star-outline"}
                 size={24}
-                color={bulletin.is_marked ? "#e6b420" : "#a89f85"}
+                color={bulletin.is_marked ? ACCENT : "#a89f85"}
               />
             </TouchableOpacity>
           </View>
@@ -358,14 +343,14 @@ export default function BulletinDetailScreen({ route, navigation }) {
 
   // Memoized bulletin content parsing — runs only when content changes
   const parsedContent = useMemo(
-    () => parseBulletinContent(bulletin?.content || ""),
+    () => parseBulletinMarkdown(bulletin?.content || ""),
     [bulletin?.hash, bulletin?.content],
   );
 
   if (!bulletin) {
     return (
       <View className="flex-1 bg-surface items-center justify-center">
-        <ActivityIndicator size="large" color="#e6b420" />
+        <ActivityIndicator size="large" color={ACCENT} />
         <Text className="text-sm text-text-secondary mt-3">
           Loading bulletin…
         </Text>
@@ -387,7 +372,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
             <RefreshControl
               refreshing={refreshingRef.current}
               onRefresh={handleRefreshReplies}
-              tintColor="#e6b420"
+              tintColor={ACCENT}
             />
           }
         >
@@ -435,7 +420,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
               <Ionicons
                 name={bulletin.is_marked ? "star" : "star-outline"}
                 size={24}
-                color={bulletin.is_marked ? "#e6b420" : "#a89f85"}
+                color={bulletin.is_marked ? ACCENT : "#a89f85"}
               />
             </TouchableOpacity>
           </View>
@@ -515,9 +500,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
                   }
                   size={16}
                   color={
-                    friendList.includes(bulletin.address)
-                      ? "#e6b420"
-                      : "#a89f85"
+                    friendList.includes(bulletin.address) ? ACCENT : "#a89f85"
                   }
                 />
                 <Text className="text-xs text-text-secondary/70">
@@ -541,9 +524,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
                   }
                   size={16}
                   color={
-                    followList.includes(bulletin.address)
-                      ? "#e6b420"
-                      : "#a89f85"
+                    followList.includes(bulletin.address) ? ACCENT : "#a89f85"
                   }
                 />
                 <Text className="text-xs text-text-secondary/70">
@@ -578,21 +559,32 @@ export default function BulletinDetailScreen({ route, navigation }) {
                 Attachments ({bulletin.file.length})
               </Text>
               {bulletin.file.map((f, i) => (
-                <TouchableOpacity
-                  key={i}
-                  onPress={() => handleFilePress(f)}
-                  activeOpacity={0.6}
-                  className="flex-row items-center gap-2 py-2 px-2 rounded-lg bg-surface-alt/50 mb-1"
-                >
-                  <Ionicons name="folder-open" size={18} color="#e6b420" />
-                  <Text className="text-sm text-text-primary flex-1 ml-1">
-                    {f.Name}
-                  </Text>
-                  <Text className="text-xs text-text-secondary/60">
-                    {(f.Size / 1024).toFixed(1)} KB
-                  </Text>
-                  <Ionicons name="download-outline" size={16} color="#a89f85" />
-                </TouchableOpacity>
+                <View key={i} className="mb-1">
+                  {/* Inline preview for image attachments */}
+                  <InlineImage
+                    hash={f.Hash}
+                    ext={f.Ext || ""}
+                    containerStyle={{ marginBottom: 6 }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => handleFilePress(f)}
+                    activeOpacity={0.6}
+                    className="flex-row items-center gap-2 py-2 px-2 rounded-lg bg-surface-alt/50"
+                  >
+                    <Ionicons name="folder-open" size={18} color={ACCENT} />
+                    <Text className="text-sm text-text-primary flex-1 ml-1">
+                      {f.Name}
+                    </Text>
+                    <Text className="text-xs text-text-secondary/60">
+                      {(f.Size / 1024).toFixed(1)} KB
+                    </Text>
+                    <Ionicons
+                      name="download-outline"
+                      size={16}
+                      color="#a89f85"
+                    />
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
           )}
@@ -627,7 +619,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
                       <Ionicons
                         name={isQuoteObj ? "link" : "quote"}
                         size={14}
-                        color="#e6b420"
+                        color={ACCENT}
                       />
                       <Text className="text-xs text-text-secondary">
                         {typeof q === "string"

@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   View,
   Text,
@@ -8,15 +14,24 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
-} from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useDispatch, useSelector } from 'react-redux';
-import { useFocusEffect } from '@react-navigation/native';
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { useDispatch, useSelector } from "react-redux";
+import { useFocusEffect } from "@react-navigation/native";
 
-import SessionListItem from '../components/Chat/SessionListItem';
-import { selectChatSessions, selectUserAddress, selectContactMap, selectMessengerConnStatus } from '../selectors';
-import { LoadSessionList, ContactAdd as ContactAddAction } from '../store/sagas/messenger.actions';
-import { SessionType } from '../lib/AppConst';
+import SessionListItem from "../components/Chat/SessionListItem";
+import {
+  selectChatSessions,
+  selectUserAddress,
+  selectContactMap,
+  selectMessengerConnStatus,
+} from "../selectors";
+import {
+  LoadSessionList,
+  ContactAdd as ContactAddAction,
+} from "../store/sagas/messenger.actions";
+import { SessionType } from "../lib/AppConst";
+import { ACCENT } from "../lib/theme";
 
 /**
  * ChatScreen — session list screen for the Chat tab.
@@ -35,38 +50,45 @@ export default function ChatScreen({ navigation }) {
   const isConnected = useSelector(selectMessengerConnStatus);
 
   // Active tab: 'all' | 'private' | 'group'
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState("all");
   // Search filter text
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   // Add Friend modal state
   const [showAddFriendModal, setShowAddFriendModal] = useState(false);
-  const [friendAddress, setFriendAddress] = useState('');
-  const [friendNickname, setFriendNickname] = useState('');
+  const [friendAddress, setFriendAddress] = useState("");
+  const [friendNickname, setFriendNickname] = useState("");
   const refreshingRef = useRef(false);
 
   // Load session list on focus
   useFocusEffect(
     useCallback(() => {
       dispatch(LoadSessionList());
-    }, [dispatch])
+    }, [dispatch]),
   );
 
   const handleRefresh = useCallback(() => {
     if (refreshingRef.current) return;
     refreshingRef.current = true;
     dispatch(LoadSessionList());
-    setTimeout(() => { refreshingRef.current = false; }, 3000);
+    setTimeout(() => {
+      refreshingRef.current = false;
+    }, 3000);
   }, [dispatch]);
 
   const handleAddFriend = useCallback(() => {
     const trimmedAddress = friendAddress.trim();
     if (!trimmedAddress) {
-      Alert.alert('Error', 'Please enter an XRPL address.');
+      Alert.alert("Error", "Please enter an XRPL address.");
       return;
     }
-    dispatch(ContactAddAction({ address: trimmedAddress, nickname: friendNickname.trim() || '' }));
-    setFriendAddress('');
-    setFriendNickname('');
+    dispatch(
+      ContactAddAction({
+        address: trimmedAddress,
+        nickname: friendNickname.trim() || "",
+      }),
+    );
+    setFriendAddress("");
+    setFriendNickname("");
     setShowAddFriendModal(false);
   }, [dispatch, friendAddress, friendNickname]);
 
@@ -74,19 +96,20 @@ export default function ChatScreen({ navigation }) {
   const filteredSessions = useMemo(() => {
     return sessions.filter((session) => {
       // Tab filter
-      if (activeTab === 'private' && session.type !== SessionType.Private) return false;
-      if (activeTab === 'group' && session.type !== SessionType.Group) return false;
+      if (activeTab === "private" && session.type !== SessionType.Private)
+        return false;
+      if (activeTab === "group" && session.type !== SessionType.Group)
+        return false;
 
       // Search filter
       if (searchText.trim().length > 0) {
         const searchLower = searchText.toLowerCase();
         if (session.type === SessionType.Private) {
-          const contact = contactMap[session.address];
-          const name = (contact?.nickname || '').toLowerCase();
-          const addr = (session.address || '').toLowerCase();
+          const name = (contactMap[session.address] || "").toLowerCase();
+          const addr = (session.address || "").toLowerCase();
           return name.includes(searchLower) || addr.includes(searchLower);
         } else {
-          const name = (session.name || '').toLowerCase();
+          const name = (session.name || "").toLowerCase();
           return name.includes(searchLower);
         }
       }
@@ -95,18 +118,24 @@ export default function ChatScreen({ navigation }) {
     });
   }, [sessions, activeTab, searchText, contactMap]);
 
-  const handleSessionPress = useCallback((session) => {
-    navigation.navigate('ChatDetail', { session });
-  }, [navigation]);
+  const handleSessionPress = useCallback(
+    (session) => {
+      navigation.navigate("ChatDetail", { session });
+    },
+    [navigation],
+  );
 
-  const renderItem = useCallback(({ item }) => (
-    <SessionListItem
-      session={item}
-      onPress={() => handleSessionPress(item)}
-      contactMap={contactMap}
-      selfAddress={selfAddress}
-    />
-  ), [handleSessionPress, contactMap, selfAddress]);
+  const renderItem = useCallback(
+    ({ item }) => (
+      <SessionListItem
+        session={item}
+        onPress={() => handleSessionPress(item)}
+        contactMap={contactMap}
+        selfAddress={selfAddress}
+      />
+    ),
+    [handleSessionPress, contactMap, selfAddress],
+  );
 
   const keyExtractor = useCallback((item) => {
     if (item.type === SessionType.Private) {
@@ -116,8 +145,8 @@ export default function ChatScreen({ navigation }) {
   }, []);
 
   // Connection status text
-  const statusText = isConnected ? 'Connected' : 'Disconnected';
-  const statusColor = isConnected ? 'bg-status-success' : 'bg-status-error';
+  const statusText = isConnected ? "Connected" : "Disconnected";
+  const statusColor = isConnected ? "bg-status-success" : "bg-status-error";
 
   return (
     <View className="flex-1 bg-surface">
@@ -133,20 +162,24 @@ export default function ChatScreen({ navigation }) {
 
         {/* Tab filters */}
         <View className="flex-row mt-2 gap-2">
-          {(['all', 'private', 'group']).map((tab) => (
+          {["all", "private", "group"].map((tab) => (
             <TouchableOpacity
               key={tab}
               onPress={() => setActiveTab(tab)}
               activeOpacity={0.7}
               className={`px-3 py-1 rounded-full border ${
                 activeTab === tab
-                  ? 'bg-primary/20 border-primary text-text-primary'
-                  : 'bg-transparent border-secondary-light/40 text-text-secondary'
+                  ? "bg-primary/20 border-primary text-text-primary"
+                  : "bg-transparent border-secondary-light/40 text-text-secondary"
               }`}
             >
-              <Text className={`text-xs font-medium ${
-                activeTab === tab ? 'text-text-primary' : 'text-text-secondary'
-              }`}>
+              <Text
+                className={`text-xs font-medium ${
+                  activeTab === tab
+                    ? "text-text-primary"
+                    : "text-text-secondary"
+                }`}
+              >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -176,12 +209,11 @@ export default function ChatScreen({ navigation }) {
             className="flex-1 ml-2 text-sm text-text-primary py-0.5"
           />
           {searchText.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchText('')} activeOpacity={0.6}>
-              <Ionicons
-                name="close-circle"
-                size={18}
-                color="#a89f85"
-              />
+            <TouchableOpacity
+              onPress={() => setSearchText("")}
+              activeOpacity={0.6}
+            >
+              <Ionicons name="close-circle" size={18} color="#a89f85" />
             </TouchableOpacity>
           )}
         </View>
@@ -197,7 +229,7 @@ export default function ChatScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshingRef.current}
             onRefresh={handleRefresh}
-            tintColor="#e6b420"
+            tintColor={ACCENT}
           />
         }
         ListEmptyComponent={
@@ -208,8 +240,8 @@ export default function ChatScreen({ navigation }) {
             </Text>
             <Text className="text-sm text-text-secondary text-center">
               {isConnected
-                ? 'When you exchange messages with contacts, they will appear here.'
-                : 'Connect to a server first to start chatting.'}
+                ? "When you exchange messages with contacts, they will appear here."
+                : "Connect to a server first to start chatting."}
             </Text>
           </View>
         }
@@ -241,7 +273,9 @@ export default function ChatScreen({ navigation }) {
             </View>
 
             <View className="gap-1">
-              <Text className="text-sm text-text-secondary">Nickname (optional)</Text>
+              <Text className="text-sm text-text-secondary">
+                Nickname (optional)
+              </Text>
               <TextInput
                 value={friendNickname}
                 onChangeText={setFriendNickname}

@@ -1,22 +1,15 @@
 import { createSelector } from "@reduxjs/toolkit";
 
 // Root slice accessors
-export const selectMessenger = (state) => state.Messenger;
-export const selectUser = (state) => state.User;
-export const selectCommon = (state) => state.Common;
 export const selectUserAddress = (state) => state.User.Address;
 
 // ── Leaf-level field accessors (Messenger slice) ──
 // Each selector only invalidates when its own field changes.
-const selectMessengerConnStatusField = (state) =>
-  state.Messenger.MessengerConnStatus;
 const selectConnsStatus = (state) => state.Messenger.ConnsStatus;
 const selectPortalBulletinList = (state) => state.Messenger.PortalBulletinList;
 const selectPortalBulletinPage = (state) => state.Messenger.PortalBulletinPage;
 const selectPortalBulletinTotalPage = (state) =>
   state.Messenger.PortalBulletinTotalPage;
-const selectShowPublishFlag = (state) => state.Messenger.ShowPublishFlag;
-const selectShowForwardFlag = (state) => state.Messenger.ShowForwardFlag;
 const selectFollowBulletinList = (state) => state.Messenger.FollowBulletinList;
 const selectFollowBulletinPage = (state) => state.Messenger.FollowBulletinPage;
 const selectFollowBulletinTotalPage = (state) =>
@@ -50,12 +43,6 @@ const selectDisplayBulletinReplyPage = (state) =>
 const selectDisplayBulletinReplyTotalPage = (state) =>
   state.Messenger.DisplayBulletinReplyTotalPage;
 
-// Server address page data
-const selectServerAddressPage = (state) => state.Messenger.ServerAddressPage;
-const selectServerAddressTotalPage = (state) =>
-  state.Messenger.ServerAddressTotalPage;
-const selectServerAddressList = (state) => state.Messenger.ServerAddressList;
-
 // Group tab fields
 const selectGroupRequestList = (state) => state.Messenger.GroupRequestList;
 const selectComposeMemberList = (state) => state.Messenger.ComposeMemberList;
@@ -69,7 +56,6 @@ const selectUserIsAuth = (state) => state.User.IsAuth;
 const selectUserNickname = (state) => state.User.Nickname;
 const selectUserSeed = (state) => state.User.Seed;
 const selectUserAccountList = (state) => state.User.AccountList;
-const selectActiveTabSettingField = (state) => state.User.activeTabSetting;
 export const selectContactList = (state) => state.User.ContactList;
 const selectContactMap = (state) => state.User.ContactMap;
 
@@ -77,14 +63,9 @@ const selectContactMap = (state) => state.User.ContactMap;
 export { selectContactMap };
 
 // ── Leaf-level field accessors (Common slice) ──
-const selectFlashNoticeMessage = (state) => state.Common.FlashNoticeMessage;
-const selectFlashNoticeDuration = (state) => state.Common.FlashNoticeDuration;
-const selectDisplayJsonField = (state) => state.Common.DisplayJson;
-// Exported directly — single-leaf selector, no need for createSelector wrapper
-export const selectDisplayJsonOption = (state) =>
-  state.Common.DisplayJsonOption;
+// FlashNotice is read directly by components/FlashNotice.jsx (state.Common.FlashNoticeMessage).
 
-// Connection status — used by Header, ConnectionStatusBanner, useBulletinLoad
+// Connection status — used by Header, ConnectionStatusBanner
 export const selectMessengerConnStatus = (state) =>
   state.Messenger.MessengerConnStatus;
 
@@ -98,10 +79,6 @@ export const selectConnectedServerCount = createSelector(
   },
 );
 
-// Total new message count — leaf accessor already gives us the number
-export const selectTotalNewMessages = (state) =>
-  state.Messenger.SessionNewMsgCount || 0;
-
 // Portal bulletin list with pagination — most visited page
 export const selectPortalBulletins = createSelector(
   [
@@ -113,15 +90,6 @@ export const selectPortalBulletins = createSelector(
     list: list || [],
     page: page || 1,
     totalPage: totalPage || 1,
-  }),
-);
-
-// Portal publish UI flags — used by PortalPage
-export const selectPublishFlags = createSelector(
-  [selectShowPublishFlag, selectShowForwardFlag],
-  (showPublish, showForward) => ({
-    showPublish,
-    showForward,
   }),
 );
 
@@ -197,47 +165,7 @@ export const selectCurrentSessionMessages = (state) =>
 export const selectGroupMembers = (state) =>
   state.Messenger.GroupMemberMap || {};
 
-// Flash notice state — used by MainLayout
-export const selectFlashNotice = createSelector(
-  [selectFlashNoticeMessage, selectFlashNoticeDuration],
-  (message, duration) => ({
-    message,
-    duration: duration || 0,
-  }),
-);
-
-// JSON display modal state — used by MainLayout and JsonDiv
-export const selectDisplayJson = createSelector(
-  [selectDisplayJsonField, selectDisplayJsonOption],
-  (json, isExpand) => ({
-    json,
-    isExpand,
-  }),
-);
-
 // ─── Combined memoized selectors for page components ───
-
-// BulletinAddressPage — address bulletins + publish/forward flags + connection status + bulletin address
-export const selectBulletinAddressData = createSelector(
-  [
-    selectAddressBulletinList,
-    selectAddressBulletinTotalPage,
-    selectAddressBulletinPage,
-    selectBulletinAddress,
-    selectShowPublishFlag,
-    selectShowForwardFlag,
-    selectMessengerConnStatusField,
-  ],
-  (list, totalPage, page, address, showPublish, showForward, connStatus) => ({
-    AddressBulletinList: list || [],
-    AddressBulletinTotalPage: totalPage || 0,
-    AddressBulletinPage: page || 1,
-    BulletinAddress: address,
-    ShowPublishFlag: showPublish,
-    ShowForwardFlag: showForward,
-    MessengerConnStatus: connStatus,
-  }),
-);
 
 // BulletinViewPage — display bulletin + replies with pagination
 export const selectDisplayBulletins = createSelector(
@@ -274,40 +202,21 @@ export const selectUserTabGroup = createSelector(
   }),
 );
 
-// TabMe — user profile fields (includes activeTabSetting since TabMe reads it too)
+// TabMe — user profile fields (Address + Nickname + Seed + AccountList)
 export const selectUserTabMe = createSelector(
   [
     selectUserAddress,
     selectUserNickname,
     selectUserSeed,
     selectUserAccountList,
-    selectActiveTabSettingField,
   ],
-  (address, nickname, seed, accounts, activeTab) => ({
+  (address, nickname, seed, accounts) => ({
     Address: address,
     Nickname: nickname,
     Seed: seed,
     AccountList: accounts || [],
-    activeTabSetting: activeTab,
   }),
 );
-
-// ServerAddressPage — server address list with pagination
-export const selectServerAddressData = createSelector(
-  [
-    selectServerAddressList,
-    selectServerAddressPage,
-    selectServerAddressTotalPage,
-  ],
-  (list, page, totalPage) => ({
-    ServerAddressList: list || [],
-    ServerAddressPage: page || 1,
-    ServerAddressTotalPage: totalPage || 0,
-  }),
-);
-
-// SettingPage — active tab for settings sub-navigation
-export const selectActiveTabSetting = (state) => state.User.activeTabSetting;
 
 // TabMessengerNetwork — server list + connection statuses
 export const selectServerNetworkData = createSelector(
@@ -318,20 +227,8 @@ export const selectServerNetworkData = createSelector(
   }),
 );
 
-// AvatarName — Address + ContactMap for nickname lookup
-export const selectAvatarNameData = createSelector(
-  [selectUserAddress, selectContactMap],
-  (address, contactMap) => ({
-    Address: address,
-    ContactMap: contactMap || {},
-  }),
-);
-
 // AuthProvider — IsAuth only
 export const selectIsAuth = (state) => state.User.IsAuth;
-
-// Nickname — used by UI components
-export const selectNickname = (state) => state.User.Nickname;
 
 // BulletinForward — SessionList
 // (selectChatSessions already exists and returns SessionList)

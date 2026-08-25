@@ -9,6 +9,7 @@ import {
   Modal,
   Switch,
   Keyboard,
+  Clipboard,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -17,10 +18,15 @@ import RNFS from "react-native-fs";
 import AvatarImage from "../components/AvatarImage";
 import useDarkMode from "../hooks/useDarkMode";
 import * as fileService from "../services/fileService";
-import { pickImage } from "../services/mediaPicker";
+import ImageCropPicker from "react-native-image-crop-picker";
 import { selectUserTabMe, selectConnectedServerCount } from "../selectors";
 import { logoutStart, setNickname } from "../store/slices/UserSlice";
-import { SaveSelfAvatar, ContactAdd } from "../store/sagas/messenger.actions";
+import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
+import {
+  SaveSelfAvatar,
+  ContactAdd,
+  AccountDel,
+} from "../store/sagas/messenger.actions";
 import { FileHash, base64ToUint8Array } from "../lib/MessengerUtil";
 import {
   getSettingBool,
@@ -28,6 +34,7 @@ import {
   setSetting,
 } from "../lib/SettingsUtil";
 import { previewSound } from "../lib/SoundUtil";
+import { ACCENT } from "../lib/theme";
 
 const APP_VERSION = "1.0.0";
 
@@ -44,7 +51,7 @@ const SOUND_OPTIONS = [
 // ---------------------------------------------------------------------------
 // Reusable list primitives
 // ---------------------------------------------------------------------------
-function SectionHeader({ icon, label, iconColor = "#e6b420" }) {
+function SectionHeader({ icon, label, iconColor = ACCENT }) {
   return (
     <View className="flex-row items-center gap-2 px-1 pt-5 pb-2">
       <Ionicons name={icon} size={16} color={iconColor} />
@@ -56,7 +63,7 @@ function SectionHeader({ icon, label, iconColor = "#e6b420" }) {
 }
 
 // A tappable row that navigates somewhere, with an optional value + chevron.
-function NavRow({ icon, iconColor = "#e6b420", label, value, onPress }) {
+function NavRow({ icon, iconColor = ACCENT, label, value, onPress }) {
   return (
     <TouchableOpacity
       activeOpacity={0.7}
@@ -76,13 +83,7 @@ function NavRow({ icon, iconColor = "#e6b420", label, value, onPress }) {
 }
 
 // A row with an inline switch.
-function SwitchRow({
-  icon,
-  iconColor = "#e6b420",
-  label,
-  value,
-  onValueChange,
-}) {
+function SwitchRow({ icon, iconColor = ACCENT, label, value, onValueChange }) {
   return (
     <View className="flex-row items-center gap-3 px-4 py-3.5">
       <View className="w-8 h-8 rounded-lg bg-primary/10 items-center justify-center">
@@ -92,7 +93,7 @@ function SwitchRow({
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: "#d4c8a8", true: "#e6b420" }}
+        trackColor={{ false: "#d4c8a8", true: ACCENT }}
         thumbColor={value ? "#fff" : "#f4f3f4"}
       />
     </View>
@@ -108,7 +109,7 @@ function Divider() {
 // ---------------------------------------------------------------------------
 export default function SettingScreen({ navigation }) {
   const dispatch = useDispatch();
-  const { Address, Nickname } = useSelector(selectUserTabMe);
+  const { Address, Nickname, Seed } = useSelector(selectUserTabMe);
   const connectedCount = useSelector(selectConnectedServerCount);
   const { isDark, toggle } = useDarkMode();
 
@@ -144,36 +145,80 @@ export default function SettingScreen({ navigation }) {
   const [avatarLoading, setAvatarLoading] = useState(false);
   const handleAvatarPress = useCallback(async () => {
     if (avatarLoading) return;
-    Alert.alert("Change Avatar", "Select a photo from your library.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Photo Library",
-        onPress: async () => {
-          setAvatarLoading(true);
-          try {
-            const image = await pickImage();
-            if (!image) {
-              setAvatarLoading(false);
-              return;
-            }
-            const base64Data = await RNFS.readFile(image.uri, "base64");
-            const content = base64ToUint8Array(base64Data);
-            const hash = FileHash(content);
-            const size = image.fileSize || content.length;
-            await fileService.writeFile(
-              fileService.getAvatarPath(Address),
-              content,
-            );
-            dispatch(SaveSelfAvatar({ hash, size, timestamp: Date.now() }));
-          } catch (e) {
-            Alert.alert("Avatar", e.message || "Failed to upload avatar");
-          } finally {
-            setAvatarLoading(false);
-          }
-        },
-      },
-    ]);
+    setAvatarLoading(true);
+    try {
+      // Open the picker with a native crop UI (square, like the Client's AvatarCropper).
+      const image = await ImageCropPicker.openPicker({
+        mediaType: "photo",
+        cropping: true,
+        cropperCircular: true,
+        cropperAspect: [1, 1],
+        maxWidth: 512,
+        maxHeight: 512,
+        showCropUI: true,
+      });
+      if (!image || !image.path) {
+        setAvatarLoading(false);
+        return;
+      }
+      const base64Data = await RNFS.readFile(image.path, "base64");
+      const content = base64ToUint8Array(base64Data);
+      const hash = FileHash(content);
+      const size = image.size || content.length;
+      await fileService.writeFile(fileService.getAvatarPath(Address), content);
+      dispatch(SaveSelfAvatar({ hash, size, timestamp: Date.now() }));
+    } catch (e) {
+      if (e?.code !== "E_CANCELED") {
+        Alert.alert("Avatar", e.message || "Failed to set avatar");
+      }
+    } finally {
+      setAvatarLoading(false);
+    }
   }, [Address, dispatch, avatarLoading]);
+
+  // --- Copy Seed ---
+  const handleCopySeed = useCallback(() => {
+    if (!Seed) {
+      dispatch(
+        setFlashNoticeMessage({
+          message: "No seed available (temporary login?)",
+          duration: 2000,
+        }),
+      );
+      return;
+    }
+    Clipboard.setString(Seed);
+    dispatch(
+      setFlashNoticeMessage({
+        message: "Seed copied to clipboard",
+        duration: 2000,
+      }),
+    );
+  }, [Seed, dispatch]);
+
+  // --- Delete Account ---
+  const handleDelAccount = useCallback(() => {
+    Alert.alert(
+      "Delete Account",
+      `Remove saved account ${Address?.slice(0, 10)}...${Address?.slice(-6)}? You will stay logged in.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            dispatch(AccountDel({ address: Address }));
+            dispatch(
+              setFlashNoticeMessage({
+                message: "Account deleted",
+                duration: 2000,
+              }),
+            );
+          },
+        },
+      ],
+    );
+  }, [Address, dispatch]);
 
   // --- Logout ---
   const handleLogout = useCallback(() => {
@@ -187,8 +232,7 @@ export default function SettingScreen({ navigation }) {
     ]);
   }, [dispatch]);
 
-  // --- Notifications + sound (persisted via SettingsUtil) ---
-  const [enableNotifications, setEnableNotifications] = useState(true);
+  // --- Sound (persisted via SettingsUtil) ---
   const [messageSound, setMessageSound] = useState("chime");
   const [showSoundSheet, setShowSoundSheet] = useState(false);
 
@@ -200,14 +244,12 @@ export default function SettingScreen({ navigation }) {
   useEffect(() => {
     (async () => {
       try {
-        const [notif, sound, follow, priv, group] = await Promise.all([
-          getSettingBool("enableNotifications", true),
+        const [sound, follow, priv, group] = await Promise.all([
           getSettingString("messageSound", "chime"),
           getSettingBool("autoDownloadFollowFiles", true),
           getSettingBool("autoDownloadPrivateFiles", true),
           getSettingBool("autoDownloadGroupFiles", true),
         ]);
-        setEnableNotifications(notif);
         setMessageSound(sound);
         setAutoDownloadFollow(follow);
         setAutoDownloadPrivate(priv);
@@ -216,15 +258,6 @@ export default function SettingScreen({ navigation }) {
         // use defaults
       }
     })();
-  }, []);
-
-  const handleNotificationToggle = useCallback(async (value) => {
-    setEnableNotifications(value);
-    try {
-      await setSetting("enableNotifications", value);
-    } catch {
-      // fail silently
-    }
   }, []);
 
   const handleAutoDownloadFollowToggle = useCallback(async (value) => {
@@ -310,6 +343,30 @@ export default function SettingScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Account actions: copy seed / delete account */}
+        <View className="flex-row gap-3 mx-4 mb-2">
+          <TouchableOpacity
+            onPress={handleCopySeed}
+            activeOpacity={0.7}
+            className="flex-1 bg-surface-card border border-secondary-light rounded-xl py-3 flex-row items-center justify-center gap-2"
+          >
+            <Ionicons name="copy-outline" size={16} color="#a89f85" />
+            <Text className="text-sm font-medium text-text-primary">
+              Copy Seed
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleDelAccount}
+            activeOpacity={0.7}
+            className="flex-1 bg-surface-card border border-red-400/40 rounded-xl py-3 flex-row items-center justify-center gap-2"
+          >
+            <Ionicons name="trash-outline" size={16} color="#ef4444" />
+            <Text className="text-sm font-medium text-red-500">
+              Delete Account
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Preferences */}
         <SectionHeader icon="color-palette-outline" label="Preferences" />
         <View className="bg-surface-card rounded-2xl mx-4 border border-secondary-light overflow-hidden">
@@ -318,13 +375,6 @@ export default function SettingScreen({ navigation }) {
             label="Dark Mode"
             value={isDark}
             onValueChange={toggle}
-          />
-          <Divider />
-          <SwitchRow
-            icon="notifications-outline"
-            label="Notifications"
-            value={enableNotifications}
-            onValueChange={handleNotificationToggle}
           />
           <Divider />
           <NavRow

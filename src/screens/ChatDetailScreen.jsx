@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -9,32 +9,50 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
-} from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useDispatch, useSelector } from 'react-redux';
+  Clipboard,
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { useDispatch, useSelector } from "react-redux";
 
-import AvatarImage from '../components/AvatarImage';
-import { selectCurrentSession, selectCurrentSessionMessages, selectUserAddress, selectContactMap, selectMessengerConnStatus, selectGroupMembers } from '../selectors';
-import { SendContent, LoadCurrentSession, LoadSessionList, SendFile, FetchChatFile, SaveChatFile } from '../store/sagas/messenger.actions';
-import { pickFile } from '../services/mediaPicker';
-import { SessionType } from '../lib/AppConst';
-import { MessageObjectType } from '../lib/MessengerConst';
-import { dbAPI } from '../db';
+import AvatarImage from "../components/AvatarImage";
+import InlineImage from "../components/InlineImage";
+import {
+  selectCurrentSession,
+  selectCurrentSessionMessages,
+  selectUserAddress,
+  selectContactMap,
+  selectMessengerConnStatus,
+  selectGroupMembers,
+} from "../selectors";
+import {
+  SendContent,
+  LoadCurrentSession,
+  LoadSessionList,
+  SendFile,
+  FetchChatFile,
+  SaveChatFile,
+} from "../store/sagas/messenger.actions";
+import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
+import { pickFile } from "../services/mediaPicker";
+import { SessionType } from "../lib/AppConst";
+import { MessageObjectType } from "../lib/MessengerConst";
+import { dbAPI } from "../db";
+import { ACCENT } from "../lib/theme";
 
 /**
  * Format a timestamp (ms epoch) into HH:mm time string.
  */
 function formatTime(timestamp) {
-  if (!timestamp || typeof timestamp !== 'number') return '';
+  if (!timestamp || typeof timestamp !== "number") return "";
   const date = new Date(timestamp);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 /**
  * Format file size in bytes to a human-readable string.
  */
 function formatFileSize(bytes) {
-  if (!bytes || bytes <= 0) return '';
+  if (!bytes || bytes <= 0) return "";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -44,19 +62,20 @@ function formatFileSize(bytes) {
  * Get initials from an address for avatar placeholder.
  */
 function getInitials(address) {
-  if (!address) return '?';
-  return (address.substring(0, 2)).toUpperCase();
+  if (!address) return "?";
+  return address.substring(0, 2).toUpperCase();
 }
 
 /**
  * Resolve a display name for an address using the contact map.
  */
 function resolveName(address, contactMap) {
-  const contact = contactMap[address];
-  if (contact?.nickname) return contact.nickname;
-  // Show truncated address
+  const nickname = contactMap[address];
+  if (nickname) return nickname;
   if (address.length > 10) {
-    return address.substring(0, 5) + '...' + address.substring(address.length - 4);
+    return (
+      address.substring(0, 5) + "..." + address.substring(address.length - 4)
+    );
   }
   return address;
 }
@@ -65,7 +84,7 @@ function resolveName(address, contactMap) {
  * Shorten an address for compact display.
  */
 function shortenAddress(addr) {
-  if (!addr || addr.length < 14) return addr || '';
+  if (!addr || addr.length < 14) return addr || "";
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
@@ -73,7 +92,7 @@ function shortenAddress(addr) {
  * Extract plain text content from a message.
  */
 function extractContent(msg) {
-  if (!msg) return '';
+  if (!msg) return "";
   if (msg.is_object && msg.content) {
     const obj = msg.content;
     if (obj.Name) {
@@ -81,15 +100,18 @@ function extractContent(msg) {
     }
     // Bulletin reference
     if (obj.ObjectType === MessageObjectType.Bulletin) {
-      return '📰 Shared a bulletin';
+      return "📰 Shared a bulletin";
     }
     // File object (PrivateChatFile or GroupChatFile)
-    if (obj.ObjectType === MessageObjectType.PrivateChatFile || obj.ObjectType === MessageObjectType.GroupChatFile) {
-      const name = obj.Name || 'File';
+    if (
+      obj.ObjectType === MessageObjectType.PrivateChatFile ||
+      obj.ObjectType === MessageObjectType.GroupChatFile
+    ) {
+      const name = obj.Name || "File";
       return `📎 ${name}`;
     }
   }
-  return typeof msg.content === 'string' ? msg.content : '';
+  return typeof msg.content === "string" ? msg.content : "";
 }
 
 /**
@@ -98,7 +120,10 @@ function extractContent(msg) {
 function isFileMessage(msg) {
   if (!msg?.is_object || !msg?.content) return false;
   const obj = msg.content;
-  return obj.ObjectType === MessageObjectType.PrivateChatFile || obj.ObjectType === MessageObjectType.GroupChatFile;
+  return (
+    obj.ObjectType === MessageObjectType.PrivateChatFile ||
+    obj.ObjectType === MessageObjectType.GroupChatFile
+  );
 }
 
 /**
@@ -119,27 +144,37 @@ function getMessageKey(msg) {
  * @param {object} props.fileDownloadStatus - Map of messageKey -> 'downloading' | 'saved'
  * @param {function} props.onFileTap - Callback when a file bubble is tapped
  */
-const MessageBubble = React.memo(function MessageBubble({ message, mode, selfAddress, contactMap, fileDownloadStatus, onFileTap }) {
-  const senderField = mode === 'group' ? 'address' : 'sour';
-  const senderAddress = message[senderField] || '';
+const MessageBubble = React.memo(function MessageBubble({
+  message,
+  mode,
+  selfAddress,
+  contactMap,
+  fileDownloadStatus,
+  onFileTap,
+}) {
+  const senderField = mode === "group" ? "address" : "sour";
+  const senderAddress = message[senderField] || "";
   const isSelf = senderAddress === selfAddress;
 
   const content = extractContent(message);
   const fileStatus = fileDownloadStatus?.[getMessageKey(message)];
 
   return (
-    <View className={`flex-row ${isSelf ? 'flex-row-reverse' : ''} mb-3`}>
+    <View className={`flex-row ${isSelf ? "flex-row-reverse" : ""} mb-3`}>
       {/* Sender avatar */}
       <AvatarImage
         address={senderAddress}
         nickname={!isSelf ? resolveName(senderAddress, contactMap) : undefined}
         size={32}
-        style={{ marginLeft: isSelf ? 8 : undefined, marginRight: !isSelf ? 8 : undefined }}
+        style={{
+          marginLeft: isSelf ? 8 : undefined,
+          marginRight: !isSelf ? 8 : undefined,
+        }}
       />
 
-      <View className={`max-w-[75%] ${isSelf ? 'items-end' : 'items-start'}`}>
+      <View className={`max-w-[75%] ${isSelf ? "items-end" : "items-start"}`}>
         {/* Sender name (group mode, or when not self) */}
-        {!isSelf && mode === 'group' && (
+        {!isSelf && mode === "group" && (
           <Text className="text-xs text-text-secondary/70 mb-1 ml-1">
             {resolveName(senderAddress, contactMap)}
           </Text>
@@ -149,41 +184,57 @@ const MessageBubble = React.memo(function MessageBubble({ message, mode, selfAdd
         <View
           className={`px-3 py-2 rounded-2xl ${
             isSelf
-              ? 'bg-primary/30 rounded-tr-sm'
-              : 'bg-surface-alt rounded-tl-sm border border-secondary-light/20'
+              ? "bg-primary/30 rounded-tr-sm"
+              : "bg-surface-alt rounded-tl-sm border border-secondary-light/20"
           }`}
         >
           {/* File message — tappable with download status */}
           {isFileMessage(message) ? (
-            <TouchableOpacity
-              onPress={() => onFileTap?.(message)}
-              activeOpacity={0.6}
-              disabled={fileStatus === 'downloading'}
-            >
-              <View className="flex-row items-center gap-2">
-                <Ionicons
-                  name={fileStatus === 'saved' ? "checkmark-circle" : "document-attach"}
-                  size={16}
-                  color={fileStatus === 'saved' ? '#22c55e' : fileStatus === 'downloading' ? '#f59e0b' : '#a89f85'}
-                />
-                <Text className="text-base text-text-primary">
-                  {content}
-                </Text>
-                {message.content?.Size > 0 && (
-                  <Text className="text-xs text-text-secondary/60">
-                    ({formatFileSize(message.content.Size)})
-                  </Text>
-                )}
-                {fileStatus === 'downloading' && (
-                  <Text className="text-xs text-warning">Downloading...</Text>
-                )}
-              </View>
+            <View>
+              {/* Inline preview for image files */}
+              <InlineImage
+                hash={message.content?.Hash}
+                ext={message.content?.Ext || ""}
+                containerStyle={{ marginBottom: 6 }}
+              />
+              <TouchableOpacity
+                onPress={() => onFileTap?.(message)}
+                activeOpacity={0.6}
+                disabled={fileStatus === "downloading"}
+              >
+                <View className="flex-row items-center gap-2">
+                  <Ionicons
+                    name={
+                      fileStatus === "saved"
+                        ? "checkmark-circle"
+                        : "document-attach"
+                    }
+                    size={16}
+                    color={
+                      fileStatus === "saved"
+                        ? "#22c55e"
+                        : fileStatus === "downloading"
+                          ? "#f59e0b"
+                          : "#a89f85"
+                    }
+                  />
+                  <Text className="text-base text-text-primary">{content}</Text>
+                  {message.content?.Size > 0 && (
+                    <Text className="text-xs text-text-secondary/60">
+                      ({formatFileSize(message.content.Size)})
+                    </Text>
+                  )}
+                  {fileStatus === "downloading" && (
+                    <Text className="text-xs text-warning">Downloading...</Text>
+                  )}
+                </View>
 
-              {/* Timestamp */}
-              <Text className="text-[10px] text-text-secondary/50 mt-1">
-                {formatTime(message.signed_at)}
-              </Text>
-            </TouchableOpacity>
+                {/* Timestamp */}
+                <Text className="text-[10px] text-text-secondary/50 mt-1">
+                  {formatTime(message.signed_at)}
+                </Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <>
               {/* Message content */}
@@ -230,7 +281,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
 
     (async () => {
       try {
-        if (mode === 'private') {
+        if (mode === "private") {
           const remoteAddr = session.remote || session.address;
           const [friend, follow] = await Promise.all([
             dbAPI.getFriend(selfAddress, remoteAddr),
@@ -241,18 +292,22 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
         } else {
           // Group mode
           const members = groupMembers[session.hash] || session.member || [];
-          const filtered = Array.isArray(members) ? members.filter(m => m !== selfAddress) : [];
+          const filtered = Array.isArray(members)
+            ? members.filter((m) => m !== selfAddress)
+            : [];
           if (!isMounted) return;
           setInfo({ members: filtered });
         }
       } catch (e) {
-        console.error('[ChatInfoModal] failed to load info:', e.message);
+        console.error("[ChatInfoModal] failed to load info:", e.message);
       } finally {
         if (isMounted) setLoading(false);
       }
     })();
 
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [visible, session, mode, selfAddress, groupMembers]);
 
   return (
@@ -263,11 +318,11 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
       onRequestClose={onClose}
     >
       <View className="flex-1 bg-black/45 justify-center items-center px-6">
-        <View className="w-full max-w-sm bg-white rounded-2xl p-5">
+        <View className="w-full max-w-sm bg-surface-card rounded-2xl p-5 border border-secondary-light">
           {/* Header */}
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-lg font-bold text-text-primary">
-              {mode === 'private' ? 'Contact Info' : 'Group Info'}
+              {mode === "private" ? "Contact Info" : "Group Info"}
             </Text>
             <TouchableOpacity onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={24} color="#999" />
@@ -277,21 +332,30 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
           {loading ? (
             <View className="items-center py-8">
               <Ionicons name="hourglass" size={32} color="#d4c8a8" />
-              <Text className="text-sm text-text-secondary mt-2">Loading...</Text>
+              <Text className="text-sm text-text-secondary mt-2">
+                Loading...
+              </Text>
             </View>
-          ) : mode === 'private' ? (
+          ) : mode === "private" ? (
             /* Private chat info */
             <View>
               {/* Contact name + address */}
               <View className="mb-3">
-                <Text className="text-xs text-text-secondary/60 mb-1">Contact</Text>
+                <Text className="text-xs text-text-secondary/60 mb-1">
+                  Contact
+                </Text>
                 <Text className="text-base font-semibold text-text-primary">
                   {resolveName(session.remote || session.address, contactMap)}
                 </Text>
               </View>
               <View className="mb-3">
-                <Text className="text-xs text-text-secondary/60 mb-1">Address</Text>
-                <Text className="text-sm text-text-primary font-mono" numberOfLines={1}>
+                <Text className="text-xs text-text-secondary/60 mb-1">
+                  Address
+                </Text>
+                <Text
+                  className="text-sm text-text-primary font-mono"
+                  numberOfLines={1}
+                >
                   {session.remote || session.address}
                 </Text>
               </View>
@@ -301,12 +365,16 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
                 <Text className="text-sm text-text-primary">Following</Text>
                 <View className="flex-row items-center gap-1.5">
                   <Ionicons
-                    name={info?.follow ? "checkmark-circle" : "close-circle-outline"}
+                    name={
+                      info?.follow ? "checkmark-circle" : "close-circle-outline"
+                    }
                     size={18}
-                    color={info?.follow ? '#22c55e' : '#999'}
+                    color={info?.follow ? "#22c55e" : "#999"}
                   />
-                  <Text className={`text-sm ${info?.follow ? 'text-status-success' : 'text-text-secondary/60'}`}>
-                    {info?.follow ? 'Yes' : 'No'}
+                  <Text
+                    className={`text-sm ${info?.follow ? "text-status-success" : "text-text-secondary/60"}`}
+                  >
+                    {info?.follow ? "Yes" : "No"}
                   </Text>
                 </View>
               </View>
@@ -316,27 +384,41 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
                 <Text className="text-sm text-text-primary">Friend</Text>
                 <View className="flex-row items-center gap-1.5">
                   <Ionicons
-                    name={info?.friend ? "checkmark-circle" : "close-circle-outline"}
+                    name={
+                      info?.friend ? "checkmark-circle" : "close-circle-outline"
+                    }
                     size={18}
-                    color={info?.friend ? '#22c55e' : '#999'}
+                    color={info?.friend ? "#22c55e" : "#999"}
                   />
-                  <Text className={`text-sm ${info?.friend ? 'text-status-success' : 'text-text-secondary/60'}`}>
-                    {info?.friend ? 'Yes' : 'No'}
+                  <Text
+                    className={`text-sm ${info?.friend ? "text-status-success" : "text-text-secondary/60"}`}
+                  >
+                    {info?.friend ? "Yes" : "No"}
                   </Text>
                 </View>
               </View>
 
               {/* ECDH handshake status */}
               <View className="flex-row items-center justify-between py-2 border-t border-secondary-light/20">
-                <Text className="text-sm text-text-primary">ECDH Handshake</Text>
+                <Text className="text-sm text-text-primary">
+                  ECDH Handshake
+                </Text>
                 <View className="flex-row items-center gap-1.5">
                   <Ionicons
-                    name={session.aes_key !== undefined ? "checkmark-circle" : "time-outline"}
+                    name={
+                      session.aes_key !== undefined
+                        ? "checkmark-circle"
+                        : "time-outline"
+                    }
                     size={18}
-                    color={session.aes_key !== undefined ? '#22c55e' : '#f59e0b'}
+                    color={
+                      session.aes_key !== undefined ? "#22c55e" : "#f59e0b"
+                    }
                   />
-                  <Text className={`text-sm ${session.aes_key !== undefined ? 'text-status-success' : 'text-warning'}`}>
-                    {session.aes_key !== undefined ? 'Established' : 'Pending'}
+                  <Text
+                    className={`text-sm ${session.aes_key !== undefined ? "text-status-success" : "text-warning"}`}
+                  >
+                    {session.aes_key !== undefined ? "Established" : "Pending"}
                   </Text>
                 </View>
               </View>
@@ -346,16 +428,23 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
             <View>
               {/* Group name */}
               <View className="mb-3">
-                <Text className="text-xs text-text-secondary/60 mb-1">Group Name</Text>
+                <Text className="text-xs text-text-secondary/60 mb-1">
+                  Group Name
+                </Text>
                 <Text className="text-base font-semibold text-text-primary">
-                  {session.name || 'Group'}
+                  {session.name || "Group"}
                 </Text>
               </View>
 
               {/* Group hash */}
               <View className="mb-3">
-                <Text className="text-xs text-text-secondary/60 mb-1">Group Hash</Text>
-                <Text className="text-xs text-text-primary font-mono" numberOfLines={2}>
+                <Text className="text-xs text-text-secondary/60 mb-1">
+                  Group Hash
+                </Text>
+                <Text
+                  className="text-xs text-text-primary font-mono"
+                  numberOfLines={2}
+                >
                   {session.hash}
                 </Text>
               </View>
@@ -370,14 +459,39 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
               {/* Member list */}
               <View className="max-h-[300px] overflow-y-auto">
                 {info?.members?.map((member, idx) => (
-                  <View key={member || `member-${idx}`} className="flex-row items-center gap-2 py-1.5">
+                  <View
+                    key={member || `member-${idx}`}
+                    className="flex-row items-center gap-2 py-1.5"
+                  >
                     <Ionicons name="person" size={16} color="#a89f85" />
-                    <Text className="text-sm text-text-primary flex-1" numberOfLines={1}>
+                    <Text
+                      className="text-sm text-text-primary flex-1"
+                      numberOfLines={1}
+                    >
                       {resolveName(member, contactMap)}
                     </Text>
-                    <Text className="text-[10px] text-text-secondary/50 font-mono" numberOfLines={1}>
+                    <Text
+                      className="text-[10px] text-text-secondary/50 font-mono"
+                      numberOfLines={1}
+                    >
                       {shortenAddress(member)}
                     </Text>
+                    <TouchableOpacity
+                      activeOpacity={0.6}
+                      hitSlop={8}
+                      onPress={() => {
+                        Clipboard.setString(member);
+                        dispatch(
+                          setFlashNoticeMessage({
+                            message: `Copied ${member.slice(0, 8)}...`,
+                            duration: 2000,
+                          }),
+                        );
+                      }}
+                      className="p-1"
+                    >
+                      <Ionicons name="copy-outline" size={14} color="#a89f85" />
+                    </TouchableOpacity>
                   </View>
                 ))}
               </View>
@@ -390,7 +504,9 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
             activeOpacity={0.6}
             className="mt-4 bg-primary/20 rounded-xl py-3 items-center"
           >
-            <Text className="text-sm font-semibold text-text-primary">Close</Text>
+            <Text className="text-sm font-semibold text-text-primary">
+              Close
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -420,21 +536,21 @@ export default function ChatDetailScreen({ route, navigation }) {
   const contactMap = useSelector(selectContactMap);
   const isConnected = useSelector(selectMessengerConnStatus);
 
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [fileDownloadStatus, setFileDownloadStatus] = useState({});
   const refreshingRef = useRef(false);
   const flatListRef = useRef(null);
 
   // Determine if this is private or group
-  const mode = session.type === SessionType.Group ? 'group' : 'private';
+  const mode = session.type === SessionType.Group ? "group" : "private";
 
   // Session display name
-  let sessionName = '';
+  let sessionName = "";
   if (session.type === SessionType.Private) {
     sessionName = resolveName(session.remote || session.address, contactMap);
   } else {
-    sessionName = session.name || 'Group';
+    sessionName = session.name || "Group";
   }
 
   // Use currentSession (which may be updated by saga) or fall back to route param
@@ -462,14 +578,16 @@ export default function ChatDetailScreen({ route, navigation }) {
     if (!content) return;
 
     dispatch(SendContent({ content }));
-    setInputText('');
+    setInputText("");
   }, [inputText, dispatch]);
 
   const handleRefresh = useCallback(() => {
     if (refreshingRef.current) return;
     refreshingRef.current = true;
     dispatch(LoadCurrentSession(session));
-    setTimeout(() => { refreshingRef.current = false; }, 3000);
+    setTimeout(() => {
+      refreshingRef.current = false;
+    }, 3000);
   }, [dispatch, session]);
 
   const handleBack = useCallback(() => {
@@ -483,54 +601,64 @@ export default function ChatDetailScreen({ route, navigation }) {
     dispatch(SendFile({ file_uri: result.uri }));
   }, [dispatch]);
 
-  const handleFileTap = useCallback(async (message) => {
-    const fileHash = message.content?.Hash;
-    if (!fileHash) return;
+  const handleFileTap = useCallback(
+    async (message) => {
+      const fileHash = message.content?.Hash;
+      if (!fileHash) return;
 
-    // Check current file status in DB
-    const existingFile = await dbAPI.getFileByHash(fileHash);
-    const msgKey = getMessageKey(message);
+      // Check current file status in DB
+      const existingFile = await dbAPI.getFileByHash(fileHash);
+      const msgKey = getMessageKey(message);
 
-    if (existingFile?.is_saved) {
-      // File already saved locally, trigger SaveChatFile to copy to shared location
-      setFileDownloadStatus(prev => ({ ...prev, [msgKey]: 'saved' }));
-      dispatch(SaveChatFile({
-        hash: fileHash,
-        name: message.content.Name || 'file',
-        ext: message.content.Ext || '',
-      }));
-    } else {
-      // Start downloading
-      setFileDownloadStatus(prev => ({ ...prev, [msgKey]: 'downloading' }));
-      dispatch(FetchChatFile({
-        hash: fileHash,
-        size: message.content.Size,
-      }));
-    }
-  }, [dispatch]);
+      if (existingFile?.is_saved) {
+        // File already saved locally, trigger SaveChatFile to copy to shared location
+        setFileDownloadStatus((prev) => ({ ...prev, [msgKey]: "saved" }));
+        dispatch(
+          SaveChatFile({
+            hash: fileHash,
+            name: message.content.Name || "file",
+            ext: message.content.Ext || "",
+          }),
+        );
+      } else {
+        // Start downloading
+        setFileDownloadStatus((prev) => ({ ...prev, [msgKey]: "downloading" }));
+        dispatch(
+          FetchChatFile({
+            hash: fileHash,
+            size: message.content.Size,
+          }),
+        );
+      }
+    },
+    [dispatch],
+  );
 
-  const renderMessage = useCallback(({ item }) => (
-    <MessageBubble
-      message={item}
-      mode={mode}
-      selfAddress={selfAddress}
-      contactMap={contactMap}
-      fileDownloadStatus={fileDownloadStatus}
-      onFileTap={handleFileTap}
-    />
-  ), [mode, selfAddress, contactMap, fileDownloadStatus, handleFileTap]);
+  const renderMessage = useCallback(
+    ({ item }) => (
+      <MessageBubble
+        message={item}
+        mode={mode}
+        selfAddress={selfAddress}
+        contactMap={contactMap}
+        fileDownloadStatus={fileDownloadStatus}
+        onFileTap={handleFileTap}
+      />
+    ),
+    [mode, selfAddress, contactMap, fileDownloadStatus, handleFileTap],
+  );
 
   const keyExtractor = useCallback((item) => {
     return item.hash || `msg-${item.sequence}-${item.signed_at}`;
   }, []);
 
   // Determine if AES key is ready (can send messages)
-  const canSend = currentSession?.aes_key !== undefined || mode === 'group';
+  const canSend = currentSession?.aes_key !== undefined || mode === "group";
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       className="flex-1 bg-surface"
     >
       {/* Header */}
@@ -541,10 +669,12 @@ export default function ChatDetailScreen({ route, navigation }) {
 
         <View className="flex-row items-center flex-1 ml-2">
           {/* Session avatar */}
-          <View className={`w-9 h-9 rounded-full items-center justify-center ${
-            mode === 'group' ? 'bg-secondary/40' : 'bg-primary/30'
-          }`}>
-            {mode === 'group' ? (
+          <View
+            className={`w-9 h-9 rounded-full items-center justify-center ${
+              mode === "group" ? "bg-secondary/40" : "bg-primary/30"
+            }`}
+          >
+            {mode === "group" ? (
               <Ionicons name="people" size={18} color="#8a7a5a" />
             ) : (
               <Text className="text-xs font-bold text-text-primary">
@@ -554,23 +684,35 @@ export default function ChatDetailScreen({ route, navigation }) {
           </View>
 
           <View className="ml-2">
-            <Text className="text-base font-semibold text-text-primary" numberOfLines={1}>
+            <Text
+              className="text-base font-semibold text-text-primary"
+              numberOfLines={1}
+            >
               {sessionName}
             </Text>
             <View className="flex-row items-center">
-              <View className={`w-1.5 h-1.5 rounded-full ${
-                isConnected ? 'bg-status-success' : 'bg-status-error'
-              }`} />
+              <View
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isConnected ? "bg-status-success" : "bg-status-error"
+                }`}
+              />
               <Text className="text-[10px] text-text-secondary/60 ml-1">
-                {isConnected ? 'Online' : 'Offline'}
+                {isConnected ? "Online" : "Offline"}
               </Text>
             </View>
           </View>
         </View>
 
         {/* Info button */}
-        <TouchableOpacity onPress={() => setShowInfoModal(true)} activeOpacity={0.6}>
-          <Ionicons name="information-circle-outline" size={22} color="#a89f85" />
+        <TouchableOpacity
+          onPress={() => setShowInfoModal(true)}
+          activeOpacity={0.6}
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={22}
+            color="#a89f85"
+          />
         </TouchableOpacity>
       </View>
 
@@ -585,16 +727,20 @@ export default function ChatDetailScreen({ route, navigation }) {
           <RefreshControl
             refreshing={refreshingRef.current}
             onRefresh={handleRefresh}
-            tintColor="#e6b420"
+            tintColor={ACCENT}
           />
         }
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center py-10">
-            <Ionicons name="chatbubble-ellipses-outline" size={48} color="#d4c8a8" />
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={48}
+              color="#d4c8a8"
+            />
             <Text className="text-base text-text-secondary mt-3">
               No messages yet
             </Text>
-            {!canSend && mode !== 'group' && (
+            {!canSend && mode !== "group" && (
               <Text className="text-xs text-text-secondary/50 mt-1 italic">
                 Waiting for handshake...
               </Text>
@@ -629,15 +775,13 @@ export default function ChatDetailScreen({ route, navigation }) {
           activeOpacity={0.6}
           disabled={!inputText.trim() || !canSend}
           className={`w-10 h-10 rounded-full items-center justify-center ${
-            inputText.trim() && canSend
-              ? 'bg-primary'
-              : 'bg-secondary-light/40'
+            inputText.trim() && canSend ? "bg-primary" : "bg-secondary-light/40"
           }`}
         >
           <Ionicons
             name="send"
             size={20}
-            color={inputText.trim() && canSend ? '#ffffff' : '#a89f85'}
+            color={inputText.trim() && canSend ? "#ffffff" : "#a89f85"}
           />
         </TouchableOpacity>
       </View>

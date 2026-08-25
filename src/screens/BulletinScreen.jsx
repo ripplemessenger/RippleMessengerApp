@@ -15,11 +15,14 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import BulletinCard from "../components/Bulletin/BulletinCard";
 import PublishModal from "../components/Bulletin/PublishModal";
+import PasteModal from "../components/Bulletin/PasteModal";
 import { selectPortalBulletins, selectMessengerConnStatus } from "../selectors";
 import { LoadPortalBulletin } from "../store/sagas/messenger.actions";
+import { ACCENT } from "../lib/theme";
 import {
   setPublishFlag,
   setPublishTagList,
+  setPasteFlag,
 } from "../store/slices/MessengerSlice";
 
 /**
@@ -126,6 +129,13 @@ export default function BulletinScreen({ navigation }) {
     dispatch(setPublishFlag(true));
   }, [dispatch]);
 
+  // Paste bulletin modal state & handlers
+  const showPasteModal = useSelector((state) => state.Messenger.ShowPasteFlag);
+
+  const handleOpenPaste = useCallback(() => {
+    dispatch(setPasteFlag(true));
+  }, [dispatch]);
+
   // Tag search state & handlers
   const [showTagSearch, setShowTagSearch] = useState(false);
   const [searchTag, setSearchTag] = useState("");
@@ -148,13 +158,22 @@ export default function BulletinScreen({ navigation }) {
       <View className="px-4 py-3 bg-primary/5 border-b border-secondary-light/30">
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-bold text-text-primary">Portal</Text>
-          <TouchableOpacity
-            onPress={() => setShowTagSearch(true)}
-            activeOpacity={0.7}
-            className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
-          >
-            <Ionicons name="search" size={20} color="#e6b420" />
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-2">
+            <TouchableOpacity
+              onPress={handleOpenPaste}
+              activeOpacity={0.7}
+              className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+            >
+              <Ionicons name="clipboard" size={20} color={ACCENT} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowTagSearch(true)}
+              activeOpacity={0.7}
+              className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+            >
+              <Ionicons name="search" size={20} color={ACCENT} />
+            </TouchableOpacity>
+          </View>
         </View>
         <View className="flex-row items-center gap-2 mt-1">
           <View
@@ -181,7 +200,7 @@ export default function BulletinScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshingRef.current}
             onRefresh={handleRefresh}
-            tintColor="#e6b420"
+            tintColor={ACCENT}
           />
         }
         onEndReached={handleLoadMore}
@@ -202,7 +221,7 @@ export default function BulletinScreen({ navigation }) {
         ListFooterComponent={
           hasMore ? (
             <View className="py-4 items-center">
-              <ActivityIndicator size="small" color="#e6b420" />
+              <ActivityIndicator size="small" color={ACCENT} />
               <Text className="text-xs text-text-secondary/70 mt-1">
                 Loading more…
               </Text>
@@ -222,7 +241,7 @@ export default function BulletinScreen({ navigation }) {
           width: 56,
           height: 56,
           borderRadius: 28,
-          backgroundColor: "#e6b420",
+          backgroundColor: ACCENT,
           justifyContent: "center",
           alignItems: "center",
           shadowColor: "#000",
@@ -243,6 +262,12 @@ export default function BulletinScreen({ navigation }) {
         onClose={() => dispatch(setPublishFlag(false))}
       />
 
+      {/* Paste Bulletin Modal */}
+      <PasteModal
+        visible={showPasteModal}
+        onClose={() => dispatch(setPasteFlag(false))}
+      />
+
       {/* Tag Search Modal */}
       <Modal
         visible={showTagSearch}
@@ -256,7 +281,7 @@ export default function BulletinScreen({ navigation }) {
               Search Tags
             </Text>
             <View className="flex-row items-center gap-2 bg-surface border border-secondary-light rounded-xl px-4">
-              <Ionicons name="pricetag" size={18} color="#e6b420" />
+              <Ionicons name="pricetag" size={18} color={ACCENT} />
               <TextInput
                 value={`#${searchTag}`}
                 onChangeText={(text) => setSearchTag(text.replace(/^#/, ""))}

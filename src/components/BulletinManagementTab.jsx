@@ -21,6 +21,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { dbAPI } from "../db";
 
 import { selectUserAddress } from "../selectors";
+import { ACCENT } from '../lib/theme';
 
 const BULLETIN_PAGE_SIZE = 20;
 
@@ -385,7 +386,7 @@ export default function BulletinManagementTab() {
         <Ionicons
           name="document-outline"
           size={48}
-          color="#e6b420"
+          color={ACCENT}
           opacity={0.4}
         />
         <Text className="text-lg text-text-secondary">No bulletins</Text>
@@ -459,7 +460,7 @@ export default function BulletinManagementTab() {
               <Ionicons
                 name={isActive ? opt.icon : `${opt.icon}-outline`}
                 size={14}
-                color={isActive ? "#e6b420" : "#9a9590"}
+                color={isActive ? ACCENT : "#9a9590"}
               />
               <Text
                 className={`text-[10px] font-medium mt-0.5 ${
@@ -510,7 +511,7 @@ export default function BulletinManagementTab() {
             <Ionicons
               name={selectMode ? "checkmark-done" : "checkmark-circle-outline"}
               size={14}
-              color={selectMode ? "#e6b420" : "#9a9590"}
+              color={selectMode ? ACCENT : "#9a9590"}
             />
           </TouchableOpacity>
 
@@ -662,7 +663,7 @@ export default function BulletinManagementTab() {
                           : "ellipse-outline"
                       }
                       size={18}
-                      color={selectedTag === tagName ? "#e6b420" : "#9a9590"}
+                      color={selectedTag === tagName ? ACCENT : "#9a9590"}
                     />
                     <Text
                       className={`text-sm ${

@@ -12,6 +12,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import BulletinCard from '../components/Bulletin/BulletinCard';
 import { selectBookmarkBulletins } from '../selectors';
 import { LoadBookmarkBulletin } from '../store/sagas/messenger.actions';
+import { ACCENT } from '../lib/theme';
 
 /**
  * BookmarkBulletins — displays all bookmarked (marked) bulletins.
@@ -54,7 +55,7 @@ export default function BookmarkBulletins({ route, navigation }) {
         </Text>
       ),
       title: 'Bookmarks',
-      headerStyle: { backgroundColor: '#e6b420' },
+      headerStyle: { backgroundColor: ACCENT },
       headerTintColor: '#1a1a2e',
     });
   }, [navigation]);
@@ -111,7 +112,7 @@ export default function BookmarkBulletins({ route, navigation }) {
       {/* Header info */}
       <View className="px-4 py-3 bg-primary/5 border-b border-secondary-light/30">
         <View className="flex-row items-center gap-2">
-          <Ionicons name="star" size={20} color="#e6b420" />
+          <Ionicons name="star" size={20} color={ACCENT} />
           <Text className="text-lg font-bold text-text-primary">
             Bookmarked Posts
           </Text>
@@ -131,7 +132,7 @@ export default function BookmarkBulletins({ route, navigation }) {
           <RefreshControl
             refreshing={refreshingRef.current}
             onRefresh={handleRefresh}
-            tintColor="#e6b420"
+            tintColor={ACCENT}
           />
         }
         onEndReached={handleLoadMore}
@@ -150,7 +151,7 @@ export default function BookmarkBulletins({ route, navigation }) {
         ListFooterComponent={
           hasMore ? (
             <View className="py-4 items-center">
-              <ActivityIndicator size="small" color="#e6b420" />
+              <ActivityIndicator size="small" color={ACCENT} />
               <Text className="text-xs text-text-secondary/70 mt-1">Loading more…</Text>
             </View>
           ) : null

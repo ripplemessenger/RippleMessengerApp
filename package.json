@@ -18,6 +18,7 @@
     "react-native-css-interop": "^0.2.6",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "2.19.0",
+    "react-native-image-crop-picker": "^0.51.1",
     "react-native-image-picker": "^8.2.0",
     "react-native-nitro-modules": "^0.36.5",
     "react-native-nitro-sqlite": "^9.7.0",
@@ -37,7 +38,8 @@
     "start": "react-native start",
     "android": "cd android && ./gradlew assembleDebug",
     "android:release": "cd android && ./gradlew assembleRelease",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "postinstall": "node scripts/patch-crop-picker.js"
   },
   "private": true,
   "devDependencies": {

@@ -24,6 +24,7 @@ module.exports = [
       "tailwind.config.js",
       "eslint.config.js",
       "index.js",
+      "scripts/*.js",
     ],
     languageOptions: {
       sourceType: "commonjs",

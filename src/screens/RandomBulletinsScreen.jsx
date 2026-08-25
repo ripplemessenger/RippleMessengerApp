@@ -12,6 +12,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import BulletinCard from '../components/Bulletin/BulletinCard';
 import { selectRandomBulletins, selectMessengerConnStatus } from '../selectors';
 import { RequestRandomBulletin } from '../store/sagas/messenger.actions';
+import { ACCENT } from '../lib/theme';
 
 /**
  * RandomBulletinsScreen — displays random bulletins fetched from the network.
@@ -44,7 +45,7 @@ export default function RandomBulletinsScreen({ navigation }) {
         </Text>
       ),
       title: 'Random Posts',
-      headerStyle: { backgroundColor: '#e6b420' },
+      headerStyle: { backgroundColor: ACCENT },
       headerTintColor: '#1a1a2e',
     });
   }, [navigation]);
@@ -90,7 +91,7 @@ export default function RandomBulletinsScreen({ navigation }) {
       {/* Header info */}
       <View className="px-4 py-3 bg-primary/5 border-b border-secondary-light/30">
         <View className="flex-row items-center gap-2">
-          <Ionicons name="shuffle" size={20} color="#e6b420" />
+          <Ionicons name="shuffle" size={20} color={ACCENT} />
           <Text className="text-lg font-bold text-text-primary">
             Random Posts
           </Text>
@@ -119,7 +120,7 @@ export default function RandomBulletinsScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshingRef.current}
             onRefresh={handleRefresh}
-            tintColor="#e6b420"
+            tintColor={ACCENT}
           />
         }
         ListEmptyComponent={

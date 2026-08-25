@@ -1,54 +1,54 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { SessionType } from '../../lib/AppConst';
-import AvatarImage from '../AvatarImage';
+import React from "react";
+import { View, Text, TouchableOpacity } from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { SessionType } from "../../lib/AppConst";
+import AvatarImage from "../AvatarImage";
 
 /**
  * Format a timestamp (ms epoch) into a human-readable relative string.
  */
 function formatTimestamp(timestamp) {
-  if (!timestamp || typeof timestamp !== 'number' || timestamp <= 0) return '';
+  if (!timestamp || typeof timestamp !== "number" || timestamp <= 0) return "";
   const now = Date.now();
   const diff = now - timestamp;
 
   // Within today: show time HH:mm
   if (diff < 24 * 60 * 60 * 1000) {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
   // Yesterday
   if (diff < 48 * 60 * 60 * 1000) {
-    return 'Yesterday';
+    return "Yesterday";
   }
 
   // Within a week: day name
   if (diff < 7 * 24 * 60 * 60 * 1000) {
     const date = new Date(timestamp);
-    return date.toLocaleDateString([], { weekday: 'short' });
+    return date.toLocaleDateString([], { weekday: "short" });
   }
 
   // Older: full date
   const date = new Date(timestamp);
-  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
 /**
  * Truncate a string to a max length and append ellipsis.
  */
 function truncate(text, maxLength = 40) {
-  if (!text) return '';
+  if (!text) return "";
   if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength).trimEnd() + '…';
+  return text.substring(0, maxLength).trimEnd() + "…";
 }
 
 /**
  * Get the initials from an XRPL address for avatar placeholder.
  */
 function getInitials(address) {
-  if (!address) return '?';
-  return (address.substring(0, 2)).toUpperCase();
+  if (!address) return "?";
+  return address.substring(0, 2).toUpperCase();
 }
 
 /**
@@ -56,20 +56,20 @@ function getInitials(address) {
  * Truncates to 40 chars for display in session list.
  */
 function getMessagePreview(msg) {
-  if (!msg) return '';
+  if (!msg) return "";
   if (msg.is_object && msg.content) {
     const obj = msg.content;
     if (obj.Name) {
-      return 'Attached: ' + truncate(obj.Name, 30);
+      return "Attached: " + truncate(obj.Name, 30);
     }
     if (obj.ObjectType !== undefined) {
       if (obj.ObjectType === 101) {
-        return 'Shared a bulletin';
+        return "Shared a bulletin";
       }
-      return 'Shared a file';
+      return "Shared a file";
     }
   }
-  const text = typeof msg.content === 'string' ? msg.content : '';
+  const text = typeof msg.content === "string" ? msg.content : "";
   return truncate(text, 40);
 }
 
@@ -87,18 +87,23 @@ function buildSessionPreview(session) {
 
     // For group chats, prefix with sender address
     if (session.type === 1) {
-      const senderAddr = lastMsg.address || '';
-      const senderShort = senderAddr.length >= 10 ? `${senderAddr.slice(0, 5)}...${senderAddr.slice(-4)}` : senderAddr;
-      return preview ? `${senderShort}: ${preview}` : `${session.member?.length || 0} members`;
+      const senderAddr = lastMsg.address || "";
+      const senderShort =
+        senderAddr.length >= 10
+          ? `${senderAddr.slice(0, 5)}...${senderAddr.slice(-4)}`
+          : senderAddr;
+      return preview
+        ? `${senderShort}: ${preview}`
+        : `${session.member?.length || 0} members`;
     }
 
     // Private chat — message content, or fallback to member hint
-    return preview || '';
+    return preview || "";
   }
 
   // No messages at all yet
   if (session.new_msg_count > 0) {
-    return `${session.new_msg_count} new message${session.new_msg_count > 1 ? 's' : ''}`;
+    return `${session.new_msg_count} new message${session.new_msg_count > 1 ? "s" : ""}`;
   }
 
   // Truly empty session — show member count for groups only
@@ -106,7 +111,7 @@ function buildSessionPreview(session) {
     return `${session.member?.length || 0} members`;
   }
 
-  return '';
+  return "";
 }
 
 /**
@@ -118,20 +123,25 @@ function buildSessionPreview(session) {
  * @param {object} props.contactMap - Map of address -> contact info (for nicknames)
  * @param {string} props.selfAddress - Current user's XRPL address
  */
-export default React.memo(function SessionListItem({ session, onPress, contactMap = {}, selfAddress = '' }) {
+export default React.memo(function SessionListItem({
+  session,
+  onPress,
+  contactMap = {},
+  selfAddress = "",
+}) {
   const isPrivate = session.type === SessionType.Private;
   const isNewMessages = session.new_msg_count > 0;
 
   // Resolve display name
-  let displayName = '';
-  let avatarInitials = '';
+  let displayName = "";
+  let avatarInitials = "";
   if (isPrivate) {
-    const contact = contactMap[session.address];
-    displayName = contact?.nickname || truncate(session.address, 12);
+    const nickname = contactMap[session.address];
+    displayName = nickname || truncate(session.address, 12);
     avatarInitials = getInitials(session.address);
   } else {
-    displayName = session.name || 'Group';
-    avatarInitials = (displayName.substring(0, 2)).toUpperCase();
+    displayName = session.name || "Group";
+    avatarInitials = displayName.substring(0, 2).toUpperCase();
   }
 
   // Get last message preview text from the actual last message content
@@ -142,7 +152,7 @@ export default React.memo(function SessionListItem({ session, onPress, contactMa
       onPress={onPress}
       activeOpacity={0.6}
       className={`flex-row items-center px-4 py-3 ${
-        isNewMessages ? 'bg-primary/5' : 'bg-transparent'
+        isNewMessages ? "bg-primary/5" : "bg-transparent"
       } border-b border-secondary-light/20`}
     >
       {/* Avatar */}
@@ -150,7 +160,7 @@ export default React.memo(function SessionListItem({ session, onPress, contactMa
         {isPrivate ? (
           <AvatarImage
             address={session.address}
-            nickname={contactMap[session.address]?.nickname}
+            nickname={contactMap[session.address]}
             size={48}
           />
         ) : (
@@ -162,7 +172,7 @@ export default React.memo(function SessionListItem({ session, onPress, contactMa
         {isNewMessages && (
           <View className="absolute -top-1 -right-1 w-5 h-5 bg-status-error rounded-full items-center justify-center">
             <Text className="text-xs font-bold text-white">
-              {session.new_msg_count > 99 ? '99+' : session.new_msg_count}
+              {session.new_msg_count > 99 ? "99+" : session.new_msg_count}
             </Text>
           </View>
         )}
@@ -173,7 +183,7 @@ export default React.memo(function SessionListItem({ session, onPress, contactMa
         <View className="flex-row items-center justify-between">
           <Text
             className={`text-base font-semibold text-text-primary ${
-              isNewMessages ? 'font-bold' : ''
+              isNewMessages ? "font-bold" : ""
             }`}
             numberOfLines={1}
             ellipsizeMode="tail"
@@ -189,14 +199,15 @@ export default React.memo(function SessionListItem({ session, onPress, contactMa
           numberOfLines={1}
           ellipsizeMode="tail"
         >
-          {previewText || (isPrivate ? '' : `${(session.member?.length || 0)} members`)}
+          {previewText ||
+            (isPrivate ? "" : `${session.member?.length || 0} members`)}
         </Text>
       </View>
 
       {/* Type indicator */}
       <View className="ml-2">
         <Ionicons
-          name={isPrivate ? 'lock-closed' : 'people'}
+          name={isPrivate ? "lock-closed" : "people"}
           size={16}
           color="#a89f85"
         />

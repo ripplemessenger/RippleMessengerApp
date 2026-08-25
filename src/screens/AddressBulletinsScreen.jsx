@@ -12,6 +12,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import BulletinCard from '../components/Bulletin/BulletinCard';
 import { selectAddressBulletins } from '../selectors';
 import { LoadAddressBulletin } from '../store/sagas/messenger.actions';
+import { ACCENT } from '../lib/theme';
 
 /**
  * AddressBulletinsScreen — displays bulletins by a specific address.
@@ -62,7 +63,7 @@ export default function AddressBulletinsScreen({ route, navigation }) {
         </Text>
       ),
       title: displayAddr,
-      headerStyle: { backgroundColor: '#e6b420' },
+      headerStyle: { backgroundColor: ACCENT },
       headerTintColor: '#1a1a2e',
     });
   }, [navigation, routeAddress]);
@@ -118,7 +119,7 @@ export default function AddressBulletinsScreen({ route, navigation }) {
       {/* Header info */}
       <View className="px-4 py-3 bg-primary/5 border-b border-secondary-light/30">
         <View className="flex-row items-center gap-2">
-          <Ionicons name="person" size={20} color="#e6b420" />
+          <Ionicons name="person" size={20} color={ACCENT} />
           <Text className="text-lg font-bold text-text-primary">
             Address Posts
           </Text>
@@ -143,7 +144,7 @@ export default function AddressBulletinsScreen({ route, navigation }) {
           <RefreshControl
             refreshing={refreshingRef.current}
             onRefresh={handleRefresh}
-            tintColor="#e6b420"
+            tintColor={ACCENT}
           />
         }
         onEndReached={handleLoadMore}
@@ -164,7 +165,7 @@ export default function AddressBulletinsScreen({ route, navigation }) {
         ListFooterComponent={
           hasMore ? (
             <View className="py-4 items-center">
-              <ActivityIndicator size="small" color="#e6b420" />
+              <ActivityIndicator size="small" color={ACCENT} />
               <Text className="text-xs text-text-secondary/70 mt-1">Loading more…</Text>
             </View>
           ) : null

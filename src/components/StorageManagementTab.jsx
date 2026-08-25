@@ -6,6 +6,7 @@ import RNFS from "react-native-fs";
 import { dbAPI } from "../db";
 import * as fileService from "../services/fileService";
 import { filesize_format } from "../lib/AppUtil";
+import { ACCENT } from '../lib/theme';
 
 const STORAGE_PAGE_SIZE = 20;
 
@@ -369,7 +370,7 @@ export default function StorageManagementTab() {
 
           {/* File icon */}
           <View className="w-10 h-10 rounded-lg bg-primary/10 items-center justify-center">
-            <Ionicons name={icon} size={20} color="#e6b420" />
+            <Ionicons name={icon} size={20} color={ACCENT} />
           </View>
 
           {/* File info */}
@@ -434,7 +435,7 @@ export default function StorageManagementTab() {
         <Ionicons
           name="folder-open-outline"
           size={48}
-          color="#e6b420"
+          color={ACCENT}
           opacity={0.4}
         />
         <Text className="text-lg text-text-secondary">No files</Text>
@@ -569,7 +570,7 @@ export default function StorageManagementTab() {
           <Ionicons
             name={selectMode ? "checkmark-done" : "checkmark-circle-outline"}
             size={16}
-            color={selectMode ? "#e6b420" : "#9a9590"}
+            color={selectMode ? ACCENT : "#9a9590"}
           />
         </TouchableOpacity>
       </View>

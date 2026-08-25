@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { ACCENT } from "../lib/theme";
 
 import { selectGroupData, selectUserTabGroup } from "../selectors";
 import { GroupMemberMax } from "../lib/MessengerConst";
@@ -138,7 +139,7 @@ export default function GroupManagementTab() {
         >
           <View className="flex-row items-center gap-3 mb-2">
             <View className="w-10 h-10 rounded-full bg-primary/20 items-center justify-center">
-              <Ionicons name="people" size={20} color="#e6b420" />
+              <Ionicons name="people" size={20} color={ACCENT} />
             </View>
             <View className="flex-1 min-w-0">
               <Text className="text-base font-semibold text-text-primary truncate">
@@ -344,7 +345,7 @@ export default function GroupManagementTab() {
           <Ionicons
             name="people-circle-outline"
             size={48}
-            color="#e6b420"
+            color={ACCENT}
             opacity={0.4}
           />
           <Text className="text-lg text-text-secondary">No groups yet</Text>

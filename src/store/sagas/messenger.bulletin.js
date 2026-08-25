@@ -44,6 +44,7 @@ import {
   setAddressBulletinList,
   setFollowBulletinList,
   setRandomBulletinList,
+  setFileSavedToken,
 } from "../slices/MessengerSlice";
 
 import {
@@ -1064,6 +1065,7 @@ export function* BulletinFileAdd({ payload }) {
       );
     } else {
       yield call(() => dbAPI.localFileSaved(hash, chunk_length, Date.now()));
+      yield put(setFileSavedToken({ hash, timestamp: Date.now() }));
     }
 
     const fileRef = {

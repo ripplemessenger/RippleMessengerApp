@@ -28,6 +28,7 @@ import { FLASH_DURATION_MS } from "../../lib/AppConst";
 import { ListItemMax } from "../../lib/MessengerConst";
 import { filesize_format } from "../../lib/AppUtil";
 import { pickFile } from "../../services/mediaPicker";
+import { ACCENT } from "../../lib/theme";
 
 const MAX_CONTENT_LENGTH = 2000;
 
@@ -431,7 +432,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     width: 36,
-    backgroundColor: "#e6b420",
+    backgroundColor: ACCENT,
     borderRadius: 8,
   },
   tagAddBtnDisabled: {
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#f0e6c0",
   },
   publishBtn: {
-    backgroundColor: "#e6b420",
+    backgroundColor: ACCENT,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 50,

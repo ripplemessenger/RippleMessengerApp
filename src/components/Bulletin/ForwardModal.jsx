@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Modal,
   View,
@@ -7,15 +7,16 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-} from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useDispatch, useSelector } from 'react-redux';
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { useDispatch, useSelector } from "react-redux";
 
-import { ForwardBulletin } from '../../store/sagas/messenger.actions';
-import { setForwardFlag } from '../../store/slices/MessengerSlice';
-import { selectContactMap } from '../../selectors';
-import AvatarImage from '../AvatarImage';
-import { dbAPI } from '../../db';
+import { ForwardBulletin } from "../../store/sagas/messenger.actions";
+import { setForwardFlag } from "../../store/slices/MessengerSlice";
+import { selectContactMap } from "../../selectors";
+import AvatarImage from "../AvatarImage";
+import { dbAPI } from "../../db";
+import { ACCENT } from "../../lib/theme";
 
 let _forwardKeyCounter = 0;
 
@@ -31,18 +32,18 @@ let _forwardKeyCounter = 0;
  */
 
 function shortenAddress(addr) {
-  if (!addr || addr.length < 14) return addr || '';
+  if (!addr || addr.length < 14) return addr || "";
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
 export default function ForwardModal({ visible }) {
   const dispatch = useDispatch();
   const contactMap = useSelector(selectContactMap);
-  const selfAddress = useSelector(state => state.User.Address);
+  const selfAddress = useSelector((state) => state.User.Address);
 
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
 
   // Load friend list — defined before useEffect so it can be a dependency
   const loadFriends = useCallback(async () => {
@@ -52,7 +53,7 @@ export default function ForwardModal({ visible }) {
       const list = await dbAPI.getMyFriends(selfAddress);
       setFriends(list || []);
     } catch (e) {
-      console.error('[ForwardModal] failed to load friends:', e.message);
+      console.error("[ForwardModal] failed to load friends:", e.message);
     } finally {
       setLoading(false);
     }
@@ -62,7 +63,7 @@ export default function ForwardModal({ visible }) {
   useEffect(() => {
     if (visible) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state on modal open
-      setSearchText('');
+      setSearchText("");
       loadFriends();
     }
   }, [visible, selfAddress, loadFriends]);
@@ -71,49 +72,51 @@ export default function ForwardModal({ visible }) {
     dispatch(setForwardFlag(false));
   }, [dispatch]);
 
-  const handleForward = useCallback((contact) => {
-    // The saga will set setForwardFlag(false) closing the modal after send
-    dispatch(ForwardBulletin({ session: { address: contact.remote } }));
-  }, [dispatch]);
+  const handleForward = useCallback(
+    (contact) => {
+      // The saga will set setForwardFlag(false) closing the modal after send
+      dispatch(ForwardBulletin({ session: { address: contact.remote } }));
+    },
+    [dispatch],
+  );
 
   // Filter friends by search text
   const filteredFriends = useMemo(() => {
     return friends.filter((f) => {
       if (!searchText.trim()) return true;
       const searchLower = searchText.toLowerCase();
-      const nickname = (contactMap?.[f.remote]?.nickname || '').toLowerCase();
-      const address = (f.remote || '').toLowerCase();
+      const nickname = (contactMap?.[f.remote] || "").toLowerCase();
+      const address = (f.remote || "").toLowerCase();
       return nickname.includes(searchLower) || address.includes(searchLower);
     });
   }, [friends, searchText, contactMap]);
 
-  const renderFriend = useCallback(({ item: friend }) => {
-    const contact = contactMap?.[friend.remote];
-    const nickname = contact?.nickname || shortenAddress(friend.remote);
+  const renderFriend = useCallback(
+    ({ item: friend }) => {
+      const nickname =
+        contactMap?.[friend.remote] || shortenAddress(friend.remote);
 
-    return (
-      <TouchableOpacity
-        onPress={() => handleForward(friend)}
-        activeOpacity={0.6}
-        className="flex-row items-center gap-3 py-3 px-2 rounded-lg"
-      >
-        <AvatarImage
-          address={friend.remote}
-          nickname={nickname}
-          size={40}
-        />
-        <View className="flex-1 min-w-0">
-          <Text className="text-base font-semibold text-text-primary truncate">
-            {nickname}
-          </Text>
-          <Text className="text-xs text-text-secondary/70" numberOfLines={1}>
-            {shortenAddress(friend.remote)}
-          </Text>
-        </View>
-        <Ionicons name="arrow-forward" size={20} color="#e6b420" />
-      </TouchableOpacity>
-    );
-  }, [contactMap, handleForward]);
+      return (
+        <TouchableOpacity
+          onPress={() => handleForward(friend)}
+          activeOpacity={0.6}
+          className="flex-row items-center gap-3 py-3 px-2 rounded-lg"
+        >
+          <AvatarImage address={friend.remote} nickname={nickname} size={40} />
+          <View className="flex-1 min-w-0">
+            <Text className="text-base font-semibold text-text-primary truncate">
+              {nickname}
+            </Text>
+            <Text className="text-xs text-text-secondary/70" numberOfLines={1}>
+              {shortenAddress(friend.remote)}
+            </Text>
+          </View>
+          <Ionicons name="arrow-forward" size={20} color={ACCENT} />
+        </TouchableOpacity>
+      );
+    },
+    [contactMap, handleForward],
+  );
 
   return (
     <Modal
@@ -124,11 +127,11 @@ export default function ForwardModal({ visible }) {
     >
       <View className="flex-1 bg-black/45 justify-end">
         {/* Drag indicator */}
-        <View className="w-[40px] h-[5px] bg-gray-300 rounded-full self-center mt-3 mb-2" />
+        <View className="w-[40px] h-[5px] bg-text-secondary/30 rounded-full self-center mt-3 mb-2" />
 
-        <View className="bg-white rounded-t-3xl max-h-[85%] pb-6">
+        <View className="bg-surface-card rounded-t-3xl max-h-[85%] pb-6 border-t border-secondary-light">
           {/* Header */}
-          <View className="flex-row items-center justify-between px-5 pb-3 border-b border-[#f0e6c0]">
+          <View className="flex-row items-center justify-between px-5 pb-3 border-b border-secondary-light/20">
             <Text className="text-lg font-bold text-text-primary">
               Forward Bulletin
             </Text>
@@ -138,7 +141,7 @@ export default function ForwardModal({ visible }) {
           </View>
 
           {/* Search input */}
-          <View className="flex-row items-center mx-5 mt-3 bg-gray-50 rounded-lg px-3 py-2 border border-[#e6d8a8]">
+          <View className="flex-row items-center mx-5 mt-3 bg-surface rounded-lg px-3 py-2 border border-secondary-light/30">
             <Ionicons name="search" size={16} color="#a89f85" />
             <TextInput
               placeholder="Search contacts..."
@@ -148,7 +151,10 @@ export default function ForwardModal({ visible }) {
               className="flex-1 ml-2 text-sm text-text-primary py-0.5"
             />
             {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')} activeOpacity={0.6}>
+              <TouchableOpacity
+                onPress={() => setSearchText("")}
+                activeOpacity={0.6}
+              >
                 <Ionicons name="close-circle" size={18} color="#a89f85" />
               </TouchableOpacity>
             )}
@@ -158,14 +164,18 @@ export default function ForwardModal({ visible }) {
           <View className="mt-3 px-2">
             {loading ? (
               <View className="items-center py-16">
-                <ActivityIndicator size="large" color="#e6b420" />
-                <Text className="text-sm text-text-secondary mt-3">Loading contacts...</Text>
+                <ActivityIndicator size="large" color={ACCENT} />
+                <Text className="text-sm text-text-secondary mt-3">
+                  Loading contacts...
+                </Text>
               </View>
             ) : filteredFriends.length > 0 ? (
               <FlatList
                 data={filteredFriends}
                 renderItem={renderFriend}
-                keyExtractor={(item) => item.remote || `friend-${++_forwardKeyCounter}`}
+                keyExtractor={(item) =>
+                  item.remote || `friend-${++_forwardKeyCounter}`
+                }
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 10 }}
               />
@@ -173,12 +183,14 @@ export default function ForwardModal({ visible }) {
               <View className="items-center py-16">
                 <Ionicons name="people-outline" size={48} color="#d4c8a8" />
                 <Text className="text-base text-text-primary mt-3 font-semibold">
-                  {searchText.trim() ? 'No matching contacts' : 'No contacts yet'}
+                  {searchText.trim()
+                    ? "No matching contacts"
+                    : "No contacts yet"}
                 </Text>
                 <Text className="text-xs text-text-secondary/60 mt-1 px-8 text-center">
                   {searchText.trim()
-                    ? 'Try a different search term.'
-                    : 'Add friends first to forward bulletins.'}
+                    ? "Try a different search term."
+                    : "Add friends first to forward bulletins."}
                 </Text>
               </View>
             )}

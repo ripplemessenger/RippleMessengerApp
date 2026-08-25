@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { ACCENT } from "../lib/theme";
 
 import {
   selectServerNetworkData,
@@ -28,7 +29,7 @@ import {
  * connect/disconnect, and set the default server.
  * Extracted from SettingScreen so it can be a standalone full-screen route.
  */
-export default function ServerManagementTab() {
+export default function ServerManagementTab({ navigation }) {
   const dispatch = useDispatch();
   const { ServerList, ConnsStatus } = useSelector(selectServerNetworkData);
   const connectedCount = useSelector(selectConnectedServerCount);
@@ -100,7 +101,7 @@ export default function ServerManagementTab() {
           activeOpacity={0.7}
           className="flex-row items-center gap-1.5 bg-primary/10 border border-primary/30 px-4 py-2 rounded-lg mt-2"
         >
-          <Ionicons name="add" size={16} color="#e6b420" />
+          <Ionicons name="add" size={16} color={ACCENT} />
           <Text className="text-sm font-medium text-primary">Add Server</Text>
         </TouchableOpacity>
       </View>
@@ -147,7 +148,7 @@ export default function ServerManagementTab() {
                         onValueChange={() =>
                           handleToggle(server.url, !server.is_connect)
                         }
-                        trackColor={{ false: "#555", true: "#e6b420" }}
+                        trackColor={{ false: "#555", true: ACCENT }}
                         thumbColor={server.is_connect ? "#fff" : "#ccc"}
                       />
                       <Text className="text-xs text-text-secondary">
@@ -156,6 +157,19 @@ export default function ServerManagementTab() {
                     </TouchableOpacity>
 
                     <View className="flex-row items-center gap-2">
+                      <TouchableOpacity
+                        onPress={() =>
+                          navigation.navigate("ServerAddress", {
+                            url: server.url,
+                          })
+                        }
+                        activeOpacity={0.7}
+                        className="px-3 py-1.5 rounded-lg border border-primary/30"
+                      >
+                        <Text className="text-xs text-primary font-medium">
+                          View
+                        </Text>
+                      </TouchableOpacity>
                       {!isDefault && (
                         <TouchableOpacity
                           onPress={() => handleSetDefault(server.url)}
@@ -190,7 +204,7 @@ export default function ServerManagementTab() {
           <Ionicons
             name="earth-outline"
             size={48}
-            color="#e6b420"
+            color={ACCENT}
             opacity={0.4}
           />
           <Text className="text-lg text-text-secondary">No servers</Text>

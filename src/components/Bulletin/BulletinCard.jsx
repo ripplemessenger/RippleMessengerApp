@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch } from "react-redux";
-import { marked } from "marked";
+import { parseBulletinMarkdown } from "../../lib/markdown";
 import { RenderHTML } from "react-native-render-html";
 
 import {
@@ -11,6 +11,7 @@ import {
 } from "../../store/sagas/messenger.actions";
 import AvatarImage from "../AvatarImage";
 import useDarkMode from "../../hooks/useDarkMode";
+import { ACCENT } from "../../lib/theme";
 
 /**
  * Format a timestamp (ms epoch) into a human-readable relative string.
@@ -35,31 +36,6 @@ function formatTimestamp(ms) {
 function shortenAddress(addr) {
   if (!addr || addr.length < 14) return addr || "";
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
-
-/**
- * Safely convert bulletin content to HTML via marked.
- * Returns { isMarkdown: true, html } on success, { isMarkdown: false, plainText } on failure.
- */
-function parseBulletinPreview(content) {
-  try {
-    const truncated =
-      content.length > 256 ? content.slice(0, 256) + "…" : content;
-    const html = marked.parse(truncated || "(empty)") || "<p>(empty)</p>";
-    return { isMarkdown: true, html };
-  } catch (e) {
-    console.warn(
-      "[BulletinCard] Markdown parse failed, falling back to plain text:",
-      e.message,
-    );
-    return {
-      isMarkdown: false,
-      plainText:
-        content.length > 256
-          ? content.slice(0, 256) + "…"
-          : content || "(empty)",
-    };
-  }
 }
 
 /* Shared HTML config for react-native-render-html — text color must follow
@@ -113,7 +89,7 @@ export default React.memo(function BulletinCard({
     html,
     plainText,
   } = useMemo(
-    () => parseBulletinPreview(bulletin.content),
+    () => parseBulletinMarkdown(bulletin.content, 256),
     [bulletin?.content],
   );
 
@@ -165,7 +141,7 @@ export default React.memo(function BulletinCard({
           <Ionicons
             name={bulletin.is_marked ? "star" : "star-outline"}
             size={20}
-            color={bulletin.is_marked ? "#e6b420" : "#a89f85"}
+            color={bulletin.is_marked ? ACCENT : "#a89f85"}
           />
         </TouchableOpacity>
       </View>

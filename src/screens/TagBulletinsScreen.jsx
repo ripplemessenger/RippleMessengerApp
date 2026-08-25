@@ -12,6 +12,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import BulletinCard from '../components/Bulletin/BulletinCard';
 import { selectTagBulletins } from '../selectors';
 import { RequestTagBulletin } from '../store/sagas/messenger.actions';
+import { ACCENT } from '../lib/theme';
 
 /**
  * TagBulletins — displays bulletins filtered by a specific tag.
@@ -58,7 +59,7 @@ export default function TagBulletins({ route, navigation }) {
         </Text>
       ),
       title: tag ? `#${tag}` : 'Tag',
-      headerStyle: { backgroundColor: '#e6b420' },
+      headerStyle: { backgroundColor: ACCENT },
       headerTintColor: '#1a1a2e',
     });
   }, [navigation, tag]);
@@ -116,7 +117,7 @@ export default function TagBulletins({ route, navigation }) {
       {/* Tag info header */}
       <View className="px-4 py-3 bg-primary/5 border-b border-secondary-light/30">
         <View className="flex-row items-center gap-2">
-          <Ionicons name="pricetag" size={20} color="#e6b420" />
+          <Ionicons name="pricetag" size={20} color={ACCENT} />
           <Text className="text-lg font-bold text-text-primary">
             {tag ? `#${tag}` : 'Tag Bulletins'}
           </Text>
@@ -136,7 +137,7 @@ export default function TagBulletins({ route, navigation }) {
           <RefreshControl
             refreshing={refreshingRef.current}
             onRefresh={handleRefresh}
-            tintColor="#e6b420"
+            tintColor={ACCENT}
           />
         }
         onEndReached={handleLoadMore}
@@ -157,7 +158,7 @@ export default function TagBulletins({ route, navigation }) {
         ListFooterComponent={
           hasMore ? (
             <View className="py-4 items-center">
-              <ActivityIndicator size="small" color="#e6b420" />
+              <ActivityIndicator size="small" color={ACCENT} />
               <Text className="text-xs text-text-secondary/70 mt-1">Loading more…</Text>
             </View>
           ) : null

@@ -9,6 +9,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { MasterAddress } from "../lib/MessengerConst";
+import { ACCENT } from '../lib/theme';
 
 /**
  * AboutScreen — content copied from the Client's AboutPage
@@ -47,7 +48,7 @@ export default function AboutScreen({ navigation }) {
             activeOpacity={0.7}
             style={{ padding: 4 }}
           >
-            <Ionicons name="arrow-back" size={24} color="#e6b420" />
+            <Ionicons name="arrow-back" size={24} color={ACCENT} />
           </TouchableOpacity>
           <Text className="text-2xl font-bold text-text-primary">About</Text>
         </View>

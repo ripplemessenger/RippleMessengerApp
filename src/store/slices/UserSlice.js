@@ -1,8 +1,7 @@
-import { createSlice } from '@reduxjs/toolkit'
-import { SettingPageTab } from '../../lib/AppConst'
+import { createSlice } from "@reduxjs/toolkit";
 
 const UserSlice = createSlice({
-  name: 'User',
+  name: "User",
   initialState: {
     IsAuth: false,
     Seed: null,
@@ -15,7 +14,6 @@ const UserSlice = createSlice({
     // contact
     ContactList: [],
     ContactMap: {},
-    activeTabSetting: SettingPageTab.Me,
 
     // follow
     FollowList: [],
@@ -23,63 +21,59 @@ const UserSlice = createSlice({
     FriendList: [],
   },
   reducers: {
-    autoLoginInit: (state) => {
+    autoLoginInit: () => {
       // No-op reducer — triggers saga to check for saved session
     },
     loginStart: (state) => {
-      state.UserError = null
-      state.IsAuth = false
-      state.Seed = null
-      state.Address = null
-      state.Nickname = null
+      state.UserError = null;
+      state.IsAuth = false;
+      state.Seed = null;
+      state.Address = null;
+      state.Nickname = null;
     },
     loginSuccess: (state, action) => {
-      state.UserError = null
-      state.IsAuth = true
-      state.Seed = action.payload.seed
-      state.Address = action.payload.address
-      state.Nickname = action.payload.nickname
+      state.UserError = null;
+      state.IsAuth = true;
+      state.Seed = action.payload.seed;
+      state.Address = action.payload.address;
+      state.Nickname = action.payload.nickname;
     },
     logoutStart: (state) => {
-      state.UserError = null
-      state.IsAuth = false
-      state.Seed = null
-      state.Address = null
-      state.Nickname = null
+      state.UserError = null;
+      state.IsAuth = false;
+      state.Seed = null;
+      state.Address = null;
+      state.Nickname = null;
     },
     setNickname: (state, action) => {
-      state.Nickname = action.payload
+      state.Nickname = action.payload;
     },
 
     // local account
     loadAccountListStart: (state) => {
-      state.AccountList = []
+      state.AccountList = [];
     },
     loadAccountListSuccess: (state, action) => {
-      state.AccountList = action.payload.account_list
+      state.AccountList = action.payload.account_list;
     },
 
     // contact
     setContactList: (state, action) => {
-      state.ContactList = action.payload.contact_list
-      state.ContactMap = action.payload.contact_map
+      state.ContactList = action.payload.contact_list;
+      state.ContactMap = action.payload.contact_map;
     },
     setFollowList: (state, action) => {
-      state.FollowList = action.payload
+      state.FollowList = action.payload;
     },
     setFriendList: (state, action) => {
-      state.FriendList = action.payload
+      state.FriendList = action.payload;
     },
 
     setUserError: (state, action) => {
-      state.UserError = action.payload
+      state.UserError = action.payload;
     },
-
-    setActiveTabSetting: (state, action) => {
-      state.activeTabSetting = action.payload
-    }
-  }
-})
+  },
+});
 
 export const {
   autoLoginInit,
@@ -96,7 +90,5 @@ export const {
   setFriendList,
 
   setUserError,
-
-  setActiveTabSetting
-} = UserSlice.actions
-export default UserSlice.reducer
+} = UserSlice.actions;
+export default UserSlice.reducer;

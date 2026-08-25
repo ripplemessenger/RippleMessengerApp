@@ -24,7 +24,7 @@ let dbReady: boolean = false;
  * Convert Tauri-style $N placeholders to SQLite ? placeholders.
  */
 function convertPlaceholders(sql: string): string {
-  return sql.replace(/\$(\d+)/g, "?");
+  return sql.replace(/\$(\d+)/g, "?$1");
 }
 
 function checkResult(result: any, sql: string): void {

@@ -6,6 +6,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { selectIsAuth } from "../selectors";
 import ForwardModal from "../components/Bulletin/ForwardModal";
+import FlashNotice from "../components/FlashNotice";
 
 // Screen imports
 import LoginScreen from "../screens/LoginScreen";
@@ -24,9 +25,11 @@ import BulletinManagementTab from "../components/BulletinManagementTab";
 import StorageManagementTab from "../components/StorageManagementTab";
 import GroupManagementTab from "../components/GroupManagementTab";
 import ServerManagementTab from "../components/ServerManagementTab";
+import ServerAddressScreen from "../screens/ServerAddressScreen";
 import FollowedBulletinsScreen from "../screens/FollowedBulletinsScreen";
 import RandomBulletinsScreen from "../screens/RandomBulletinsScreen";
 import AddressBulletinsScreen from "../screens/AddressBulletinsScreen";
+import { ACCENT } from "../lib/theme";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -67,7 +70,7 @@ function SettingTab() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        headerStyle: { backgroundColor: "#e6b420" },
+        headerStyle: { backgroundColor: ACCENT },
         headerTintColor: "#1a1a2e",
       }}
     >
@@ -91,6 +94,11 @@ function SettingTab() {
         name="ServerManagement"
         component={ServerManagementTab}
         options={{ headerShown: true, title: "Servers" }}
+      />
+      <Stack.Screen
+        name="ServerAddress"
+        component={ServerAddressScreen}
+        options={{ headerShown: true, title: "Server Stats" }}
       />
       <Stack.Screen
         name="About"
@@ -130,9 +138,9 @@ function MainTabNav() {
             iconName = focused ? "settings" : "settings-outline";
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: "#e6b420",
+        tabBarActiveTintColor: ACCENT,
         tabBarInactiveTintColor: "#6b6358",
-        headerStyle: { backgroundColor: "#e6b420" },
+        headerStyle: { backgroundColor: ACCENT },
         headerTintColor: "#1a1a2e",
       })}
     >
@@ -203,5 +211,11 @@ function AuthenticatedNav() {
 
 export default function AppNavigator() {
   const isAuth = useSelector(selectIsAuth);
-  return isAuth ? <AuthenticatedNav /> : <AuthStack />;
+  return (
+    <>
+      {isAuth ? <AuthenticatedNav /> : <AuthStack />}
+      {/* Global toast — surfaces Common.FlashNoticeMessage (publish/file/forward feedback) */}
+      <FlashNotice />
+    </>
+  );
 }

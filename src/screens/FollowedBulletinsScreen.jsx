@@ -12,6 +12,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import BulletinCard from '../components/Bulletin/BulletinCard';
 import { selectFollowBulletins } from '../selectors';
 import { LoadFollowBulletin } from '../store/sagas/messenger.actions';
+import { ACCENT } from '../lib/theme';
 
 /**
  * FollowedBulletinsScreen — displays bulletins from accounts the user follows.
@@ -54,7 +55,7 @@ export default function FollowedBulletinsScreen({ navigation }) {
         </Text>
       ),
       title: 'Followed Posts',
-      headerStyle: { backgroundColor: '#e6b420' },
+      headerStyle: { backgroundColor: ACCENT },
       headerTintColor: '#1a1a2e',
     });
   }, [navigation]);
@@ -110,7 +111,7 @@ export default function FollowedBulletinsScreen({ navigation }) {
       {/* Header info */}
       <View className="px-4 py-3 bg-primary/5 border-b border-secondary-light/30">
         <View className="flex-row items-center gap-2">
-          <Ionicons name="people" size={20} color="#e6b420" />
+          <Ionicons name="people" size={20} color={ACCENT} />
           <Text className="text-lg font-bold text-text-primary">
             Followed Posts
           </Text>
@@ -130,7 +131,7 @@ export default function FollowedBulletinsScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshingRef.current}
             onRefresh={handleRefresh}
-            tintColor="#e6b420"
+            tintColor={ACCENT}
           />
         }
         onEndReached={handleLoadMore}
@@ -149,7 +150,7 @@ export default function FollowedBulletinsScreen({ navigation }) {
         ListFooterComponent={
           hasMore ? (
             <View className="py-4 items-center">
-              <ActivityIndicator size="small" color="#e6b420" />
+              <ActivityIndicator size="small" color={ACCENT} />
               <Text className="text-xs text-text-secondary/70 mt-1">Loading more…</Text>
             </View>
           ) : null

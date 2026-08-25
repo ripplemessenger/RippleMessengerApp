@@ -14,11 +14,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { selectContactList, selectUserAddress } from "../selectors";
+import { ACCENT } from "../lib/theme";
 import {
   LoadContactList,
   ContactAdd as ContactAddAction,
   ContactDel as ContactDelAction,
   ContactToggleIsFollow,
+  ContactToggleIsFriend,
 } from "../store/sagas/messenger.actions";
 
 /**
@@ -36,7 +38,13 @@ import {
 // ---------------------------------------------------------------------------
 // Contact Card Component
 // ---------------------------------------------------------------------------
-function ContactCard({ contact, onChat, onToggleFollow, onDelete }) {
+function ContactCard({
+  contact,
+  onChat,
+  onToggleFollow,
+  onToggleFriend,
+  onDelete,
+}) {
   return (
     <TouchableOpacity
       activeOpacity={0.7}
@@ -45,7 +53,7 @@ function ContactCard({ contact, onChat, onToggleFollow, onDelete }) {
     >
       {/* Avatar placeholder */}
       <View className="w-10 h-10 rounded-full bg-primary/20 items-center justify-center">
-        <Ionicons name="person" size={20} color="#e6b420" />
+        <Ionicons name="person" size={20} color={ACCENT} />
       </View>
 
       <View className="flex-1 min-w-0">
@@ -74,14 +82,33 @@ function ContactCard({ contact, onChat, onToggleFollow, onDelete }) {
         </Text>
       </TouchableOpacity>
 
-      {/* Delete button */}
+      {/* Friend badge / toggle */}
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={() => onDelete(contact)}
-        className="p-1"
+        onPress={() => onToggleFriend(contact)}
+        className={`px-2 py-1 rounded-full ${
+          contact.is_friend ? "bg-primary/20" : "bg-secondary-light/20"
+        }`}
       >
-        <Ionicons name="close-circle" size={20} color="#ef4444" />
+        <Text
+          className={`text-xs ${
+            contact.is_friend ? "text-primary" : "text-text-secondary"
+          }`}
+        >
+          {contact.is_friend ? "Friend" : "Add Friend"}
+        </Text>
       </TouchableOpacity>
+
+      {/* Delete button (hidden when followed or friend, matching Client) */}
+      {contact.is_follow === false && contact.is_friend === false && (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => onDelete(contact)}
+          className="p-1"
+        >
+          <Ionicons name="close-circle" size={20} color="#ef4444" />
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 }
@@ -217,6 +244,13 @@ export default function ContactScreen({ navigation }) {
     [dispatch],
   );
 
+  const handleToggleFriend = useCallback(
+    (contact) => {
+      dispatch(ContactToggleIsFriend({ contact_address: contact.address }));
+    },
+    [dispatch],
+  );
+
   const handleDelete = useCallback(
     (contact) => {
       Alert.alert(
@@ -249,10 +283,11 @@ export default function ContactScreen({ navigation }) {
         contact={item}
         onChat={handleTap}
         onToggleFollow={handleToggleFollow}
+        onToggleFriend={handleToggleFriend}
         onDelete={handleDelete}
       />
     ),
-    [handleTap, handleToggleFollow, handleDelete],
+    [handleTap, handleToggleFollow, handleToggleFriend, handleDelete],
   );
 
   const keyExtractor = useCallback((item) => item.address, []);
@@ -282,7 +317,7 @@ export default function ContactScreen({ navigation }) {
             activeOpacity={0.7}
             className="flex-row items-center gap-1.5 bg-primary/10 border border-primary/30 px-3 py-2 rounded-lg"
           >
-            <Ionicons name="add" size={16} color="#e6b420" />
+            <Ionicons name="add" size={16} color={ACCENT} />
             <Text className="text-xs font-medium text-primary">Add</Text>
           </TouchableOpacity>
         </View>
@@ -298,7 +333,7 @@ export default function ContactScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshingRef.current}
             onRefresh={handleRefresh}
-            tintColor="#e6b420"
+            tintColor={ACCENT}
           />
         }
         ListEmptyComponent={

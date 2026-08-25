@@ -12,6 +12,7 @@ const MessengerSlice = createSlice({
     // bulletin publish
     ShowPublishFlag: false,
     ShowForwardFlag: false,
+    ShowPasteFlag: false,
     ForwardBulletin: null,
     CurrentBulletinSequence: 0,
     PublishTagList: [],
@@ -47,6 +48,10 @@ const MessengerSlice = createSlice({
     ServerAddressPage: 1,
     ServerAddressTotalPage: 1,
     ServerAddressList: [],
+
+    // hash -> timestamp; bumped when a file finishes downloading so inline
+    // image previews re-render (mirrors Client FileSavedMap).
+    FileSavedMap: {},
 
     SearchTagList: [],
     TagBulletinList: [],
@@ -87,6 +92,9 @@ const MessengerSlice = createSlice({
 
     setPublishFlag: (state, action) => {
       state.ShowPublishFlag = action.payload;
+    },
+    setPasteFlag: (state, action) => {
+      state.ShowPasteFlag = action.payload;
     },
     setForwardFlag: (state, action) => {
       state.ShowForwardFlag = action.payload;
@@ -150,6 +158,9 @@ const MessengerSlice = createSlice({
       state.ServerAddressTotalPage = action.payload.TotalPage;
       state.ServerAddressList = action.payload.List;
     },
+    setFileSavedToken: (state, action) => {
+      state.FileSavedMap[action.payload.hash] = action.payload.timestamp;
+    },
     setTagBulletinList: (state, action) => {
       state.TagBulletinList = action.payload.List;
       state.TagBulletinPage = action.payload.Page;
@@ -211,6 +222,7 @@ export const {
   setServerList,
 
   setPublishFlag,
+  setPasteFlag,
   setForwardFlag,
   setForwardBulletin,
   setCurrentBulletinSequence,
@@ -229,6 +241,7 @@ export const {
   setFollowBulletinList,
   setBookmarkBulletinList,
   setServerAddressList,
+  setFileSavedToken,
   setTagBulletinList,
   setSearchTagList,
 
