@@ -1,8 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, TextInput, Keyboard } from 'react-native';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  Keyboard,
+} from "react-native";
+import { useTranslation } from "react-i18next";
 
-import { getWallet } from '../lib/RippleUtil';
-import Logger from '../lib/Logger';
+import { getWallet } from "../lib/RippleUtil";
+import Logger from "../lib/Logger";
 
 /**
  * TempLoginModal - Temporary login via seed paste.
@@ -10,14 +18,15 @@ import Logger from '../lib/Logger';
  * Matches Client/src/pages/TempLoginModal.jsx + OpenPage temp login behaviour.
  */
 export default function TempLoginModal({ visible, onClose, onLogin }) {
-  const [seed, setSeed] = useState('');
-  const [address, setAddress] = useState('');
+  const { t } = useTranslation();
+  const [seed, setSeed] = useState("");
+  const [address, setAddress] = useState("");
   const [error, setError] = useState(null);
 
   useEffect(() => {
     if (visible) {
-      setSeed('');
-      setAddress('');
+      setSeed("");
+      setAddress("");
       setError(null);
     }
   }, [visible]);
@@ -25,24 +34,24 @@ export default function TempLoginModal({ visible, onClose, onLogin }) {
   const handleSeedChange = (value) => {
     const trimmed = value.trim();
     setSeed(trimmed);
-    setAddress('');
+    setAddress("");
     setError(null);
 
-    if (trimmed === '') return;
+    if (trimmed === "") return;
 
     try {
       const wallet = getWallet(trimmed);
       setAddress(wallet.classicAddress);
     } catch (e) {
-      Logger.debug('[TempLogin] invalid seed:', e);
-      setError('Invalid seed format');
+      Logger.debug("[TempLogin] invalid seed:", e);
+      setError(t("auth.invalid_seed"));
     }
   };
 
   const handleTempLogin = () => {
     Keyboard.dismiss();
     if (!seed.trim()) {
-      setError('Seed is required');
+      setError(t("auth.seed_required"));
       return;
     }
 
@@ -58,21 +67,25 @@ export default function TempLoginModal({ visible, onClose, onLogin }) {
         <View className="w-full max-w-sm bg-surface rounded-2xl p-6">
           {/* Header */}
           <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-semibold text-text-primary">Temporary Login</Text>
+            <Text className="text-lg font-semibold text-text-primary">
+              {t("auth.temporary_login")}
+            </Text>
             <TouchableOpacity onPress={onClose}>
-              <Text className="text-base text-text-secondary">Done</Text>
+              <Text className="text-base text-text-secondary">
+                {t("common.close")}
+              </Text>
             </TouchableOpacity>
           </View>
 
           {/* Description */}
           <Text className="text-sm text-text-secondary mb-4">
-            Log in without saving your account. Your seed will not be stored.
+            {t("auth.temp_login_desc")}
           </Text>
 
           {/* Seed Input */}
           <View className="mb-4">
             <Text className="text-sm font-medium text-text-primary mb-1">
-              Seed:
+              {t("auth.seed_label")}
             </Text>
             <View className="border border-secondary-light rounded-xl bg-surface-card px-3 py-2">
               <TextInput
@@ -88,10 +101,10 @@ export default function TempLoginModal({ visible, onClose, onLogin }) {
           </View>
 
           {/* Derived Address (read-only) */}
-          {address !== '' && (
+          {address !== "" && (
             <View className="mb-4">
               <Text className="text-sm font-medium text-text-primary mb-1">
-                Address:
+                {t("auth.address_label")}
               </Text>
               <View className="border border-secondary-light rounded-xl bg-surface-card px-3 py-2">
                 <Text className="text-xs text-text-secondary font-mono break-all">
@@ -113,11 +126,11 @@ export default function TempLoginModal({ visible, onClose, onLogin }) {
           {/* Login Button */}
           <TouchableOpacity
             onPress={handleTempLogin}
-            disabled={seed.trim() === '' || error !== null}
+            disabled={seed.trim() === "" || error !== null}
             className="bg-primary py-3 rounded-xl items-center mb-3"
           >
             <Text className="text-base font-semibold text-text-primary">
-              Login Temporarily
+              {t("auth.login_temporarily")}
             </Text>
           </TouchableOpacity>
 
@@ -127,7 +140,7 @@ export default function TempLoginModal({ visible, onClose, onLogin }) {
             className="bg-surface-card border border-secondary py-3 rounded-xl items-center"
           >
             <Text className="text-base font-medium text-text-secondary">
-              Cancel
+              {t("common.cancel")}
             </Text>
           </TouchableOpacity>
         </View>

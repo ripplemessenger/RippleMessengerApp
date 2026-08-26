@@ -37,7 +37,7 @@ const FileChunkSize = 1024 * 1024;
 /** @type {number} Maximum file size: 64 MB */
 const FileMaxSize = 64 * 1024 * 1024;
 /** @type {RegExp} Regex matching image file extensions for inline preview */
-const FileImageExtRegex = /^(png|jpe?g|gif|webp)$/i;
+const FileImageExtRegex = /^\.?(png|jpe?g|gif|webp)$/i;
 
 // Bulletin pagination
 /** @type {number} Bulletins returned per page */

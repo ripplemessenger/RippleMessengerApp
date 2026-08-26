@@ -53,6 +53,10 @@ const MessengerSlice = createSlice({
     // image previews re-render (mirrors Client FileSavedMap).
     FileSavedMap: {},
 
+    // address -> timestamp; bumped when an avatar image finishes saving so
+    // AvatarImage/useAvatarData re-render and pick up the new image.
+    AvatarSavedMap: {},
+
     SearchTagList: [],
     TagBulletinList: [],
     TagBulletinPage: 1,
@@ -161,6 +165,9 @@ const MessengerSlice = createSlice({
     setFileSavedToken: (state, action) => {
       state.FileSavedMap[action.payload.hash] = action.payload.timestamp;
     },
+    setAvatarSavedToken: (state, action) => {
+      state.AvatarSavedMap[action.payload.address] = action.payload.timestamp;
+    },
     setTagBulletinList: (state, action) => {
       state.TagBulletinList = action.payload.List;
       state.TagBulletinPage = action.payload.Page;
@@ -242,6 +249,7 @@ export const {
   setBookmarkBulletinList,
   setServerAddressList,
   setFileSavedToken,
+  setAvatarSavedToken,
   setTagBulletinList,
   setSearchTagList,
 

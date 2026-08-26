@@ -1,15 +1,10 @@
 import React from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Linking,
-} from "react-native";
+import { useTranslation } from "react-i18next";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { MasterAddress } from "../lib/MessengerConst";
-import { ACCENT } from '../lib/theme';
+import { ACCENT } from "../lib/theme";
 
 /**
  * AboutScreen — content copied from the Client's AboutPage
@@ -38,6 +33,7 @@ const RULES = [
 ];
 
 export default function AboutScreen({ navigation }) {
+  const { t } = useTranslation();
   return (
     <ScrollView className="flex-1 bg-surface">
       <View className="px-6 py-8 gap-6">
@@ -50,7 +46,9 @@ export default function AboutScreen({ navigation }) {
           >
             <Ionicons name="arrow-back" size={24} color={ACCENT} />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-text-primary">About</Text>
+          <Text className="text-2xl font-bold text-text-primary">
+            {t("common.about")}
+          </Text>
         </View>
 
         {/* Divider */}
@@ -58,8 +56,8 @@ export default function AboutScreen({ navigation }) {
 
         {/* Rules */}
         <View className="bg-surface-card rounded-2xl p-5 border border-secondary-light gap-3">
-          <Text className="text-xl font-bold text-text-primary mb-1">
-            Rules
+          <Text className="text-xl font-bold text-text-primary">
+            {t("about.rules")}
           </Text>
           {RULES.map((rule, i) => (
             <View key={rule} className="flex-row items-start gap-3">
@@ -73,7 +71,9 @@ export default function AboutScreen({ navigation }) {
 
         {/* Donate */}
         <View className="bg-surface-card rounded-2xl p-5 border border-secondary-light gap-3">
-          <Text className="text-xl font-bold text-text-primary">Donate</Text>
+          <Text className="text-xl font-bold text-text-primary">
+            {t("about.donate")}
+          </Text>
           <Text className="text-sm font-mono text-text-secondary break-all">
             {MasterAddress}
           </Text>

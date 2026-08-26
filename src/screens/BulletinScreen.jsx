@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 
 import BulletinCard from "../components/Bulletin/BulletinCard";
@@ -34,6 +35,7 @@ import {
  * resets everything to page 1.
  */
 export default function BulletinScreen({ navigation }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const {
     list: reduxBulletins,
@@ -157,36 +159,55 @@ export default function BulletinScreen({ navigation }) {
       {/* Header bar */}
       <View className="px-4 py-3 bg-primary/5 border-b border-secondary-light/30">
         <View className="flex-row items-center justify-between">
-          <Text className="text-xl font-bold text-text-primary">Portal</Text>
-          <View className="flex-row items-center gap-2">
-            <TouchableOpacity
-              onPress={handleOpenPaste}
-              activeOpacity={0.7}
-              className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
-            >
-              <Ionicons name="clipboard" size={20} color={ACCENT} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowTagSearch(true)}
-              activeOpacity={0.7}
-              className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
-            >
-              <Ionicons name="search" size={20} color={ACCENT} />
-            </TouchableOpacity>
-          </View>
-        </View>
-        <View className="flex-row items-center gap-2 mt-1">
-          <View
-            className={`w-2 h-2 rounded-full ${
-              isConnected ? "bg-status-success" : "bg-status-error"
-            }`}
-          />
-          <Text className="text-xs text-text-secondary/70">
-            {isConnected ? "Connected" : "Disconnected"}
+          <Text className="text-xl font-bold text-text-primary">
+            {t("page.portal")}
           </Text>
           <Text className="text-xs text-text-secondary/50">
-            · {allBulletins.length} post{allBulletins.length !== 1 ? "s" : ""}
+            {t("common.posts_count", { count: allBulletins.length })}
           </Text>
+        </View>
+        <View className="flex-row items-center gap-2 mt-2">
+          <TouchableOpacity
+            onPress={() =>
+              navigation.getParent()?.getParent()?.navigate("FollowedBulletins")
+            }
+            activeOpacity={0.7}
+            className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+          >
+            <Ionicons name="people" size={20} color={ACCENT} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.getParent()?.getParent()?.navigate("BookmarkBulletins")
+            }
+            activeOpacity={0.7}
+            className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+          >
+            <Ionicons name="star" size={20} color={ACCENT} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.getParent()?.getParent()?.navigate("RandomBulletins")
+            }
+            activeOpacity={0.7}
+            className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+          >
+            <Ionicons name="shuffle" size={20} color={ACCENT} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleOpenPaste}
+            activeOpacity={0.7}
+            className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+          >
+            <Ionicons name="clipboard" size={20} color={ACCENT} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setShowTagSearch(true)}
+            activeOpacity={0.7}
+            className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+          >
+            <Ionicons name="search" size={20} color={ACCENT} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -209,12 +230,10 @@ export default function BulletinScreen({ navigation }) {
           <View className="flex-1 items-center justify-center py-20">
             <Text className="text-5xl mb-4">📝</Text>
             <Text className="text-xl font-bold text-text-primary mb-2">
-              No posts yet
+              {t("ui.no_posts_yet")}
             </Text>
             <Text className="text-sm text-text-secondary text-center px-8">
-              {isConnected
-                ? "The bulletin feed is empty. Posts from connected servers will appear here."
-                : "Connect to a server in the Servers tab to start seeing posts."}
+              {t("ui.feed_empty")}
             </Text>
           </View>
         }
@@ -223,7 +242,7 @@ export default function BulletinScreen({ navigation }) {
             <View className="py-4 items-center">
               <ActivityIndicator size="small" color={ACCENT} />
               <Text className="text-xs text-text-secondary/70 mt-1">
-                Loading more…
+                {t("common.loading_more")}
               </Text>
             </View>
           ) : null
@@ -278,14 +297,14 @@ export default function BulletinScreen({ navigation }) {
         <View className="flex-1 justify-center items-center bg-black/50 px-6">
           <View className="bg-surface-card rounded-2xl p-6 w-full gap-4 border border-secondary-light">
             <Text className="text-xl font-semibold text-text-primary text-center">
-              Search Tags
+              {t("ui.search_tags")}
             </Text>
             <View className="flex-row items-center gap-2 bg-surface border border-secondary-light rounded-xl px-4">
               <Ionicons name="pricetag" size={18} color={ACCENT} />
               <TextInput
                 value={`#${searchTag}`}
                 onChangeText={(text) => setSearchTag(text.replace(/^#/, ""))}
-                placeholder="Enter tag name"
+                placeholder={t("ui.enter_tag_name")}
                 placeholderTextColor="#9a9590"
                 autoCapitalize="none"
                 autoFocus
@@ -302,7 +321,7 @@ export default function BulletinScreen({ navigation }) {
                 className="flex-1 py-3 rounded-xl border border-secondary-light items-center"
               >
                 <Text className="text-base font-medium text-text-secondary">
-                  Cancel
+                  {t("common.cancel")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -310,7 +329,7 @@ export default function BulletinScreen({ navigation }) {
                 className="flex-1 bg-primary py-3 rounded-xl items-center"
               >
                 <Text className="text-base font-semibold text-text-primary">
-                  Search
+                  {t("ui.search")}
                 </Text>
               </TouchableOpacity>
             </View>

@@ -10,6 +10,7 @@ import {
   FlatList,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { ACCENT } from "../lib/theme";
 
@@ -30,6 +31,7 @@ import {
  * Extracted from SettingScreen so it can be a standalone full-screen route.
  */
 export default function GroupManagementTab() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { GroupList, GroupRequestList } = useSelector(selectGroupData);
   const { ContactList: userContacts } = useSelector(selectUserTabGroup);
@@ -40,7 +42,7 @@ export default function GroupManagementTab() {
   // --- Create group ---
   const handleCreateGroup = useCallback(() => {
     if (!groupName.trim()) {
-      Alert.alert("Error", "Please enter a group name.");
+      Alert.alert(t("common.error"), t("group.name_required"));
       return;
     }
     dispatch(CreateGroupAction({ name: groupName.trim() }));
@@ -198,7 +200,7 @@ export default function GroupManagementTab() {
   );
 
   return (
-    <View className="flex-1 gap-4">
+    <View className="flex-1 gap-4 bg-surface">
       {/* Create Group Modal */}
       <Modal
         visible={showCreateModal}

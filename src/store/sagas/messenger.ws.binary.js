@@ -13,6 +13,7 @@ import {
   FileHash,
   getMemberByIndex,
   ArrayBufferToUint32,
+  uint8ArrayToBase64,
 } from "../../lib/MessengerUtil";
 import { getFileRequestList, setFileRequestList } from "./messenger.core";
 import {
@@ -20,9 +21,11 @@ import {
   FetchPrivateChatFile,
   FetchGroupChatFile,
 } from "./messenger.file";
-import { setFileSavedToken } from "../slices/MessengerSlice";
-
-const FILE_REQUEST_TTL_MS = 120 * 1000; // 2 minutes per request entry
+import {
+  setFileSavedToken,
+  setAvatarSavedToken,
+} from "../slices/MessengerSlice";
+import { FILE_REQUEST_TTL_MS } from "../../lib/AppConst";
 
 // ---------- Binary message handlers (file chunk reception) ----------
 
@@ -254,6 +257,16 @@ function* handleBinaryAvatar(request, content) {
       yield call(() =>
         dbAPI.updateAvatarIsSaved(request.Address, true, Date.now()),
       );
+      // Also save base64 to DB for fast access without file I/O
+      const base64 = uint8ArrayToBase64(content);
+      yield call(() => dbAPI.saveAvatarImage(request.Address, base64));
+      // Notify UI so useAvatarData re-renders and picks up the new image
+      yield put(
+        setAvatarSavedToken({
+          address: request.Address,
+          timestamp: Date.now(),
+        }),
+      );
     } else {
       Logger.error(
         "[handleBinaryAvatar] Hash mismatch for",
@@ -284,10 +297,10 @@ export function* handleBinaryMessage(action) {
   try {
     const nonce = ArrayBufferToUint32(action.data.slice(0, 4));
 
-    // Filter stale file requests
+    // Filter stale file requests (use dynamic TTL from item, fallback to default)
     setFileRequestList(
       getFileRequestList().filter(
-        (r) => r.Timestamp + FILE_REQUEST_TTL_MS > Date.now(),
+        (r) => r.Timestamp + (r.TTL || FILE_REQUEST_TTL_MS) > Date.now(),
       ),
     );
     const fileRequests = getFileRequestList();

@@ -13,11 +13,13 @@ import {
   Dimensions,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
 import {
   PublishBulletin,
   BulletinFileAdd,
   BulletinFileDel,
+  BulletinQuoteDel,
 } from "../../store/sagas/messenger.actions";
 import {
   setPublishFlag,
@@ -29,6 +31,7 @@ import { ListItemMax } from "../../lib/MessengerConst";
 import { filesize_format } from "../../lib/AppUtil";
 import { pickFile } from "../../services/mediaPicker";
 import { ACCENT } from "../../lib/theme";
+import useDarkMode from "../../hooks/useDarkMode";
 
 const MAX_CONTENT_LENGTH = 2000;
 
@@ -44,11 +47,17 @@ const MAX_CONTENT_LENGTH = 2000;
  *   - Submit clears local publish state and dispatches PublishBulletin saga
  */
 export default function PublishModal({ visible, onClose }) {
+  const { t } = useTranslation();
+  const { isDark } = useDarkMode();
   const dispatch = useDispatch();
   const publishTags = useSelector((state) => state.Messenger.PublishTagList);
   const publishFiles = useSelector((state) => state.Messenger.PublishFileList);
+  const publishQuotes = useSelector(
+    (state) => state.Messenger.PublishQuoteList,
+  );
 
   const [content, setContent] = useState("");
+  const s = styles(isDark);
   const [tagInput, setTagInput] = useState("");
   const contentRef = useRef(null);
 
@@ -141,11 +150,18 @@ export default function PublishModal({ visible, onClose }) {
     [dispatch],
   );
 
+  const handleRemoveQuote = useCallback(
+    (hash) => {
+      dispatch(BulletinQuoteDel({ Hash: hash }));
+    },
+    [dispatch],
+  );
+
   const handleSubmit = useCallback(() => {
     if (!content.trim()) {
       dispatch(
         setFlashNoticeMessage({
-          message: "Content cannot be empty.",
+          message: t("chat.content_empty"),
           duration: FLASH_DURATION_MS,
         }),
       );
@@ -180,22 +196,22 @@ export default function PublishModal({ visible, onClose }) {
             paddingBottom: Platform.OS === "android" ? kbHeight : 0,
           }}
         >
-          <View style={styles.container}>
+          <View style={s.container}>
             {/* Drag indicator */}
-            <View style={styles.dragIndicator} />
+            <View style={s.dragIndicator} />
 
             {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>New Bulletin</Text>
+            <View style={s.header}>
+              <Text style={s.headerTitle}>{t("ui.new_bulletin")}</Text>
               <TouchableOpacity onPress={handleClose} hitSlop={10}>
-                <Text style={styles.closeBtn}>Cancel</Text>
+                <Text style={s.closeBtn}>{t("common.cancel")}</Text>
               </TouchableOpacity>
             </View>
 
             {/* Content area */}
             <ScrollView
-              style={styles.body}
-              contentContainerStyle={styles.bodyContent}
+              style={s.body}
+              contentContainerStyle={s.bodyContent}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
@@ -204,81 +220,105 @@ export default function PublishModal({ visible, onClose }) {
                 ref={contentRef}
                 multiline
                 numberOfLines={8}
-                placeholder="Write your bulletin..."
+                placeholder={t("ui.write_bulletin")}
                 placeholderTextColor="#999"
                 value={content}
                 onChangeText={setContent}
                 maxLength={MAX_CONTENT_LENGTH}
-                style={styles.textarea}
+                style={s.textarea}
               />
-              <Text style={styles.charCount}>
+              <Text style={s.charCount}>
                 {content.length} / {MAX_CONTENT_LENGTH}
               </Text>
 
               {/* Tag section */}
-              <View style={styles.tagSection}>
-                <Text style={styles.sectionLabel}>
-                  Tags (max {ListItemMax})
+              <View style={s.tagSection}>
+                <Text style={s.sectionLabel}>
+                  {t("ui.tags_max", { max: ListItemMax })}
                 </Text>
 
                 {/* Tag chips */}
                 {publishTags.length > 0 && (
-                  <View style={styles.chipRow}>
+                  <View style={s.chipRow}>
                     {publishTags.map((tag) => (
                       <TouchableOpacity
                         key={tag}
-                        style={styles.chip}
+                        style={s.chip}
                         onPress={() => handleRemoveTag(tag)}
                         activeOpacity={0.6}
                       >
-                        <Text style={styles.chipText}>{tag}</Text>
-                        <Text style={styles.chipRemove}> ✕</Text>
+                        <Text style={s.chipText}>{tag}</Text>
+                        <Text style={s.chipRemove}> ✕</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 )}
 
                 {/* Tag input row */}
-                <View style={styles.tagInputRow}>
+                <View style={s.tagInputRow}>
                   <TextInput
-                    placeholder="Type tag name"
+                    placeholder={t("ui.type_tag_name")}
                     placeholderTextColor="#999"
                     value={tagInput}
                     onChangeText={setTagInput}
                     onSubmitEditing={handleAddTag}
                     returnKeyType="done"
-                    style={styles.tagInput}
+                    style={s.tagInput}
                   />
                   <TouchableOpacity
                     onPress={handleAddTag}
                     disabled={!tagInput.trim()}
                     style={[
-                      styles.tagAddBtn,
-                      !tagInput.trim() && styles.tagAddBtnDisabled,
+                      s.tagAddBtn,
+                      !tagInput.trim() && s.tagAddBtnDisabled,
                     ]}
                     hitSlop={8}
                   >
-                    <Text style={styles.tagAddText}>+</Text>
+                    <Text style={s.tagAddText}>+</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
+              {/* Quote section */}
+              {publishQuotes.length > 0 && (
+                <View style={s.tagSection}>
+                  <Text style={s.sectionLabel}>
+                    Quoted Bulletins ({publishQuotes.length})
+                  </Text>
+                  <View style={s.chipRow}>
+                    {publishQuotes.map((quote) => (
+                      <TouchableOpacity
+                        key={quote.Hash}
+                        style={[s.chip, s.quoteChip]}
+                        onPress={() => handleRemoveQuote(quote.Hash)}
+                        activeOpacity={0.6}
+                      >
+                        <Text style={s.chipText} numberOfLines={1}>
+                          🔗 #{quote.Sequence} {quote.Address.slice(0, 6)}...
+                        </Text>
+                        <Text style={s.chipRemove}> ✕</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
               {/* File attachments */}
               {publishFiles.length > 0 && (
                 <View>
-                  <Text style={styles.sectionLabel}>Attached Files</Text>
-                  <View style={styles.chipRow}>
+                  <Text style={s.sectionLabel}>{t("ui.attachments")}</Text>
+                  <View style={s.chipRow}>
                     {publishFiles.map((file) => (
                       <TouchableOpacity
                         key={file.Hash}
-                        style={[styles.chip, styles.fileChip]}
+                        style={[s.chip, s.fileChip]}
                         onPress={() => handleRemoveFile(file.Hash)}
                         activeOpacity={0.6}
                       >
-                        <Text style={styles.chipText} numberOfLines={1}>
+                        <Text style={s.chipText} numberOfLines={1}>
                           {file.Name || "file"} ({filesize_format(file.Size)})
                         </Text>
-                        <Text style={styles.chipRemove}> ✕</Text>
+                        <Text style={s.chipRemove}> ✕</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -287,26 +327,23 @@ export default function PublishModal({ visible, onClose }) {
 
               <TouchableOpacity
                 onPress={handleFileAttach}
-                style={styles.attachBtn}
+                style={s.attachBtn}
                 activeOpacity={0.7}
               >
-                <Text style={styles.attachIcon}>📎</Text>
-                <Text style={styles.attachText}>Attach file</Text>
+                <Text style={s.attachIcon}>📎</Text>
+                <Text style={s.attachText}>{t("ui.attach_file")}</Text>
               </TouchableOpacity>
             </ScrollView>
 
             {/* Footer */}
-            <View style={styles.footer}>
+            <View style={s.footer}>
               <TouchableOpacity
                 onPress={handleSubmit}
                 disabled={!canSubmit}
-                style={[
-                  styles.publishBtn,
-                  !canSubmit && styles.publishBtnDisabled,
-                ]}
+                style={[s.publishBtn, !canSubmit && s.publishBtnDisabled]}
                 activeOpacity={0.7}
               >
-                <Text style={styles.publishText}>Publish</Text>
+                <Text style={s.publishText}>{t("ui.publish")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -316,173 +353,176 @@ export default function PublishModal({ visible, onClose }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "85%",
-    paddingBottom: Platform.OS === "ios" ? 30 : 20,
-  },
-  dragIndicator: {
-    width: 40,
-    height: 5,
-    backgroundColor: "#ccc",
-    borderRadius: 3,
-    alignSelf: "center",
-    marginTop: 10,
-    marginBottom: 6,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0e6c0",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#333",
-  },
-  closeBtn: {
-    fontSize: 16,
-    color: "#999",
-  },
-  body: {
-    flex: 1,
-  },
-  bodyContent: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    gap: 14,
-  },
-  textarea: {
-    minHeight: 140,
-    maxHeight: 220,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#e6d8a8",
-    borderRadius: 10,
-    fontSize: 16,
-    textAlignVertical: "top",
-    backgroundColor: "#fffdf5",
-  },
-  charCount: {
-    position: "absolute",
-    right: 20,
-    bottom: Platform.OS === "ios" ? -28 : -22,
-    fontSize: 11,
-    color: "#bbb",
-  },
-  tagSection: {
-    marginTop: 10,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#888",
-    marginBottom: 6,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 8,
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fdf6d3",
-    borderWidth: 1,
-    borderColor: "#e6d07a",
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  chipText: {
-    fontSize: 13,
-    color: "#8a7415",
-    fontWeight: "500",
-  },
-  chipRemove: {
-    fontSize: 13,
-    color: "#b8960e",
-  },
-  fileChip: {
-    maxWidth: "85%",
-  },
-  tagInputRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  tagInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-  },
-  tagAddBtn: {
-    justifyContent: "center",
-    alignItems: "center",
-    width: 36,
-    backgroundColor: ACCENT,
-    borderRadius: 8,
-  },
-  tagAddBtnDisabled: {
-    backgroundColor: "#ddd",
-  },
-  tagAddText: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#fff",
-    marginTop: -3,
-  },
-  attachBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: "#f9f5e8",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#e6d8a8",
-  },
-  attachIcon: {
-    fontSize: 18,
-  },
-  attachText: {
-    fontSize: 13,
-    color: "#999",
-    fontStyle: "italic",
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#f0e6c0",
-  },
-  publishBtn: {
-    backgroundColor: ACCENT,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 50,
-  },
-  publishBtnDisabled: {
-    backgroundColor: "#ccc",
-  },
-  publishText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
-    textAlign: "center",
-  },
-});
+const styles = (isDark) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: isDark ? "#2a2a34" : "#fff",
+      borderRadius: 20,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: "85%",
+      paddingBottom: Platform.OS === "ios" ? 30 : 20,
+    },
+    dragIndicator: {
+      width: 40,
+      height: 5,
+      backgroundColor: isDark ? "#4a4a55" : "#ccc",
+      borderRadius: 3,
+      alignSelf: "center",
+      marginTop: 10,
+      marginBottom: 6,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? "#3a3a45" : "#f0e6c0",
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: isDark ? "#e8e8ec" : "#333",
+    },
+    closeBtn: {
+      fontSize: 16,
+      color: "#999",
+    },
+    body: {
+      // flex:1 在只有 maxHeight（无确定高度）的父容器里会塌缩成 0，
+      // 导致输入框/标签/附件全部不可见。改用确定高度让 ScrollView 正常撑开。
+      height: 380,
+    },
+    bodyContent: {
+      paddingHorizontal: 20,
+      paddingTop: 14,
+      gap: 14,
+    },
+    textarea: {
+      minHeight: 140,
+      maxHeight: 220,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: isDark ? "#4a4a55" : "#e6d8a8",
+      borderRadius: 10,
+      fontSize: 16,
+      textAlignVertical: "top",
+      backgroundColor: isDark ? "#1e1e28" : "#fffdf5",
+    },
+    charCount: {
+      position: "absolute",
+      right: 20,
+      bottom: Platform.OS === "ios" ? -28 : -22,
+      fontSize: 11,
+      color: isDark ? "#777" : "#bbb",
+    },
+    tagSection: {
+      marginTop: 10,
+    },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: isDark ? "#999" : "#888",
+      marginBottom: 6,
+    },
+    chipRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+      marginBottom: 8,
+    },
+    chip: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: isDark ? "#3a3520" : "#fdf6d3",
+      borderWidth: 1,
+      borderColor: isDark ? "#5a5030" : "#e6d07a",
+      borderRadius: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+    },
+    chipText: {
+      fontSize: 13,
+      color: isDark ? "#d4c8a8" : "#8a7415",
+      fontWeight: "500",
+    },
+    chipRemove: {
+      fontSize: 13,
+      color: isDark ? "#c4b060" : "#b8960e",
+    },
+    fileChip: {
+      maxWidth: "85%",
+    },
+    tagInputRow: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    tagInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: isDark ? "#4a4a55" : "#ddd",
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      fontSize: 14,
+    },
+    tagAddBtn: {
+      justifyContent: "center",
+      alignItems: "center",
+      width: 36,
+      backgroundColor: ACCENT,
+      borderRadius: 8,
+    },
+    tagAddBtnDisabled: {
+      backgroundColor: isDark ? "#3a3a45" : "#ddd",
+    },
+    tagAddText: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: "#fff",
+      marginTop: -3,
+    },
+    attachBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      backgroundColor: isDark ? "#2e2e38" : "#f9f5e8",
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: isDark ? "#4a4a55" : "#e6d8a8",
+    },
+    attachIcon: {
+      fontSize: 18,
+    },
+    attachText: {
+      fontSize: 13,
+      color: "#999",
+      fontStyle: "italic",
+    },
+    footer: {
+      flexDirection: "row",
+      justifyContent: "center",
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: isDark ? "#3a3a45" : "#f0e6c0",
+    },
+    publishBtn: {
+      backgroundColor: ACCENT,
+      borderRadius: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 50,
+    },
+    publishBtnDisabled: {
+      backgroundColor: isDark ? "#3a3a45" : "#ccc",
+    },
+    publishText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: "#fff",
+      textAlign: "center",
+    },
+  });

@@ -1,12 +1,12 @@
 import { launchImageLibrary } from "react-native-image-picker";
 import RNFS from "react-native-fs";
-// TODO: react-native-document-picker is incompatible with RN 0.86 (GuardedResultAsyncTask missing)
-// import DocumentPicker from 'react-native-document-picker'
+import Logger from "../lib/Logger";
 
-const DocumentPicker = {
-  pick: async () => null, // placeholder until library is fixed
-  types: { allFiles: "*" },
-};
+/**
+ * KNOWN LIMITATION: react-native-document-picker is incompatible with RN 0.75.
+ * Document picking returns null. Only image picking via Camera Roll works.
+ * Fix planned: migrate to expo-file-system or react-native-doc-viewer.
+ */
 
 // Inline type fallbacks in case the installed version lacks these exports
 type ImageOptions = Record<string, unknown>;
@@ -59,16 +59,11 @@ export async function pickImage() {
 }
 
 export async function pickDocument() {
-  try {
-    const result = await (DocumentPicker.pick as any)({
-      type: [DocumentPicker.types.allFiles],
-    });
-
-    if (!result || result.length === 0) return null;
-    return result[0];
-  } catch {
-    return null;
-  }
+  // Document picking is disabled — react-native-document-picker incompatible with RN 0.75
+  Logger.warn(
+    "[mediaPicker] pickDocument is disabled due to library incompatibility",
+  );
+  return null;
 }
 
 /**

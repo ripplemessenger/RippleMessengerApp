@@ -60,19 +60,13 @@ import {
 import { LoadSessionList } from "./messenger.session";
 
 function* handleLogin({ payload }) {
-  console.log("[TRACE] handleLogin START", payload.address);
   try {
     let nickname = "";
-    console.log("[TRACE] getContactByAddress");
     let contact = yield call(() => dbAPI.getContactByAddress(payload.address));
-    console.log("[TRACE] getContactByAddress DONE", contact);
     if (contact !== null) {
       nickname = contact.nickname;
     }
-    console.log("[TRACE] updateAccountUpdatedAt");
     yield call(() => dbAPI.updateAccountUpdatedAt(payload.address, Date.now()));
-    console.log("[TRACE] updateAccountUpdatedAt DONE");
-    console.log("[TRACE] dispatch loginSuccess");
     yield put(
       loginSuccess({
         seed: payload.seed,
@@ -80,22 +74,17 @@ function* handleLogin({ payload }) {
         nickname: nickname,
       }),
     );
-    console.log("[TRACE] loginSuccess dispatched");
 
     // Parallelize independent data loads
-    console.log("[TRACE] yield all parallel sagas");
     yield all([
       call(loadContactList),
       call(LoadMineBulletinSequence),
       call(RefreshPortalBulletin),
       call(LoadGroupRequestList),
     ]);
-    console.log("[TRACE] parallel sagas done");
 
     // LoadGroupList must complete before LoadSessionList (reads GroupList from store)
-    console.log("[TRACE] LoadGroupList");
     yield call(LoadGroupList);
-    console.log("[TRACE] LoadSessionList");
     yield call(LoadSessionList);
 
     const contact_list = yield select((state) => state.User.ContactList);
@@ -121,14 +110,10 @@ function* handleLogin({ payload }) {
 
 // Auto-login: check for saved session credentials and login if found
 function* handleAutoLogin() {
-  console.log("[TRACE] handleAutoLogin START");
   const IsAuth = yield select((state) => state.User.IsAuth);
-  console.log("[TRACE] handleAutoLogin IsAuth=", IsAuth);
   if (IsAuth) return;
 
-  console.log("[TRACE] handleAutoLogin calling loadSession");
   const session = yield call(loadSession);
-  console.log("[TRACE] handleAutoLogin session=", JSON.stringify(session));
   if (session && session.seed && session.address) {
     Logger.info("[handleAutoLogin] Found saved session for", session.address);
     yield put(loginStart({ seed: session.seed, address: session.address }));

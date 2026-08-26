@@ -173,16 +173,30 @@ function* handleRandomBulletinListObject(json) {
 function* handleAvatarListObject(json) {
   try {
     if (!checkAvatarListSchema(json)) return;
+    Logger.info(
+      `[handleAvatarListObject] received ${json.List.length} avatars`,
+    );
     for (let i = 0; i < json.List.length; i++) {
       const avatar = json.List[i];
       if (VerifyJsonSignature(avatar)) {
         const avatar_address = rippleKeyPairs.deriveAddress(avatar.PublicKey);
+        Logger.info(
+          `[handleAvatarListObject] avatar for ${avatar_address}, hash=${avatar.Hash}, size=${avatar.Size}`,
+        );
         const db_avatar = yield call(() =>
           dbAPI.getAvatarByAddress(avatar_address),
         );
+        Logger.info(
+          `[handleAvatarListObject] db_avatar=${db_avatar ? "exists" : "null"}`,
+        );
+        if (db_avatar) {
+          Logger.info(
+            `[handleAvatarListObject]   db.signed_at=${db_avatar.signed_at} db.hash=${db_avatar.hash} db.is_saved=${db_avatar.is_saved} avatar.Timestamp=${avatar.Timestamp} avatar.Hash=${avatar.Hash}`,
+          );
+        }
         if (db_avatar !== null) {
           if (db_avatar.signed_at < avatar.Timestamp) {
-            if (db_avatar.hash === avatar.Hash) {
+            if (db_avatar.hash === avatar.Hash && db_avatar.is_saved) {
               yield call(() =>
                 dbAPI.updateAvatar(
                   avatar_address,
@@ -222,6 +236,24 @@ function* handleAvatarListObject(json) {
               hash: avatar.Hash,
             });
           }
+        } else {
+          // DB record doesn't exist yet — create it with server metadata
+          yield call(() =>
+            dbAPI.addAvatar(
+              avatar_address,
+              avatar.Hash,
+              avatar.Size,
+              avatar.Timestamp,
+              Date.now(),
+              avatar,
+              false,
+            ),
+          );
+          yield call(RequestAvatarFile, {
+            key: null,
+            address: avatar_address,
+            hash: avatar.Hash,
+          });
         }
       }
     }

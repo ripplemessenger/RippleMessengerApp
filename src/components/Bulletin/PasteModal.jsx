@@ -2,17 +2,11 @@ import React, { useState, useCallback } from "react";
 import { Modal, View, Text, TextInput, TouchableOpacity } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
 
-import { setPasteFlag } from "../../store/slices/MessengerSlice";
 import { UploadBulletin } from "../../store/sagas/messenger.actions";
 import { checkBulletinSchema } from "../../lib/MessageSchemaVerifier";
 import { VerifyJsonSignature } from "../../lib/MessengerUtil";
-
-const ERROR_TEXT = {
-  json: "Not valid JSON",
-  schema: "Bulletin schema invalid",
-  signature: "Signature invalid",
-};
 
 /**
  * PasteModal — paste a raw bulletin JSON, validate it, and save to cache.
@@ -24,6 +18,7 @@ const ERROR_TEXT = {
  * signature verification.
  */
 export default function PasteModal({ visible, onClose }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const [tmpBulletin, setTmpBulletin] = useState("");
   const [status, setStatus] = useState({
@@ -67,7 +62,11 @@ export default function PasteModal({ visible, onClose }) {
     handleClose();
   }, [status, dispatch, handleClose]);
 
-  const errorText = status.error ? ERROR_TEXT[status.error] : null;
+  const errorText = status.error
+    ? t(
+        `ui.${status.error === "json" ? "not_valid_json" : status.error === "schema" ? "bulletin_schema_invalid" : "signature_invalid"}`,
+      )
+    : null;
 
   return (
     <Modal
@@ -82,7 +81,7 @@ export default function PasteModal({ visible, onClose }) {
           {/* Header */}
           <View className="flex-row items-center justify-between pb-3 border-b border-secondary-light/20">
             <Text className="text-lg font-bold text-text-primary">
-              Paste Bulletin JSON
+              {t("ui.paste_bulletin_title")}
             </Text>
             <TouchableOpacity onPress={handleClose} hitSlop={10}>
               <Ionicons name="close" size={24} color="#999" />
@@ -93,7 +92,7 @@ export default function PasteModal({ visible, onClose }) {
           <TextInput
             value={tmpBulletin}
             onChangeText={handleChange}
-            placeholder="Paste bulletin JSON here..."
+            placeholder={t("ui.paste_bulletin_hint")}
             placeholderTextColor="#a89f85"
             multiline
             numberOfLines={8}
@@ -106,7 +105,7 @@ export default function PasteModal({ visible, onClose }) {
             <Text className="mt-2 text-sm text-red-500">{errorText}</Text>
           ) : status.valid ? (
             <Text className="mt-2 text-sm text-green-600">
-              ✓ Valid bulletin — ready to save
+              {t("ui.valid_bulletin")}
             </Text>
           ) : null}
 
@@ -124,7 +123,7 @@ export default function PasteModal({ visible, onClose }) {
                 status.valid ? "text-white" : "text-text-secondary/50"
               }`}
             >
-              Save Bulletin
+              {t("ui.save_bulletin")}
             </Text>
           </TouchableOpacity>
         </View>

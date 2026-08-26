@@ -9,11 +9,29 @@ import { DefaultPartition, FileChunkSize } from "../../lib/AppConst";
 import { AesEncrypt, AesEncryptBuffer } from "../../lib/AppUtil";
 import Logger from "../../lib/Logger";
 import { mgAPI } from "../../lib/MessageGenerator";
-import { ActionCode, FileRequestType, ObjectType, Epoch } from "../../lib/MessengerConst";
-import { DHSequence, VerifyJsonSignature, getMemberIndex, Uint32ToBuffer, concatUint8Arrays } from "../../lib/MessengerUtil";
-import { checkAvatarRequestSchema, checkBulletinRequestSchema, checkFileRequestSchema, checkGroupMessageSyncSchema, checkGroupSyncSchema, checkPrivateMessageSyncSchema } from "../../lib/MessageSchemaVerifier";
+import {
+  ActionCode,
+  FileRequestType,
+  ObjectType,
+  Epoch,
+} from "../../lib/MessengerConst";
+import {
+  DHSequence,
+  VerifyJsonSignature,
+  getMemberIndex,
+  Uint32ToBuffer,
+  concatUint8Arrays,
+} from "../../lib/MessengerUtil";
+import {
+  checkAvatarRequestSchema,
+  checkBulletinRequestSchema,
+  checkFileRequestSchema,
+  checkGroupMessageSyncSchema,
+  checkGroupSyncSchema,
+  checkPrivateMessageSyncSchema,
+} from "../../lib/MessageSchemaVerifier";
 import { SendMessage, safeFork } from "./messenger.core";
-import { RequestNextBulletin, AvatarRequest } from "./messenger.bulletin";
+import { RequestNextBulletin } from "./messenger.bulletin";
 import { InitHandshake } from "./messenger.private";
 import { GroupSync } from "./messenger.group";
 
@@ -480,6 +498,9 @@ export function* handleActionMessage(json, action, address, seed) {
           seed,
         );
         break;
+      case ActionCode.Declare:
+        // Server sends its own Declare to identify itself; nothing to do
+        break;
       default:
         Logger.warn("[handleActionMessage] unknown ActionCode", json.Action);
     }
@@ -491,4 +512,3 @@ export function* handleActionMessage(json, action, address, seed) {
     );
   }
 }
-

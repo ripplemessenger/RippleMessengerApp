@@ -11,11 +11,19 @@ import { cancelled, call, fork, put, select, take } from "redux-saga/effects";
 import { FLASH_DURATION_MS } from "../../lib/AppConst";
 import Logger from "../../lib/Logger";
 import { mgAPI } from "../../lib/MessageGenerator";
-import { ActionCode, ObjectType, MessageCode, ControlActionCode, ErrorMessageMap } from "../../lib/MessengerConst";
+import {
+  MessageCode,
+  ControlActionCode,
+  ErrorMessageMap,
+} from "../../lib/MessengerConst";
 import { globalWsChannel } from "../../lib/WebsocketUtil";
 import { setFlashNoticeMessage } from "../slices/CommonSlice";
 import { SendMessage } from "./messenger.core";
-import { AvatarRequest, SubscribeFollow, FetchFollowBulletin } from "./messenger.bulletin";
+import {
+  AvatarRequest,
+  SubscribeFollow,
+  FetchFollowBulletin,
+} from "./messenger.bulletin";
 import { AutoSyncPrivateMessages } from "./messenger.private";
 import { UpdateConnStatus } from "./MessengerSaga";
 
@@ -143,6 +151,9 @@ export function* WebsocketListener() {
               yield call(handleBinaryMessage, action);
             } else {
               const json = action.data;
+              Logger.info(
+                `[WS] msg: Action=${json.Action} ObjectType=${json.ObjectType} ActionCode=${json.ActionCode} keys=${Object.keys(json).slice(0, 6).join(",")}`,
+              );
               // Control-plane messages (ActionCode 8xx) — server notifications/errors
               if (
                 json.ActionCode === ControlActionCode.ServerNotify ||

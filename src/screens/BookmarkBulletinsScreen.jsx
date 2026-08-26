@@ -1,25 +1,31 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   FlatList,
   RefreshControl,
   ActivityIndicator,
-} from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useDispatch, useSelector } from 'react-redux';
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
-import BulletinCard from '../components/Bulletin/BulletinCard';
-import { selectBookmarkBulletins } from '../selectors';
-import { LoadBookmarkBulletin } from '../store/sagas/messenger.actions';
-import { ACCENT } from '../lib/theme';
+import BulletinCard from "../components/Bulletin/BulletinCard";
+import { selectBookmarkBulletins } from "../selectors";
+import { LoadBookmarkBulletin } from "../store/sagas/messenger.actions";
+import { ACCENT } from "../lib/theme";
 
 /**
  * BookmarkBulletins — displays all bookmarked (marked) bulletins.
  */
-export default function BookmarkBulletins({ route, navigation }) {
+export default function BookmarkBulletins({ navigation }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
-  const { list: bulletins, page, totalPage } = useSelector(selectBookmarkBulletins);
+  const {
+    list: bulletins,
+    page,
+    totalPage,
+  } = useSelector(selectBookmarkBulletins);
 
   // Locally accumulated bulletin list across pages
   const [allBulletins, setAllBulletins] = useState([]);
@@ -37,7 +43,7 @@ export default function BookmarkBulletins({ route, navigation }) {
       setAllBulletins(bulletins);
       setLocalPage(1);
     } else if (page > 1 && bulletins.length > 0) {
-      setAllBulletins(prev => [...prev, ...bulletins]);
+      setAllBulletins((prev) => [...prev, ...bulletins]);
       setLocalPage(page);
     }
   }, [bulletins, page]);
@@ -51,12 +57,12 @@ export default function BookmarkBulletins({ route, navigation }) {
           className="text-base font-semibold text-primary"
           style={{ paddingLeft: 8 }}
         >
-          ← Back
+          ← {t("common.back")}
         </Text>
       ),
-      title: 'Bookmarks',
+      title: t("ui.bookmarks"),
       headerStyle: { backgroundColor: ACCENT },
-      headerTintColor: '#1a1a2e',
+      headerTintColor: "#1a1a2e",
     });
   }, [navigation]);
 
@@ -65,7 +71,9 @@ export default function BookmarkBulletins({ route, navigation }) {
     refreshingRef.current = true;
     setLocalPage(0);
     dispatch(LoadBookmarkBulletin({ page: 1 }));
-    setTimeout(() => { refreshingRef.current = false; }, 3000);
+    setTimeout(() => {
+      refreshingRef.current = false;
+    }, 3000);
   }, [dispatch]);
 
   const handleLoadMore = useCallback(() => {
@@ -75,33 +83,42 @@ export default function BookmarkBulletins({ route, navigation }) {
     }
   }, [dispatch, localPage, page, totalPage]);
 
-  const handlePressBulletin = useCallback((bulletin) => {
-    // BulletinDetail is in the BulletinTab sub-stack; navigate through root.
-    // This screen is a direct child of RootStack, so navigate() directly.
-    navigation.navigate('MainTabs', {
-      screen: 'Bulletin',
-      params: {
-        screen: 'BulletinDetail',
+  const handlePressBulletin = useCallback(
+    (bulletin) => {
+      // BulletinDetail is in the BulletinTab sub-stack; navigate through root.
+      // This screen is a direct child of RootStack, so navigate() directly.
+      navigation.navigate("MainTabs", {
+        screen: "Bulletin",
         params: {
-          hash: bulletin.hash,
-          address: bulletin.address,
-          sequence: bulletin.sequence,
+          screen: "BulletinDetail",
+          params: {
+            hash: bulletin.hash,
+            address: bulletin.address,
+            sequence: bulletin.sequence,
+          },
         },
-      },
-    });
-  }, [navigation]);
+      });
+    },
+    [navigation],
+  );
 
-  const handleTagPress = useCallback((t) => {
-    navigation.navigate('TagBulletins', { tag: t });
-  }, [navigation]);
+  const handleTagPress = useCallback(
+    (t) => {
+      navigation.navigate("TagBulletins", { tag: t });
+    },
+    [navigation],
+  );
 
-  const renderItem = useCallback(({ item }) => (
-    <BulletinCard
-      bulletin={item}
-      onPress={() => handlePressBulletin(item)}
-      onTagPress={handleTagPress}
-    />
-  ), [handlePressBulletin, handleTagPress]);
+  const renderItem = useCallback(
+    ({ item }) => (
+      <BulletinCard
+        bulletin={item}
+        onPress={() => handlePressBulletin(item)}
+        onTagPress={handleTagPress}
+      />
+    ),
+    [handlePressBulletin, handleTagPress],
+  );
 
   const keyExtractor = useCallback((item) => item.hash, []);
 
@@ -114,11 +131,11 @@ export default function BookmarkBulletins({ route, navigation }) {
         <View className="flex-row items-center gap-2">
           <Ionicons name="star" size={20} color={ACCENT} />
           <Text className="text-lg font-bold text-text-primary">
-            Bookmarked Posts
+            {t("ui.bookmarked_posts")}
           </Text>
         </View>
         <Text className="text-xs text-text-secondary/70 mt-1">
-          {allBulletins.length} post{allBulletins.length !== 1 ? 's' : ''} bookmarked
+          {t("ui.bookmarked_count", { count: allBulletins.length })}
         </Text>
       </View>
 
@@ -141,10 +158,10 @@ export default function BookmarkBulletins({ route, navigation }) {
           <View className="flex-1 items-center justify-center py-20">
             <Ionicons name="star-outline" size={48} color="#d4c8a8" />
             <Text className="text-xl font-bold text-text-primary mt-3 mb-1">
-              No bookmarks yet
+              {t("ui.no_bookmarks")}
             </Text>
             <Text className="text-sm text-text-secondary text-center px-8">
-              Tap the star icon on any post to save it here for quick access.
+              {t("ui.bookmark_hint")}
             </Text>
           </View>
         }
@@ -152,7 +169,9 @@ export default function BookmarkBulletins({ route, navigation }) {
           hasMore ? (
             <View className="py-4 items-center">
               <ActivityIndicator size="small" color={ACCENT} />
-              <Text className="text-xs text-text-secondary/70 mt-1">Loading more…</Text>
+              <Text className="text-xs text-text-secondary/70 mt-1">
+                {t("common.loading_more")}
+              </Text>
             </View>
           ) : null
         }

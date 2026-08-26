@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { RequestServerAddress } from "../store/sagas/messenger.actions";
@@ -22,6 +23,7 @@ import { ACCENT } from "../lib/theme";
  * (filled by the WebSocket handler for ObjectType.ServerAddressList)
  */
 export default function ServerAddressScreen({ route, navigation }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const url = route.params?.url || "";
   const { ServerAddressPage, ServerAddressTotalPage, ServerAddressList } =
@@ -80,7 +82,7 @@ export default function ServerAddressScreen({ route, navigation }) {
         </View>
         <View className="px-3 py-1 rounded-full bg-secondary-light/20">
           <Text className="text-xs text-text-secondary">
-            {item.Count ?? 0} posts
+            {t("ui.address_posts_count", { count: item.Count ?? 0 })}
           </Text>
         </View>
       </TouchableOpacity>
@@ -95,7 +97,7 @@ export default function ServerAddressScreen({ route, navigation }) {
       {/* Header */}
       <View className="px-4 py-3 bg-primary/5 border-b border-secondary-light/30">
         <Text className="text-lg font-bold text-text-primary">
-          Server Stats
+          {t("ui.server_stats")}
         </Text>
         <Text className="text-xs font-mono text-text-secondary/70 mt-0.5 truncate">
           {url}
@@ -119,10 +121,10 @@ export default function ServerAddressScreen({ route, navigation }) {
           <View className="flex-1 items-center justify-center py-20 px-8">
             <Ionicons name="globe-outline" size={56} color="#d4c8a8" />
             <Text className="text-xl font-bold text-text-primary mt-4 mb-2">
-              No addresses
+              {t("ui.no_addresses")}
             </Text>
             <Text className="text-sm text-text-secondary text-center">
-              The server has not reported any addresses yet.
+              {t("ui.server_no_addresses")}
             </Text>
           </View>
         }
@@ -148,7 +150,7 @@ export default function ServerAddressScreen({ route, navigation }) {
                   : "text-primary"
               }`}
             >
-              Prev
+              {t("common.prev")}
             </Text>
           </TouchableOpacity>
           <Text className="text-sm text-text-secondary">
@@ -171,7 +173,7 @@ export default function ServerAddressScreen({ route, navigation }) {
                   : "text-primary"
               }`}
             >
-              Next
+              {t("common.next")}
             </Text>
           </TouchableOpacity>
         </View>

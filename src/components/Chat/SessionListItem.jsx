@@ -1,13 +1,14 @@
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { useTranslation } from "react-i18next";
 import { SessionType } from "../../lib/AppConst";
 import AvatarImage from "../AvatarImage";
 
 /**
  * Format a timestamp (ms epoch) into a human-readable relative string.
  */
-function formatTimestamp(timestamp) {
+function formatTimestamp(timestamp, t) {
   if (!timestamp || typeof timestamp !== "number" || timestamp <= 0) return "";
   const now = Date.now();
   const diff = now - timestamp;
@@ -20,7 +21,7 @@ function formatTimestamp(timestamp) {
 
   // Yesterday
   if (diff < 48 * 60 * 60 * 1000) {
-    return "Yesterday";
+    return t("time.yesterday", { defaultValue: "Yesterday" });
   }
 
   // Within a week: day name
@@ -44,29 +45,21 @@ function truncate(text, maxLength = 40) {
 }
 
 /**
- * Get the initials from an XRPL address for avatar placeholder.
- */
-function getInitials(address) {
-  if (!address) return "?";
-  return address.substring(0, 2).toUpperCase();
-}
-
-/**
  * Extract a text preview from a message that may be plain text or an object.
  * Truncates to 40 chars for display in session list.
  */
-function getMessagePreview(msg) {
+function getMessagePreview(msg, t) {
   if (!msg) return "";
   if (msg.is_object && msg.content) {
     const obj = msg.content;
     if (obj.Name) {
-      return "Attached: " + truncate(obj.Name, 30);
+      return t("chat.attached") + " " + truncate(obj.Name, 30);
     }
     if (obj.ObjectType !== undefined) {
       if (obj.ObjectType === 101) {
-        return "Shared a bulletin";
+        return t("chat.shared_bulletin");
       }
-      return "Shared a file";
+      return t("chat.shared_file");
     }
   }
   const text = typeof msg.content === "string" ? msg.content : "";
@@ -78,12 +71,12 @@ function getMessagePreview(msg) {
  * Shows "Sender: message" for groups, "message" for private chats.
  * Falls back to member count for empty group sessions only.
  */
-function buildSessionPreview(session) {
+function buildSessionPreview(session, t) {
   const lastMsg = session.last_message;
 
   // When there are messages, always show content preview
   if (lastMsg) {
-    const preview = getMessagePreview(lastMsg);
+    const preview = getMessagePreview(lastMsg, t);
 
     // For group chats, prefix with sender address
     if (session.type === 1) {
@@ -94,7 +87,7 @@ function buildSessionPreview(session) {
           : senderAddr;
       return preview
         ? `${senderShort}: ${preview}`
-        : `${session.member?.length || 0} members`;
+        : `${session.member?.length || 0} ${t("chat.group_members")}`;
     }
 
     // Private chat — message content, or fallback to member hint
@@ -103,12 +96,12 @@ function buildSessionPreview(session) {
 
   // No messages at all yet
   if (session.new_msg_count > 0) {
-    return `${session.new_msg_count} new message${session.new_msg_count > 1 ? "s" : ""}`;
+    return `${session.new_msg_count} ${t("chat.new_message")}${session.new_msg_count > 1 ? "s" : ""}`;
   }
 
   // Truly empty session — show member count for groups only
   if (session.type === 1) {
-    return `${session.member?.length || 0} members`;
+    return `${session.member?.length || 0} ${t("chat.group_members")}`;
   }
 
   return "";
@@ -127,25 +120,22 @@ export default React.memo(function SessionListItem({
   session,
   onPress,
   contactMap = {},
-  selfAddress = "",
 }) {
+  const { t } = useTranslation();
   const isPrivate = session.type === SessionType.Private;
   const isNewMessages = session.new_msg_count > 0;
 
   // Resolve display name
   let displayName = "";
-  let avatarInitials = "";
   if (isPrivate) {
     const nickname = contactMap[session.address];
     displayName = nickname || truncate(session.address, 12);
-    avatarInitials = getInitials(session.address);
   } else {
-    displayName = session.name || "Group";
-    avatarInitials = displayName.substring(0, 2).toUpperCase();
+    displayName = session.name || t("group.unnamed");
   }
 
   // Get last message preview text from the actual last message content
-  const previewText = buildSessionPreview(session);
+  const previewText = buildSessionPreview(session, t);
 
   return (
     <TouchableOpacity
@@ -191,7 +181,7 @@ export default React.memo(function SessionListItem({
             {displayName}
           </Text>
           <Text className="text-xs text-text-secondary/60 ml-2">
-            {formatTimestamp(session.updated_at)}
+            {formatTimestamp(session.updated_at, t)}
           </Text>
         </View>
         <Text
@@ -200,7 +190,9 @@ export default React.memo(function SessionListItem({
           ellipsizeMode="tail"
         >
           {previewText ||
-            (isPrivate ? "" : `${session.member?.length || 0} members`)}
+            (isPrivate
+              ? ""
+              : `${session.member?.length || 0} ${t("chat.group_members")}`)}
         </Text>
       </View>
 

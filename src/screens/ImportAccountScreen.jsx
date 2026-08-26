@@ -1,15 +1,25 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Keyboard } from 'react-native';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  ActivityIndicator,
+  Keyboard,
+} from "react-native";
+import { useTranslation } from "react-i18next";
 
-import { getWallet } from '../lib/RippleUtil';
-import { genSalt, encryptWithPassword } from '../lib/AppUtil';
-import { dbAPI } from '../db';
-import Logger from '../lib/Logger';
+import { getWallet } from "../lib/RippleUtil";
+import { genSalt, encryptWithPassword } from "../lib/AppUtil";
+import { dbAPI } from "../db";
+import Logger from "../lib/Logger";
 
 export default function ImportAccountScreen({ navigation }) {
-  const [seed, setSeed] = useState('');
-  const [address, setAddress] = useState('');
-  const [password, setPassword] = useState('');
+  const { t } = useTranslation();
+  const [seed, setSeed] = useState("");
+  const [address, setAddress] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -17,17 +27,17 @@ export default function ImportAccountScreen({ navigation }) {
   const handleSeedChange = (value) => {
     const trimmed = value.trim();
     setSeed(trimmed);
-    setAddress('');
+    setAddress("");
     setError(null);
 
-    if (trimmed === '') return;
+    if (trimmed === "") return;
 
     try {
       const wallet = getWallet(trimmed);
       setAddress(wallet.classicAddress);
     } catch (e) {
-      Logger.debug('[ImportAccount] invalid seed:', e);
-      setError('Invalid seed format');
+      Logger.debug("[ImportAccount] invalid seed:", e);
+      setError(t("auth.invalid_seed"));
     }
   };
 
@@ -36,12 +46,12 @@ export default function ImportAccountScreen({ navigation }) {
     setError(null);
 
     if (!seed.trim()) {
-      setError('Seed is required');
+      setError(t("auth.seed_required"));
       return;
     }
 
-    if (password.trim() === '') {
-      setError('Password is required');
+    if (password.trim() === "") {
+      setError(t("auth.password_required"));
       return;
     }
 
@@ -50,7 +60,7 @@ export default function ImportAccountScreen({ navigation }) {
     try {
       wallet = getWallet(seed);
     } catch (e) {
-      setError('Invalid seed format');
+      setError(t("auth.invalid_seed"));
       return;
     }
 
@@ -68,8 +78,8 @@ export default function ImportAccountScreen({ navigation }) {
       // Navigate back to LoginScreen
       navigation.goBack();
     } catch (e) {
-      Logger.error('[ImportAccount] failed:', e);
-      setError(typeof e === 'string' ? e : String(e));
+      Logger.error("[ImportAccount] failed:", e);
+      setError(typeof e === "string" ? e : String(e));
     } finally {
       setLoading(false);
     }
@@ -80,10 +90,10 @@ export default function ImportAccountScreen({ navigation }) {
       <View className="px-6 py-10 items-center">
         {/* Title */}
         <Text className="text-3xl font-bold text-text-primary mb-2">
-          Import Account
+          {t("auth.import_title")}
         </Text>
         <Text className="text-sm text-text-secondary mb-8 text-center">
-          Import an existing XRPL account using your seed
+          {t("auth.import_desc")}
         </Text>
 
         {/* Divider */}
@@ -94,7 +104,7 @@ export default function ImportAccountScreen({ navigation }) {
           {/* Seed Input */}
           <View className="mb-4">
             <Text className="text-sm font-medium text-text-primary mb-1">
-              Seed:
+              {t("auth.seed_label")}
             </Text>
             <View className="border border-secondary-light rounded-xl bg-surface-card px-3 py-2">
               <TextInput
@@ -109,10 +119,10 @@ export default function ImportAccountScreen({ navigation }) {
           </View>
 
           {/* Derived Address (read-only) */}
-          {address !== '' && (
+          {address !== "" && (
             <View className="mb-4">
               <Text className="text-sm font-medium text-text-primary mb-1">
-                Address:
+                {t("auth.address_label")}
               </Text>
               <View className="border border-secondary-light rounded-xl bg-surface-card px-3 py-2">
                 <Text className="text-xs text-text-secondary font-mono break-all">
@@ -125,7 +135,7 @@ export default function ImportAccountScreen({ navigation }) {
           {/* Password Input */}
           <View className="mb-6">
             <Text className="text-sm font-medium text-text-primary mb-1">
-              Password:
+              {t("auth.password_label")}
             </Text>
             <View className="border border-secondary-light rounded-xl bg-surface-card px-3 py-2">
               <TextInput
@@ -151,14 +161,14 @@ export default function ImportAccountScreen({ navigation }) {
           {/* Import Button */}
           <TouchableOpacity
             onPress={handleImport}
-            disabled={loading || seed === '' || password.length === 0}
+            disabled={loading || seed === "" || password.length === 0}
             className="bg-primary py-3 rounded-xl items-center mb-4"
           >
             {loading ? (
               <ActivityIndicator color="#1a1a2e" />
             ) : (
               <Text className="text-base font-semibold text-text-primary">
-                Import Account
+                {t("auth.import_title")}
               </Text>
             )}
           </TouchableOpacity>
@@ -170,7 +180,7 @@ export default function ImportAccountScreen({ navigation }) {
             className="bg-surface-card border border-secondary py-3 rounded-xl items-center"
           >
             <Text className="text-base font-medium text-text-secondary">
-              Back to Login
+              {t("auth.back_to_login")}
             </Text>
           </TouchableOpacity>
         </View>

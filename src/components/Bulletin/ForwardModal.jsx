@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
 import { ForwardBulletin } from "../../store/sagas/messenger.actions";
 import { setForwardFlag } from "../../store/slices/MessengerSlice";
@@ -37,6 +38,7 @@ function shortenAddress(addr) {
 }
 
 export default function ForwardModal({ visible }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const contactMap = useSelector(selectContactMap);
   const selfAddress = useSelector((state) => state.User.Address);
@@ -133,7 +135,7 @@ export default function ForwardModal({ visible }) {
           {/* Header */}
           <View className="flex-row items-center justify-between px-5 pb-3 border-b border-secondary-light/20">
             <Text className="text-lg font-bold text-text-primary">
-              Forward Bulletin
+              {t("ui.forward_bulletin")}
             </Text>
             <TouchableOpacity onPress={handleClose} hitSlop={10}>
               <Ionicons name="close" size={24} color="#999" />
@@ -144,7 +146,7 @@ export default function ForwardModal({ visible }) {
           <View className="flex-row items-center mx-5 mt-3 bg-surface rounded-lg px-3 py-2 border border-secondary-light/30">
             <Ionicons name="search" size={16} color="#a89f85" />
             <TextInput
-              placeholder="Search contacts..."
+              placeholder={t("ui.search_contacts")}
               placeholderTextColor="#a89f85"
               value={searchText}
               onChangeText={setSearchText}
@@ -166,7 +168,7 @@ export default function ForwardModal({ visible }) {
               <View className="items-center py-16">
                 <ActivityIndicator size="large" color={ACCENT} />
                 <Text className="text-sm text-text-secondary mt-3">
-                  Loading contacts...
+                  {t("ui.loading_contacts")}
                 </Text>
               </View>
             ) : filteredFriends.length > 0 ? (
@@ -184,13 +186,13 @@ export default function ForwardModal({ visible }) {
                 <Ionicons name="people-outline" size={48} color="#d4c8a8" />
                 <Text className="text-base text-text-primary mt-3 font-semibold">
                   {searchText.trim()
-                    ? "No matching contacts"
-                    : "No contacts yet"}
+                    ? t("ui.no_contacts_available")
+                    : t("ui.no_contacts")}
                 </Text>
                 <Text className="text-xs text-text-secondary/60 mt-1 px-8 text-center">
                   {searchText.trim()
-                    ? "Try a different search term."
-                    : "Add friends first to forward bulletins."}
+                    ? t("ui.try_different_search")
+                    : t("ui.add_friends_first")}
                 </Text>
               </View>
             )}

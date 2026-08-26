@@ -1,25 +1,31 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   FlatList,
   RefreshControl,
   ActivityIndicator,
-} from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useDispatch, useSelector } from 'react-redux';
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
-import BulletinCard from '../components/Bulletin/BulletinCard';
-import { selectFollowBulletins } from '../selectors';
-import { LoadFollowBulletin } from '../store/sagas/messenger.actions';
-import { ACCENT } from '../lib/theme';
+import BulletinCard from "../components/Bulletin/BulletinCard";
+import { selectFollowBulletins } from "../selectors";
+import { LoadFollowBulletin } from "../store/sagas/messenger.actions";
+import { ACCENT } from "../lib/theme";
 
 /**
  * FollowedBulletinsScreen — displays bulletins from accounts the user follows.
  */
 export default function FollowedBulletinsScreen({ navigation }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
-  const { list: bulletins, page, totalPage } = useSelector(selectFollowBulletins);
+  const {
+    list: bulletins,
+    page,
+    totalPage,
+  } = useSelector(selectFollowBulletins);
 
   // Locally accumulated bulletin list across pages
   const [allBulletins, setAllBulletins] = useState([]);
@@ -37,7 +43,7 @@ export default function FollowedBulletinsScreen({ navigation }) {
       setAllBulletins(bulletins);
       setLocalPage(1);
     } else if (page > 1 && bulletins.length > 0) {
-      setAllBulletins(prev => [...prev, ...bulletins]);
+      setAllBulletins((prev) => [...prev, ...bulletins]);
       setLocalPage(page);
     }
   }, [bulletins, page]);
@@ -51,12 +57,12 @@ export default function FollowedBulletinsScreen({ navigation }) {
           className="text-base font-semibold text-primary"
           style={{ paddingLeft: 8 }}
         >
-          ← Back
+          ← {t("common.back")}
         </Text>
       ),
-      title: 'Followed Posts',
+      title: t("ui.followed_posts"),
       headerStyle: { backgroundColor: ACCENT },
-      headerTintColor: '#1a1a2e',
+      headerTintColor: "#1a1a2e",
     });
   }, [navigation]);
 
@@ -65,7 +71,9 @@ export default function FollowedBulletinsScreen({ navigation }) {
     refreshingRef.current = true;
     setLocalPage(0);
     dispatch(LoadFollowBulletin({ page: 1 }));
-    setTimeout(() => { refreshingRef.current = false; }, 3000);
+    setTimeout(() => {
+      refreshingRef.current = false;
+    }, 3000);
   }, [dispatch]);
 
   const handleLoadMore = useCallback(() => {
@@ -75,32 +83,41 @@ export default function FollowedBulletinsScreen({ navigation }) {
     }
   }, [dispatch, localPage, page, totalPage]);
 
-  const handlePressBulletin = useCallback((bulletin) => {
-    // This screen is a direct child of RootStack, so navigate() directly.
-    navigation.navigate('MainTabs', {
-      screen: 'Bulletin',
-      params: {
-        screen: 'BulletinDetail',
+  const handlePressBulletin = useCallback(
+    (bulletin) => {
+      // This screen is a direct child of RootStack, so navigate() directly.
+      navigation.navigate("MainTabs", {
+        screen: "Bulletin",
         params: {
-          hash: bulletin.hash,
-          address: bulletin.address,
-          sequence: bulletin.sequence,
+          screen: "BulletinDetail",
+          params: {
+            hash: bulletin.hash,
+            address: bulletin.address,
+            sequence: bulletin.sequence,
+          },
         },
-      },
-    });
-  }, [navigation]);
+      });
+    },
+    [navigation],
+  );
 
-  const handleTagPress = useCallback((t) => {
-    navigation.navigate('TagBulletins', { tag: t });
-  }, [navigation]);
+  const handleTagPress = useCallback(
+    (t) => {
+      navigation.navigate("TagBulletins", { tag: t });
+    },
+    [navigation],
+  );
 
-  const renderItem = useCallback(({ item }) => (
-    <BulletinCard
-      bulletin={item}
-      onPress={() => handlePressBulletin(item)}
-      onTagPress={handleTagPress}
-    />
-  ), [handlePressBulletin, handleTagPress]);
+  const renderItem = useCallback(
+    ({ item }) => (
+      <BulletinCard
+        bulletin={item}
+        onPress={() => handlePressBulletin(item)}
+        onTagPress={handleTagPress}
+      />
+    ),
+    [handlePressBulletin, handleTagPress],
+  );
 
   const keyExtractor = useCallback((item) => item.hash, []);
 
@@ -113,11 +130,11 @@ export default function FollowedBulletinsScreen({ navigation }) {
         <View className="flex-row items-center gap-2">
           <Ionicons name="people" size={20} color={ACCENT} />
           <Text className="text-lg font-bold text-text-primary">
-            Followed Posts
+            {t("ui.followed_posts")}
           </Text>
         </View>
         <Text className="text-xs text-text-secondary/70 mt-1">
-          {allBulletins.length} post{allBulletins.length !== 1 ? 's' : ''} from followed accounts
+          {t("ui.followed_count", { count: allBulletins.length })}
         </Text>
       </View>
 
@@ -140,10 +157,10 @@ export default function FollowedBulletinsScreen({ navigation }) {
           <View className="flex-1 items-center justify-center py-20">
             <Ionicons name="people-outline" size={48} color="#d4c8a8" />
             <Text className="text-xl font-bold text-text-primary mt-3 mb-1">
-              No followed posts yet
+              {t("ui.no_followed")}
             </Text>
             <Text className="text-sm text-text-secondary text-center px-8">
-              Follow some accounts to see their posts here.
+              {t("ui.follow_hint")}
             </Text>
           </View>
         }
@@ -151,7 +168,9 @@ export default function FollowedBulletinsScreen({ navigation }) {
           hasMore ? (
             <View className="py-4 items-center">
               <ActivityIndicator size="small" color={ACCENT} />
-              <Text className="text-xs text-text-secondary/70 mt-1">Loading more…</Text>
+              <Text className="text-xs text-text-secondary/70 mt-1">
+                {t("common.loading_more")}
+              </Text>
             </View>
           ) : null
         }

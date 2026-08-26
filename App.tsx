@@ -10,8 +10,11 @@ if (typeof global.crypto?.getRandomValues === "function") {
 }
 // @ts-ignore - CSS side-effect import for NativeWind
 import "./src/global.css";
-import React, { useEffect, Component, ReactNode } from "react";
+import i18n, { initPromise } from "./src/i18n";
+import { getSettingString } from "./src/lib/SettingsUtil";
+import React, { useEffect, Component, ReactNode, useState } from "react";
 import { StatusBar, View, Text, StyleSheet } from "react-native";
+import { I18nextProvider } from "react-i18next";
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -88,16 +91,41 @@ function AppShell() {
 }
 
 export default function App() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // Wait for i18n to finish initializing before rendering any components
+    initPromise
+      .then(async () => {
+        // Apply the user's saved language preference (defaults to "en")
+        try {
+          const saved = await getSettingString("language", "en");
+          if (saved) await i18n.changeLanguage(saved);
+        } catch {
+          // keep default language
+        }
+        // Small delay to ensure React context is fully set up
+        setTimeout(() => setReady(true), 100);
+      })
+      .catch(() => setReady(true));
+  }, []);
+
   useEffect(() => {
     initNotifications();
     store.dispatch(autoLoginInit());
-  }, []);
+  }, [ready]);
+
+  if (!ready) {
+    return null;
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Provider store={store}>
-        <AppShell />
-      </Provider>
+      <I18nextProvider i18n={i18n}>
+        <Provider store={store}>
+          <AppShell />
+        </Provider>
+      </I18nextProvider>
     </GestureHandlerRootView>
   );
 }

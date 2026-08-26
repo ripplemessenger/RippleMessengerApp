@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { View, Text, TouchableOpacity, FlatList, Alert } from "react-native";
+import { useTranslation } from "react-i18next";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import RNFS from "react-native-fs";
 import { dbAPI } from "../db";
 import * as fileService from "../services/fileService";
 import { filesize_format } from "../lib/AppUtil";
-import { ACCENT } from '../lib/theme';
+import { ACCENT } from "../lib/theme";
 
 const STORAGE_PAGE_SIZE = 20;
 
@@ -63,6 +64,7 @@ function getFileIcon(ext) {
  * Uses local state (transient data, no Redux slice needed).
  */
 export default function StorageManagementTab() {
+  const { t } = useTranslation();
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [files, setFiles] = useState([]);
   const [page, setPage] = useState(1);
@@ -200,7 +202,7 @@ export default function StorageManagementTab() {
                 loadFiles(page);
                 loadSummary();
               } catch (e) {
-                Alert.alert("Error", "Failed to delete file.");
+                Alert.alert(t("common.error"), t("storage.delete_failed"));
               }
             },
           },
@@ -216,12 +218,12 @@ export default function StorageManagementTab() {
     if (orphaned.length === 0) return;
 
     Alert.alert(
-      "Clear Orphaned Files",
-      `Remove ${orphaned.length} orphaned file(s)? These are no longer linked to any bulletin or chat.`,
+      t("storage.clear_orphaned_title"),
+      t("storage.clear_orphaned_confirm", { count: orphaned.length }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Clear All",
+          text: t("storage.clear_all"),
           style: "destructive",
           onPress: async () => {
             for (const f of orphaned) {
@@ -265,12 +267,12 @@ export default function StorageManagementTab() {
   // Delete selected files
   const handleDeleteSelected = useCallback(async () => {
     Alert.alert(
-      "Delete Selected",
-      `Remove ${selectedHashes.length} file(s) from storage?`,
+      t("storage.delete_selected_title"),
+      t("storage.delete_selected_confirm", { count: selectedHashes.length }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             for (const hash of selectedHashes) {
@@ -293,25 +295,21 @@ export default function StorageManagementTab() {
 
   // Clear avatar cache
   const handleClearAvatars = useCallback(() => {
-    Alert.alert(
-      "Clear Avatar Cache",
-      "Remove all cached avatars from local storage?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await dbAPI.clearAvatars();
-              loadSummary();
-            } catch (e) {
-              Alert.alert("Error", "Failed to clear avatar cache.");
-            }
-          },
+    Alert.alert(t("storage.clear_avatar_title"), t("storage.clear_confirm"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("storage.clear"),
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await dbAPI.clearAvatars();
+            loadSummary();
+          } catch (e) {
+            Alert.alert(t("common.error"), t("storage.clear_failed"));
+          }
         },
-      ],
-    );
+      },
+    ]);
   }, [loadSummary]);
 
   const formatDate = useCallback((ts) => {
@@ -442,7 +440,7 @@ export default function StorageManagementTab() {
         <Text className="text-sm text-text-secondary/60 text-center px-8">
           {categoryFilter !== "all"
             ? `No ${categoryFilter} files found`
-            : "Cached files will appear here"}
+            : t("storage.no_cached")}
         </Text>
       </View>
     ),
@@ -450,7 +448,7 @@ export default function StorageManagementTab() {
   );
 
   return (
-    <View className="flex-1 gap-3">
+    <View className="flex-1 gap-3 bg-surface">
       {/* Storage Summary Card */}
       <View className="bg-surface-card rounded-2xl p-4 border border-secondary-light gap-2">
         <Text className="text-sm font-semibold text-text-primary mb-1">

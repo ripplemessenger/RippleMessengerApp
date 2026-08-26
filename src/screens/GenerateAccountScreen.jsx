@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Clipboard, Alert } from 'react-native';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Clipboard,
+  Alert,
+} from "react-native";
+import { useTranslation } from "react-i18next";
 
-import { getWallet, generateWallet } from '../lib/RippleUtil';
+import { getWallet, generateWallet } from "../lib/RippleUtil";
 
 export default function GenerateAccountScreen({ navigation }) {
-  const [seed, setSeed] = useState('');
-  const [address, setAddress] = useState('');
+  const { t } = useTranslation();
+  const [seed, setSeed] = useState("");
+  const [address, setAddress] = useState("");
   const [copiedField, setCopiedField] = useState(null);
 
   const handleGenerate = () => {
@@ -16,7 +25,10 @@ export default function GenerateAccountScreen({ navigation }) {
       const wallet = getWallet(gen.seed);
       setAddress(wallet.classicAddress);
     } catch (e) {
-      Alert.alert('Error', 'Failed to generate account: ' + String(e));
+      Alert.alert(
+        t("common.error"),
+        t("auth.generate_failed") + " " + String(e),
+      );
     }
   };
 
@@ -31,10 +43,10 @@ export default function GenerateAccountScreen({ navigation }) {
       <View className="px-6 py-10 items-center">
         {/* Title */}
         <Text className="text-3xl font-bold text-text-primary mb-2">
-          Generate Account
+          {t("auth.generate")}
         </Text>
         <Text className="text-sm text-text-secondary mb-8 text-center">
-          Create a new XRPL account
+          {t("auth.generate_desc")}
         </Text>
 
         {/* Divider */}
@@ -48,18 +60,21 @@ export default function GenerateAccountScreen({ navigation }) {
             className="bg-primary py-3 rounded-xl items-center mb-6"
           >
             <Text className="text-base font-semibold text-text-primary">
-              Generate Account
+              {t("auth.generate")}
             </Text>
           </TouchableOpacity>
 
           {/* Seed Display (hidden until generated) */}
-          {seed !== '' && (
+          {seed !== "" && (
             <View className="mb-4">
               <Text className="text-sm font-medium text-text-primary mb-1">
-                Seed: <Text className="text-xs font-normal text-text-secondary">(tap to copy)</Text>
+                {t("auth.seed_label")}{" "}
+                <Text className="text-xs font-normal text-text-secondary">
+                  {t("auth.click_to_copy")}
+                </Text>
               </Text>
               <TouchableOpacity
-                onPress={() => handleCopy(seed, 'seed')}
+                onPress={() => handleCopy(seed, "seed")}
                 activeOpacity={0.6}
                 className="border border-secondary-light rounded-xl bg-surface-card px-3 py-2"
               >
@@ -67,22 +82,25 @@ export default function GenerateAccountScreen({ navigation }) {
                   {seed}
                 </Text>
               </TouchableOpacity>
-              {copiedField === 'seed' && (
+              {copiedField === "seed" && (
                 <Text className="text-xs text-status-success mt-1 font-medium">
-                  Copied to clipboard!
+                  {t("common.copied_to_clipboard")}
                 </Text>
               )}
             </View>
           )}
 
           {/* Address Display (hidden until generated) */}
-          {address !== '' && (
+          {address !== "" && (
             <View className="mb-6">
               <Text className="text-sm font-medium text-text-primary mb-1">
-                Address: <Text className="text-xs font-normal text-text-secondary">(tap to copy)</Text>
+                {t("auth.address_label")}{" "}
+                <Text className="text-xs font-normal text-text-secondary">
+                  {t("auth.click_to_copy")}
+                </Text>
               </Text>
               <TouchableOpacity
-                onPress={() => handleCopy(address, 'address')}
+                onPress={() => handleCopy(address, "address")}
                 activeOpacity={0.6}
                 className="border border-secondary-light rounded-xl bg-surface-card px-3 py-2"
               >
@@ -90,19 +108,19 @@ export default function GenerateAccountScreen({ navigation }) {
                   {address}
                 </Text>
               </TouchableOpacity>
-              {copiedField === 'address' && (
+              {copiedField === "address" && (
                 <Text className="text-xs text-status-success mt-1 font-medium">
-                  Copied to clipboard!
+                  {t("common.copied_to_clipboard")}
                 </Text>
               )}
             </View>
           )}
 
           {/* Warning */}
-          {seed !== '' && (
+          {seed !== "" && (
             <View className="p-3 rounded-xl border border-secondary/50 mb-6">
               <Text className="text-sm text-text-secondary text-center">
-                Keep your seed safe. It cannot be recovered if lost.
+                {t("auth.seed_warning")}
               </Text>
             </View>
           )}
@@ -113,7 +131,7 @@ export default function GenerateAccountScreen({ navigation }) {
             className="bg-surface-card border border-secondary py-3 rounded-xl items-center"
           >
             <Text className="text-base font-medium text-text-secondary">
-              Back to Login
+              {t("auth.back_to_login")}
             </Text>
           </TouchableOpacity>
         </View>

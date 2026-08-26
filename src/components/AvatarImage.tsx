@@ -1,62 +1,59 @@
-import React, { useCallback } from 'react'
-import { View, Text, Image, StyleSheet } from 'react-native'
-import Ionicons from 'react-native-vector-icons/Ionicons'
+import React, { useCallback } from "react";
+import { View, Text, Image, StyleSheet } from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
-import { CheckAvatar } from '../store/sagas/messenger.actions'
-import { useDispatch } from 'react-redux'
-import { useAvatarData } from '../hooks/useAvatarData'
+import { CheckAvatar } from "../store/sagas/messenger.actions";
+import { useDispatch } from "react-redux";
+import { useAvatarData } from "../hooks/useAvatarData";
 
 interface AvatarImageProps {
   /** XRPL address to look up avatar for */
-  address?: string | null
+  address?: string | null;
   /** Nickname or display name (used for initials fallback and accessibility) */
-  nickname?: string
+  nickname?: string;
   /** Diameter of the avatar in pixels. Default: 36 */
-  size?: number
+  size?: number;
   /** Optional press handler */
-  onPress?: () => void
+  onPress?: () => void;
 }
 
 /**
- * Get the first two characters suitable for an avatar fallback.
- * If a nickname is provided, use it; otherwise fall back to the address.
+ * Get 4-character identifier for avatar fallback.
+ * All XRPL addresses start with 'r', so we take chars[1..2] + last 2 chars
+ * for better visual distinction. Always uses address, not nickname.
  */
 function getInitials(nickname?: string, address?: string): string {
-  if (nickname && nickname.length >= 2) return nickname.slice(0, 2).toUpperCase()
-  if (nickname && nickname.length === 1) return nickname.toUpperCase()
-  if (address && address.length >= 2) return address.slice(0, 2).toUpperCase()
-  return '?'
-}
-
-/**
- * Generate a deterministic pastel color from an XRPL address string.
- * Uses character codes to derive an HSL hue, producing a consistent colour per address.
- */
-function addressToHue(address: string): number {
-  let hash = 0
-  for (let i = 0; i < address.length; i++) {
-    hash = ((hash << 5) - hash + address.charCodeAt(i)) | 0
+  if (address && address.length >= 4) {
+    // rAaa... → take chars at index 1,2 and last 2 chars
+    return (
+      address[1] +
+      address[2] +
+      address[address.length - 2] +
+      address[address.length - 1]
+    );
   }
-  return Math.abs(hash) % 360
+  if (address && address.length >= 2) return address.slice(0, 2);
+  if (nickname && nickname.length >= 2) return nickname.slice(0, 2);
+  return "?";
 }
 
 const COLORS = [
-  '#e6b420', // primary gold
-  '#5b8dee', // blue
-  '#e06c75', // red
-  '#98c379', // green
-  '#c678dd', // purple
-  '#d19a66', // orange
-  '#61afef', // light blue
-  '#be5046', // dark red
-]
+  "#e6b420", // primary gold
+  "#5b8dee", // blue
+  "#e06c75", // red
+  "#98c379", // green
+  "#c678dd", // purple
+  "#d19a66", // orange
+  "#61afef", // light blue
+  "#be5046", // dark red
+];
 
 function addressToColor(address: string): string {
-  let hash = 0
+  let hash = 0;
   for (let i = 0; i < address.length; i++) {
-    hash = ((hash << 5) - hash + address.charCodeAt(i)) | 0
+    hash = ((hash << 5) - hash + address.charCodeAt(i)) | 0;
   }
-  return COLORS[Math.abs(hash) % COLORS.length]
+  return COLORS[Math.abs(hash) % COLORS.length];
 }
 
 /**
@@ -71,26 +68,23 @@ export default function AvatarImage({
   size = 36,
   onPress,
 }: AvatarImageProps) {
-  const dispatch = useDispatch()
-  const avatarUri = useAvatarData(address)
+  const dispatch = useDispatch();
+  const avatarUri = useAvatarData(address);
 
   // Dispatch CheckAvatar once when address changes
   React.useEffect(() => {
     if (address) {
       // @ts-ignore - createAction payload type not inferred from JS module
-      dispatch(CheckAvatar({ address }))
+      dispatch(CheckAvatar({ address }));
     }
-  }, [address, dispatch])
+  }, [address, dispatch]);
 
-  const initials = getInitials(nickname, address || undefined)
-  const bgColor = address ? addressToColor(address) : '#a89f85'
+  const initials = getInitials(nickname, address || undefined);
+  const bgColor = address ? addressToColor(address) : "#a89f85";
 
   return (
     <View
-      style={[
-        styles.container,
-        { width: size, height: size },
-      ]}
+      style={[styles.container, { width: size, height: size }]}
       onTouchEnd={onPress}
     >
       {avatarUri ? (
@@ -98,7 +92,7 @@ export default function AvatarImage({
           source={{ uri: avatarUri }}
           style={[styles.image, { width: size, height: size }]}
           resizeMode="cover"
-          accessibilityLabel={`Avatar for ${nickname || address || 'user'}`}
+          accessibilityLabel={`Avatar for ${nickname || address || "user"}`}
         />
       ) : (
         <View
@@ -111,36 +105,39 @@ export default function AvatarImage({
               backgroundColor: `${bgColor}30`,
             },
           ]}
-          accessibilityLabel={`Avatar for ${nickname || address || 'user'}`}
+          accessibilityLabel={`Avatar for ${nickname || address || "user"}`}
         >
           <Text
             style={[
               styles.initials,
-              { fontSize: size * 0.3 },
+              { fontSize: size * 0.38, lineHeight: size * 0.42 },
             ]}
           >
-            {initials}
+            {" "}
+            {initials.slice(0, 2)}
+            {"\n"}
+            {initials.slice(2, 4)}{" "}
           </Text>
         </View>
       )}
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexShrink: 0,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   image: {
     borderRadius: 999,
   },
   fallback: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   initials: {
-    fontWeight: '700',
-    color: '#e6b420',
+    fontWeight: "700",
+    color: "#e6b420",
   },
-})
+});

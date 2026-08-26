@@ -132,8 +132,25 @@ export function createMultiWsChannel(configs) {
         Logger.info(
           `[WS] Closed: ${key} (code: ${ev.code}) (wasClean: ${ev.wasClean})`,
         );
+        // If the entry was already removed from the manager (by
+        // cleanupRemovedConnections / disconnectAllWebsockets), this close was
+        // intentional — report CLOSED and do NOT schedule a reconnect.
+        if (!manager.channels.has(key)) {
+          emitToGlobal({
+            type: "status",
+            key,
+            status: WebSocket.CLOSED,
+            code: ev.code,
+          });
+          return;
+        }
+
+        // React Native's CloseEvent does not set `wasClean` (it is `undefined`),
+        // so decide by close code alone: 1000/1001 are intentional/normal closes
+        // and must not trigger a reconnect.
         const shouldRetry =
-          (!ev.wasClean || (ev.code !== 1000 && ev.code !== 1001)) &&
+          ev.code !== 1000 &&
+          ev.code !== 1001 &&
           retryCount < manager.MAX_RETRIES;
 
         if (shouldRetry) {

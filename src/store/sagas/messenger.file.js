@@ -44,8 +44,7 @@ import {
 
 // MessengerSaga — SendContent dispatcher and saveLocalFile re-export
 import { SendContent } from "./MessengerSaga";
-
-const FILE_REQUEST_TTL_MS = 120 * 1000; // 2 minutes per request entry
+import { FILE_REQUEST_TTL_MS } from "../../lib/AppConst";
 
 /**
  * Fetch the next chunk of a bulletin attachment from connected peers via server relay.
@@ -80,7 +79,7 @@ export function* FetchBulletinFile({ payload }) {
     setFileRequestList(
       getFileRequestList().filter(
         (r) =>
-          r.Timestamp + FILE_REQUEST_TTL_MS > Date.now() &&
+          r.Timestamp + (r.TTL || FILE_REQUEST_TTL_MS) > Date.now() &&
           r.Hash !== file.hash,
       ),
     );
@@ -221,7 +220,7 @@ export function* FetchPrivateChatFile({ payload }) {
         setFileRequestList(
           getFileRequestList().filter(
             (r) =>
-              r.Timestamp + FILE_REQUEST_TTL_MS > Date.now() &&
+              r.Timestamp + (r.TTL || FILE_REQUEST_TTL_MS) > Date.now() &&
               r.EHash !== ehash,
           ),
         );
@@ -304,7 +303,8 @@ export function* FetchGroupChatFile({ payload }) {
       setFileRequestList(
         getFileRequestList().filter(
           (r) =>
-            r.Timestamp + FILE_REQUEST_TTL_MS > Date.now() && r.EHash !== ehash,
+            r.Timestamp + (r.TTL || FILE_REQUEST_TTL_MS) > Date.now() &&
+            r.EHash !== ehash,
         ),
       );
       pushFileRequest({

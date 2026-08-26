@@ -7,20 +7,18 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  Alert,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 
-import { selectContactList, selectUserAddress } from "../selectors";
+import { selectContactList } from "../selectors";
 import { ACCENT } from "../lib/theme";
+import AvatarImage from "../components/AvatarImage";
 import {
   LoadContactList,
   ContactAdd as ContactAddAction,
-  ContactDel as ContactDelAction,
-  ContactToggleIsFollow,
-  ContactToggleIsFriend,
 } from "../store/sagas/messenger.actions";
 
 /**
@@ -38,78 +36,53 @@ import {
 // ---------------------------------------------------------------------------
 // Contact Card Component
 // ---------------------------------------------------------------------------
-function ContactCard({
-  contact,
-  onChat,
-  onToggleFollow,
-  onToggleFriend,
-  onDelete,
-}) {
+function ContactCard({ contact, onOpenDetail, onViewBulletins, onStartChat }) {
+  const { t } = useTranslation();
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={() => onChat(contact)}
-      className="bg-surface-card rounded-xl p-4 flex-row items-center gap-3 border border-secondary-light"
-    >
-      {/* Avatar placeholder */}
-      <View className="w-10 h-10 rounded-full bg-primary/20 items-center justify-center">
-        <Ionicons name="person" size={20} color={ACCENT} />
-      </View>
-
-      <View className="flex-1 min-w-0">
-        <Text className="text-base font-medium text-text-primary truncate">
-          {contact.nickname || "Unknown"}
-        </Text>
-        <Text className="text-xs font-mono text-text-secondary/70 truncate">
-          {contact.address}
-        </Text>
-      </View>
-
-      {/* Follow badge / toggle */}
+    <View className="bg-surface-card rounded-xl p-3 border border-secondary-light mb-2">
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={() => onToggleFollow(contact)}
-        className={`px-2 py-1 rounded-full ${
-          contact.is_follow ? "bg-status-success/20" : "bg-secondary-light/20"
-        }`}
+        onPress={() => onOpenDetail(contact)}
+        className="flex-row items-center gap-2"
       >
-        <Text
-          className={`text-xs ${
-            contact.is_follow ? "text-status-success" : "text-text-secondary"
-          }`}
-        >
-          {contact.is_follow ? "Following" : "Follow"}
-        </Text>
-      </TouchableOpacity>
+        <AvatarImage
+          address={contact.address}
+          nickname={contact.nickname}
+          size={36}
+        />
 
-      {/* Friend badge / toggle */}
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={() => onToggleFriend(contact)}
-        className={`px-2 py-1 rounded-full ${
-          contact.is_friend ? "bg-primary/20" : "bg-secondary-light/20"
-        }`}
-      >
-        <Text
-          className={`text-xs ${
-            contact.is_friend ? "text-primary" : "text-text-secondary"
-          }`}
-        >
-          {contact.is_friend ? "Friend" : "Add Friend"}
-        </Text>
-      </TouchableOpacity>
+        <View className="flex-1 min-w-0">
+          <Text className="text-base font-medium text-text-primary truncate">
+            {contact.nickname || t("common.unknown")}
+          </Text>
+          <Text className="text-xs font-mono text-text-secondary/70 truncate">
+            {contact.address}
+          </Text>
+        </View>
 
-      {/* Delete button (hidden when followed or friend, matching Client) */}
-      {contact.is_follow === false && contact.is_friend === false && (
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => onDelete(contact)}
-          className="p-1"
-        >
-          <Ionicons name="close-circle" size={20} color="#ef4444" />
-        </TouchableOpacity>
-      )}
-    </TouchableOpacity>
+        {/* Bulletin icon (if follow) */}
+        {contact.is_follow && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => onViewBulletins(contact)}
+            className="p-2"
+          >
+            <Ionicons name="volume-high-outline" size={20} color={ACCENT} />
+          </TouchableOpacity>
+        )}
+
+        {/* Chat icon (if friend) */}
+        {contact.is_friend && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => onStartChat(contact)}
+            className="p-2"
+          >
+            <Ionicons name="chatbubbles-outline" size={20} color={ACCENT} />
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -117,6 +90,7 @@ function ContactCard({
 // Add Contact Modal
 // ---------------------------------------------------------------------------
 function AddContactModal({ visible, onClose, onAdd }) {
+  const { t } = useTranslation();
   const [address, setAddress] = useState("");
   const [nickname, setNickname] = useState("");
 
@@ -139,11 +113,13 @@ function AddContactModal({ visible, onClose, onAdd }) {
       <View className="flex-1 justify-center items-center bg-black/50 px-6">
         <View className="bg-surface-card rounded-2xl p-6 w-full gap-4 border border-secondary-light">
           <Text className="text-xl font-semibold text-text-primary text-center">
-            Add Contact
+            {t("ui.add_contact")}
           </Text>
 
           <View className="gap-1">
-            <Text className="text-sm text-text-secondary">XRPL Address</Text>
+            <Text className="text-sm text-text-secondary">
+              {t("ui.xrpl_address")}
+            </Text>
             <TextInput
               value={address}
               onChangeText={setAddress}
@@ -156,12 +132,12 @@ function AddContactModal({ visible, onClose, onAdd }) {
 
           <View className="gap-1">
             <Text className="text-sm text-text-secondary">
-              Nickname (optional)
+              {t("ui.nickname_optional")}
             </Text>
             <TextInput
               value={nickname}
               onChangeText={setNickname}
-              placeholder="Display name"
+              placeholder={t("ui.nickname")}
               placeholderTextColor="#9a9590"
               className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm"
             />
@@ -174,7 +150,7 @@ function AddContactModal({ visible, onClose, onAdd }) {
               className="flex-1 py-3 rounded-xl border border-secondary-light items-center"
             >
               <Text className="text-base font-medium text-text-secondary">
-                Cancel
+                {t("common.cancel")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -192,7 +168,7 @@ function AddContactModal({ visible, onClose, onAdd }) {
                     : "text-text-secondary/50"
                 }`}
               >
-                Add
+                {t("ui.add")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -206,9 +182,9 @@ function AddContactModal({ visible, onClose, onAdd }) {
 // Main ContactScreen
 // ---------------------------------------------------------------------------
 export default function ContactScreen({ navigation }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const contacts = useSelector(selectContactList);
-  const selfAddress = useSelector(selectUserAddress);
   const refreshingRef = useRef(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -228,46 +204,33 @@ export default function ContactScreen({ navigation }) {
     }, 3000);
   }, [dispatch]);
 
-  const handleTap = useCallback(
+  const handleOpenDetail = useCallback(
     (contact) => {
-      navigation.navigate("AddressBulletins", {
+      navigation.navigate("ContactDetail", { address: contact.address });
+    },
+    [navigation],
+  );
+
+  const handleViewBulletins = useCallback(
+    (contact) => {
+      navigation.getParent().navigate("AddressBulletins", {
         address: contact.address,
       });
     },
     [navigation],
   );
 
-  const handleToggleFollow = useCallback(
+  const handleStartChat = useCallback(
     (contact) => {
-      dispatch(ContactToggleIsFollow({ contact_address: contact.address }));
+      navigation.getParent().navigate("ChatDetail", {
+        session: {
+          address: contact.address,
+          nickname: contact.nickname || contact.address,
+          is_friend: true,
+        },
+      });
     },
-    [dispatch],
-  );
-
-  const handleToggleFriend = useCallback(
-    (contact) => {
-      dispatch(ContactToggleIsFriend({ contact_address: contact.address }));
-    },
-    [dispatch],
-  );
-
-  const handleDelete = useCallback(
-    (contact) => {
-      Alert.alert(
-        "Delete Contact",
-        `Remove ${contact.nickname || contact.address} from contacts?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: () =>
-              dispatch(ContactDelAction({ contact_address: contact.address })),
-          },
-        ],
-      );
-    },
-    [dispatch],
+    [navigation],
   );
 
   const handleAdd = useCallback(
@@ -281,13 +244,12 @@ export default function ContactScreen({ navigation }) {
     ({ item }) => (
       <ContactCard
         contact={item}
-        onChat={handleTap}
-        onToggleFollow={handleToggleFollow}
-        onToggleFriend={handleToggleFriend}
-        onDelete={handleDelete}
+        onOpenDetail={handleOpenDetail}
+        onViewBulletins={handleViewBulletins}
+        onStartChat={handleStartChat}
       />
     ),
-    [handleTap, handleToggleFollow, handleToggleFriend, handleDelete],
+    [handleOpenDetail, handleViewBulletins, handleStartChat],
   );
 
   const keyExtractor = useCallback((item) => item.address, []);
@@ -304,10 +266,13 @@ export default function ContactScreen({ navigation }) {
         <View className="flex-row items-center justify-between">
           <View>
             <Text className="text-xl font-bold text-text-primary">
-              Contacts
+              {t("common.contacts")}
             </Text>
             <Text className="text-xs text-text-secondary/70 mt-0.5">
-              {contacts.length} total · {followCount} following
+              {t("contact.count_summary", {
+                total: contacts.length,
+                follow: followCount,
+              })}
             </Text>
           </View>
 
@@ -318,7 +283,9 @@ export default function ContactScreen({ navigation }) {
             className="flex-row items-center gap-1.5 bg-primary/10 border border-primary/30 px-3 py-2 rounded-lg"
           >
             <Ionicons name="add" size={16} color={ACCENT} />
-            <Text className="text-xs font-medium text-primary">Add</Text>
+            <Text className="text-xs font-medium text-primary">
+              {t("common.add_contact")}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -340,10 +307,10 @@ export default function ContactScreen({ navigation }) {
           <View className="flex-1 items-center justify-center py-20 px-8">
             <Ionicons name="people-outline" size={56} color="#d4c8a8" />
             <Text className="text-xl font-bold text-text-primary mt-4 mb-2">
-              No contacts yet
+              {t("ui.no_contacts")}
             </Text>
             <Text className="text-sm text-text-secondary text-center">
-              Tap the Add button above to add an XRPL address.
+              {t("contact.add_hint")}
             </Text>
           </View>
         }

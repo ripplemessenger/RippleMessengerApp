@@ -43,7 +43,8 @@ export default function InlineImage({ hash, ext, style, containerStyle }) {
           const path = fileService.getFileFullPath(hash);
           const exists = await fileService.fileExists(path);
           if (!cancelled && exists) {
-            setLocalUri(path);
+            const uri = path.startsWith("file://") ? path : `file://${path}`;
+            setLocalUri(uri);
             return;
           }
         }
@@ -64,7 +65,12 @@ export default function InlineImage({ hash, ext, style, containerStyle }) {
       <Image
         source={{ uri: localUri }}
         style={[
-          { width: "100%", borderRadius: 12, backgroundColor: "#00000010" },
+          {
+            width: "100%",
+            height: 200,
+            borderRadius: 12,
+            backgroundColor: "#00000010",
+          },
           style,
         ]}
         resizeMode="contain"

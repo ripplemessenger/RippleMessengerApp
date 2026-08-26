@@ -12,11 +12,14 @@ import {
   Clipboard,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import RNFS from "react-native-fs";
 import AvatarImage from "../components/AvatarImage";
 import useDarkMode from "../hooks/useDarkMode";
+import { dbAPI } from "../db";
+import { AvatarRequest } from "../store/sagas/messenger.bulletin";
 import * as fileService from "../services/fileService";
 import ImageCropPicker from "react-native-image-crop-picker";
 import { selectUserTabMe, selectConnectedServerCount } from "../selectors";
@@ -35,8 +38,21 @@ import {
 } from "../lib/SettingsUtil";
 import { previewSound } from "../lib/SoundUtil";
 import { ACCENT } from "../lib/theme";
+import i18n from "../i18n";
 
 const APP_VERSION = "1.0.0";
+
+const LANGUAGE_OPTIONS = [
+  { code: "en", label: "English" },
+  { code: "zh", label: "中文" },
+  { code: "fr", label: "Français" },
+  { code: "ru", label: "Русский" },
+  { code: "ja", label: "日本語" },
+  { code: "ko", label: "한국어" },
+  { code: "es", label: "Español" },
+  { code: "pt", label: "Português" },
+  { code: "de", label: "Deutsch" },
+];
 
 const SOUND_OPTIONS = [
   { value: "chime", label: "Chime", icon: "🔔" },
@@ -108,6 +124,7 @@ function Divider() {
 // SettingScreen — mobile settings list (single scroll, sections, sub-screens)
 // ---------------------------------------------------------------------------
 export default function SettingScreen({ navigation }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { Address, Nickname, Seed } = useSelector(selectUserTabMe);
   const connectedCount = useSelector(selectConnectedServerCount);
@@ -151,10 +168,10 @@ export default function SettingScreen({ navigation }) {
       const image = await ImageCropPicker.openPicker({
         mediaType: "photo",
         cropping: true,
-        cropperCircular: true,
-        cropperAspect: [1, 1],
-        maxWidth: 512,
-        maxHeight: 512,
+        cropperCircleOverlay: true,
+        width: 512,
+        height: 512,
+        hideBottomControls: true,
         showCropUI: true,
       });
       if (!image || !image.path) {
@@ -169,7 +186,10 @@ export default function SettingScreen({ navigation }) {
       dispatch(SaveSelfAvatar({ hash, size, timestamp: Date.now() }));
     } catch (e) {
       if (e?.code !== "E_CANCELED") {
-        Alert.alert("Avatar", e.message || "Failed to set avatar");
+        Alert.alert(
+          t("setting.avatar"),
+          e.message || t("setting.failed_to_set_avatar"),
+        );
       }
     } finally {
       setAvatarLoading(false);
@@ -181,7 +201,7 @@ export default function SettingScreen({ navigation }) {
     if (!Seed) {
       dispatch(
         setFlashNoticeMessage({
-          message: "No seed available (temporary login?)",
+          message: t("setting.no_seed_available"),
           duration: 2000,
         }),
       );
@@ -190,27 +210,47 @@ export default function SettingScreen({ navigation }) {
     Clipboard.setString(Seed);
     dispatch(
       setFlashNoticeMessage({
-        message: "Seed copied to clipboard",
+        message: t("common.copied_to_clipboard"),
         duration: 2000,
       }),
     );
   }, [Seed, dispatch]);
 
+  // --- Copy Address ---
+  const handleCopyAddress = useCallback(() => {
+    if (!Address) {
+      dispatch(
+        setFlashNoticeMessage({
+          message: t("setting.no_address_available"),
+          duration: 2000,
+        }),
+      );
+      return;
+    }
+    Clipboard.setString(Address);
+    dispatch(
+      setFlashNoticeMessage({
+        message: t("common.copied_to_clipboard"),
+        duration: 2000,
+      }),
+    );
+  }, [Address, dispatch]);
+
   // --- Delete Account ---
   const handleDelAccount = useCallback(() => {
     Alert.alert(
-      "Delete Account",
+      t("auth.remove_account"),
       `Remove saved account ${Address?.slice(0, 10)}...${Address?.slice(-6)}? You will stay logged in.`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: () => {
             dispatch(AccountDel({ address: Address }));
             dispatch(
               setFlashNoticeMessage({
-                message: "Account deleted",
+                message: t("setting.account_deleted"),
                 duration: 2000,
               }),
             );
@@ -222,10 +262,10 @@ export default function SettingScreen({ navigation }) {
 
   // --- Logout ---
   const handleLogout = useCallback(() => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("setting.logout"), t("setting.logout_confirm"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Logout",
+        text: t("setting.logout"),
         style: "destructive",
         onPress: () => dispatch(logoutStart()),
       },
@@ -236,6 +276,10 @@ export default function SettingScreen({ navigation }) {
   const [messageSound, setMessageSound] = useState("chime");
   const [showSoundSheet, setShowSoundSheet] = useState(false);
 
+  // --- Language (persisted via SettingsUtil) ---
+  const [language, setLanguage] = useState("en");
+  const [showLanguageSheet, setShowLanguageSheet] = useState(false);
+
   // --- Auto-download settings (persisted via SettingsUtil) ---
   const [autoDownloadFollow, setAutoDownloadFollow] = useState(true);
   const [autoDownloadPrivate, setAutoDownloadPrivate] = useState(true);
@@ -244,16 +288,18 @@ export default function SettingScreen({ navigation }) {
   useEffect(() => {
     (async () => {
       try {
-        const [sound, follow, priv, group] = await Promise.all([
+        const [sound, follow, priv, group, lang] = await Promise.all([
           getSettingString("messageSound", "chime"),
           getSettingBool("autoDownloadFollowFiles", true),
           getSettingBool("autoDownloadPrivateFiles", true),
           getSettingBool("autoDownloadGroupFiles", true),
+          getSettingString("language", "en"),
         ]);
         setMessageSound(sound);
         setAutoDownloadFollow(follow);
         setAutoDownloadPrivate(priv);
         setAutoDownloadGroup(group);
+        setLanguage(lang);
       } catch {
         // use defaults
       }
@@ -301,12 +347,26 @@ export default function SettingScreen({ navigation }) {
   const soundLabel =
     SOUND_OPTIONS.find((o) => o.value === messageSound)?.label || "Chime";
 
+  const languageLabel =
+    LANGUAGE_OPTIONS.find((o) => o.code === language)?.label || "English";
+
+  const handleLanguageChange = useCallback(async (code) => {
+    setLanguage(code);
+    setShowLanguageSheet(false);
+    try {
+      await i18n.changeLanguage(code);
+      await setSetting("language", code);
+    } catch {
+      // fail silently — UI state already updated
+    }
+  }, []);
+
   return (
     <View className="flex-1 bg-surface">
       {/* Header */}
       <View className="px-5 pt-14 pb-2">
         <Text className="text-3xl font-bold text-text-primary text-center">
-          Settings
+          {t("setting.title")}
         </Text>
       </View>
 
@@ -331,153 +391,133 @@ export default function SettingScreen({ navigation }) {
               hitSlop={8}
             >
               <Text className="text-lg font-semibold text-text-primary truncate">
-                {Nickname || "No nickname"}
+                {Nickname || t("setting.no_nickname")}
               </Text>
               <Ionicons name="create-outline" size={16} color="#a89f85" />
             </TouchableOpacity>
             {Address ? (
-              <Text className="text-xs font-mono text-text-secondary/70 truncate">
-                {Address.slice(0, 10)}...{Address.slice(-6)}
-              </Text>
+              <TouchableOpacity
+                onPress={handleCopyAddress}
+                activeOpacity={0.7}
+                hitSlop={8}
+              >
+                <Text className="text-xs font-mono text-text-secondary/70 truncate">
+                  {Address}
+                </Text>
+              </TouchableOpacity>
             ) : null}
           </View>
         </View>
 
-        {/* Account actions: copy seed / delete account */}
-        <View className="flex-row gap-3 mx-4 mb-2">
-          <TouchableOpacity
-            onPress={handleCopySeed}
-            activeOpacity={0.7}
-            className="flex-1 bg-surface-card border border-secondary-light rounded-xl py-3 flex-row items-center justify-center gap-2"
-          >
-            <Ionicons name="copy-outline" size={16} color="#a89f85" />
-            <Text className="text-sm font-medium text-text-primary">
-              Copy Seed
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleDelAccount}
-            activeOpacity={0.7}
-            className="flex-1 bg-surface-card border border-red-400/40 rounded-xl py-3 flex-row items-center justify-center gap-2"
-          >
-            <Ionicons name="trash-outline" size={16} color="#ef4444" />
-            <Text className="text-sm font-medium text-red-500">
-              Delete Account
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Preferences */}
-        <SectionHeader icon="color-palette-outline" label="Preferences" />
+        <SectionHeader
+          icon="color-palette-outline"
+          label={t("setting.preferences")}
+        />
         <View className="bg-surface-card rounded-2xl mx-4 border border-secondary-light overflow-hidden">
           <SwitchRow
             icon={isDark ? "moon" : "sunny"}
-            label="Dark Mode"
+            label={t("setting.dark_mode")}
             value={isDark}
             onValueChange={toggle}
           />
           <Divider />
           <NavRow
             icon="volume-high-outline"
-            label="Message Sound"
+            label={t("setting.message_sound")}
             value={soundLabel}
             onPress={() => setShowSoundSheet(true)}
           />
           <Divider />
+          <NavRow
+            icon="language-outline"
+            label={t("ui.language")}
+            value={languageLabel}
+            onPress={() => setShowLanguageSheet(true)}
+          />
+          <Divider />
           <SwitchRow
             icon="cloud-download-outline"
-            label="Auto-download Followed Files"
+            label={t("setting.auto_download_follow_files")}
             value={autoDownloadFollow}
             onValueChange={handleAutoDownloadFollowToggle}
           />
           <Divider />
           <SwitchRow
             icon="chatbox-ellipses-outline"
-            label="Auto-download Private Chat Files"
+            label={t("setting.auto_download_private_files")}
             value={autoDownloadPrivate}
             onValueChange={handleAutoDownloadPrivateToggle}
           />
           <Divider />
           <SwitchRow
             icon="people-outline"
-            label="Auto-download Group Chat Files"
+            label={t("setting.auto_download_group_files")}
             value={autoDownloadGroup}
             onValueChange={handleAutoDownloadGroupToggle}
           />
         </View>
 
         {/* Data */}
-        <SectionHeader icon="folder-outline" label="Data" />
+        <SectionHeader icon="folder-outline" label={t("setting.data")} />
         <View className="bg-surface-card rounded-2xl mx-4 border border-secondary-light overflow-hidden">
           <NavRow
             icon="document-text-outline"
-            label="Bulletin Cache"
+            label={t("setting.bulletin_cache")}
             onPress={() => navigation.navigate("BulletinManagement")}
           />
           <Divider />
           <NavRow
             icon="cloud-outline"
-            label="File Storage"
+            label={t("setting.storage")}
             onPress={() => navigation.navigate("StorageManagement")}
           />
         </View>
 
-        {/* Content */}
-        <SectionHeader icon="bookmark-outline" label="Content" />
-        <View className="bg-surface-card rounded-2xl mx-4 border border-secondary-light overflow-hidden">
-          <NavRow
-            icon="bookmark-outline"
-            label="Bookmarked Posts"
-            onPress={() => navigation.navigate("BookmarkBulletins")}
-          />
-          <Divider />
-          <NavRow
-            icon="star-outline"
-            label="Followed Posts"
-            onPress={() => navigation.navigate("FollowedBulletins")}
-          />
-          <Divider />
-          <NavRow
-            icon="shuffle-outline"
-            label="Random Posts"
-            onPress={() => navigation.navigate("RandomBulletins")}
-          />
-        </View>
-
         {/* Groups */}
-        <SectionHeader icon="people-circle-outline" label="Groups" />
+        <SectionHeader
+          icon="people-circle-outline"
+          label={t("setting.group")}
+        />
         <View className="bg-surface-card rounded-2xl mx-4 border border-secondary-light overflow-hidden">
           <NavRow
             icon="people-outline"
-            label="My Groups"
+            label={t("setting.my_groups")}
             onPress={() => navigation.navigate("GroupManagement")}
           />
         </View>
 
         {/* Servers */}
-        <SectionHeader icon="earth-outline" label="Servers" />
+        <SectionHeader icon="earth-outline" label={t("setting.servers")} />
         <View className="bg-surface-card rounded-2xl mx-4 border border-secondary-light overflow-hidden">
           <NavRow
             icon="wifi-outline"
-            label="Connected Servers"
+            label={t("setting.connected_servers")}
             value={
-              connectedCount > 0 ? `${connectedCount} active` : "Not connected"
+              connectedCount > 0
+                ? t("setting.active", { count: connectedCount })
+                : t("setting.not_connected")
             }
             onPress={() => navigation.navigate("ServerManagement")}
           />
         </View>
 
         {/* About */}
-        <SectionHeader icon="information-circle-outline" label="About" />
+        <SectionHeader
+          icon="information-circle-outline"
+          label={t("common.about")}
+        />
         <View className="bg-surface-card rounded-2xl mx-4 border border-secondary-light overflow-hidden">
           <NavRow
             icon="information-circle-outline"
-            label="About RippleMessenger"
+            label={t("setting.about_app")}
             onPress={() => navigation.navigate("About")}
           />
           <Divider />
           <View className="flex-row items-center justify-between px-4 py-3.5">
-            <Text className="text-base text-text-primary">Version</Text>
+            <Text className="text-base text-text-primary">
+              {t("setting.version")}
+            </Text>
             <Text className="text-sm text-text-secondary">v{APP_VERSION}</Text>
           </View>
         </View>
@@ -486,10 +526,36 @@ export default function SettingScreen({ navigation }) {
         <TouchableOpacity
           onPress={handleLogout}
           activeOpacity={0.8}
-          className="bg-status-error m-4 py-3.5 rounded-2xl items-center"
+          className="bg-status-success m-4 py-3.5 rounded-2xl items-center"
         >
-          <Text className="text-base font-semibold text-white">Logout</Text>
+          <Text className="text-base font-semibold text-white">
+            {t("setting.logout")}
+          </Text>
         </TouchableOpacity>
+
+        {/* Account actions: copy seed / delete account */}
+        <View className="flex-row gap-3 mx-4 mb-2">
+          <TouchableOpacity
+            onPress={handleCopySeed}
+            activeOpacity={0.7}
+            className="flex-1 bg-primary rounded-xl py-3 flex-row items-center justify-center gap-2"
+          >
+            <Ionicons name="copy-outline" size={16} color="#fff" />
+            <Text className="text-sm font-medium text-white">
+              {t("auth.copy_seed")}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleDelAccount}
+            activeOpacity={0.7}
+            className="flex-1 bg-status-error rounded-xl py-3 flex-row items-center justify-center gap-2"
+          >
+            <Ionicons name="trash-outline" size={16} color="#fff" />
+            <Text className="text-sm font-medium text-white">
+              {t("auth.remove_account")}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <View className="h-4" />
       </ScrollView>
@@ -505,7 +571,7 @@ export default function SettingScreen({ navigation }) {
           <View className="bg-surface-card rounded-t-3xl p-5 pb-8 border-t border-secondary-light">
             <View className="w-10 h-1 bg-secondary-light rounded-full mx-auto mb-4" />
             <Text className="text-lg font-semibold text-text-primary text-center mb-4">
-              Message Sound
+              {t("setting.message_sound")}
             </Text>
             <View className="flex-row flex-wrap gap-2.5">
               {SOUND_OPTIONS.map((opt) => (
@@ -537,7 +603,59 @@ export default function SettingScreen({ navigation }) {
               className="mt-5 py-3 rounded-xl border border-secondary-light items-center"
             >
               <Text className="text-base font-medium text-text-secondary">
-                Cancel
+                {t("common.cancel")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Language bottom sheet */}
+      <Modal
+        visible={showLanguageSheet}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLanguageSheet(false)}
+      >
+        <View className="flex-1 justify-end bg-black/50">
+          <View className="bg-surface-card rounded-t-3xl p-5 pb-8 border-t border-secondary-light">
+            <View className="w-10 h-1 bg-secondary-light rounded-full mx-auto mb-4" />
+            <Text className="text-lg font-semibold text-text-primary text-center mb-1">
+              {t("ui.language")}
+            </Text>
+            <Text className="text-sm text-text-secondary text-center mb-4">
+              {t("ui.language_hint")}
+            </Text>
+            <View className="flex-row flex-wrap gap-2.5">
+              {LANGUAGE_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.code}
+                  activeOpacity={0.7}
+                  onPress={() => handleLanguageChange(opt.code)}
+                  className={`px-4 py-2.5 rounded-xl border ${
+                    language === opt.code
+                      ? "border-primary bg-primary/10"
+                      : "border-secondary-light"
+                  }`}
+                >
+                  <Text
+                    className={`text-sm font-medium ${
+                      language === opt.code
+                        ? "text-primary"
+                        : "text-text-secondary"
+                    }`}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              onPress={() => setShowLanguageSheet(false)}
+              className="mt-5 py-3 rounded-xl border border-secondary-light items-center"
+            >
+              <Text className="text-base font-medium text-text-secondary">
+                {t("common.cancel")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -560,12 +678,12 @@ export default function SettingScreen({ navigation }) {
         >
           <View className="bg-surface-card rounded-2xl p-5">
             <Text className="text-lg font-semibold text-text-primary mb-3">
-              Edit Nickname
+              {t("setting.edit_nickname")}
             </Text>
             <TextInput
               value={nicknameInput}
               onChangeText={setNicknameInput}
-              placeholder="Enter nickname..."
+              placeholder={t("setting.enter_nickname")}
               placeholderTextColor="#999"
               className="border border-secondary-light rounded-xl px-4 py-3 text-base text-text-primary mb-4"
               autoFocus
@@ -575,13 +693,17 @@ export default function SettingScreen({ navigation }) {
                 onPress={() => setShowNicknameModal(false)}
                 className="flex-1 py-3 rounded-xl border border-secondary-light items-center"
               >
-                <Text className="text-base text-text-secondary">Cancel</Text>
+                <Text className="text-base text-text-secondary">
+                  {t("common.cancel")}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleNicknameSave}
                 className="flex-1 py-3 rounded-xl bg-primary items-center"
               >
-                <Text className="text-base font-medium text-white">Save</Text>
+                <Text className="text-base font-medium text-white">
+                  {t("common.save")}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

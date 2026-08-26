@@ -1,10 +1,12 @@
 import React from "react";
+import { Text } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSelector } from "react-redux";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-import { selectIsAuth } from "../selectors";
+import { selectIsAuth, selectMessengerConnStatus } from "../selectors";
+import useDarkMode from "../hooks/useDarkMode";
 import ForwardModal from "../components/Bulletin/ForwardModal";
 import FlashNotice from "../components/FlashNotice";
 
@@ -19,6 +21,7 @@ import BookmarkBulletinsScreen from "../screens/BookmarkBulletinsScreen";
 import ChatScreen from "../screens/ChatScreen";
 import ChatDetailScreen from "../screens/ChatDetailScreen";
 import ContactScreen from "../screens/ContactScreen";
+import ContactDetailScreen from "../screens/ContactDetailScreen";
 import SettingScreen from "../screens/SettingScreen";
 import AboutScreen from "../screens/AboutScreen";
 import BulletinManagementTab from "../components/BulletinManagementTab";
@@ -59,7 +62,7 @@ function BulletinTab() {
       <Stack.Screen
         name="BulletinDetail"
         component={BulletinDetailScreen}
-        options={{ title: "Post" }}
+        options={{ title: "Bulletin" }}
       />
     </Stack.Navigator>
   );
@@ -122,24 +125,51 @@ function ChatTab() {
   );
 }
 
+function ContactTab() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ContactList" component={ContactScreen} />
+      <Stack.Screen
+        name="ContactDetail"
+        component={ContactDetailScreen}
+        options={{ title: "Contact" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 function MainTabNav() {
+  const { isDark } = useDarkMode();
+  const isConnected = useSelector(selectMessengerConnStatus);
+
+  const connColor = isConnected ? "#4caf50" : "#f44336";
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        tabBarStyle: {
+          backgroundColor: isDark ? "#2a2a34" : "#ffffff",
+          borderTopColor: isDark ? "#34343f" : "#e5e0d0",
+        },
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           if (route.name === "Bulletin")
-            iconName = focused ? "newspaper" : "newspaper-outline";
+            iconName = focused ? "volume-high" : "volume-high-outline";
           else if (route.name === "Chat")
             iconName = focused ? "chatbubbles" : "chatbubbles-outline";
           else if (route.name === "Contact")
             iconName = focused ? "people" : "people-outline";
           else if (route.name === "Setting")
             iconName = focused ? "settings" : "settings-outline";
+          // Setting tab color reflects connection status
+          if (route.name === "Setting") {
+            return <Ionicons name={iconName} size={size} color={connColor} />;
+          }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: ACCENT,
         tabBarInactiveTintColor: "#6b6358",
+        tabBarLabelStyle: { fontSize: 14 },
         headerStyle: { backgroundColor: ACCENT },
         headerTintColor: "#1a1a2e",
       })}
@@ -154,11 +184,27 @@ function MainTabNav() {
         component={ChatTab}
         options={{ headerShown: false }}
       />
-      <Tab.Screen name="Contact" component={ContactScreen} />
+      <Tab.Screen
+        name="Contact"
+        component={ContactTab}
+        options={{ headerShown: false }}
+      />
       <Tab.Screen
         name="Setting"
         component={SettingTab}
-        options={{ headerShown: false }}
+        options={{
+          headerShown: false,
+          tabBarLabel: () => (
+            <Text
+              style={{
+                fontSize: 14,
+                color: connColor,
+              }}
+            >
+              Setting
+            </Text>
+          ),
+        }}
       />
     </Tab.Navigator>
   );
@@ -189,17 +235,17 @@ function AuthenticatedNav() {
         <RootStack.Screen
           name="FollowedBulletins"
           component={FollowedBulletinsScreen}
-          options={{ title: "Followed Posts" }}
+          options={{ title: "Followed Bulletins" }}
         />
         <RootStack.Screen
           name="RandomBulletins"
           component={RandomBulletinsScreen}
-          options={{ title: "Random Posts" }}
+          options={{ title: "Random Bulletins" }}
         />
         <RootStack.Screen
           name="AddressBulletins"
           component={AddressBulletinsScreen}
-          options={{ title: "Address Posts" }}
+          options={{ title: "Address Bulletins" }}
         />
       </RootStack.Navigator>
 

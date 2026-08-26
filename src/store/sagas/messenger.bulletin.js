@@ -8,7 +8,7 @@
 import RNFS from "react-native-fs";
 import * as rippleKeyPairs from "ripple-keypairs";
 
-import { all, call, put, select, fork } from "redux-saga/effects";
+import { all, call, put, select, fork, delay } from "redux-saga/effects";
 
 import { dbAPI } from "../../db";
 import {
@@ -241,9 +241,20 @@ export function* SaveSelfAvatar({ payload }) {
 export function* AvatarRequest({ payload }) {
   try {
     const seed = yield select((state) => state.User.Seed);
-    if (!seed) return;
+    if (!seed) {
+      Logger.info("[AvatarRequest] no seed, skip");
+      return;
+    }
     let timestamp = Date.now();
     const old_avatar_list = yield call(() => dbAPI.getAvatarOldList());
+    Logger.info(
+      `[AvatarRequest] old_avatar_list length: ${old_avatar_list.length}, flag: ${payload.flag}`,
+    );
+    old_avatar_list.forEach((a) =>
+      Logger.info(
+        `[AvatarRequest]   addr: ${a.address}, signed_at: ${a.signed_at}, is_saved: ${a.is_saved}`,
+      ),
+    );
     let list = [];
     for (let i = 0; i < old_avatar_list.length; i++) {
       const avatar = old_avatar_list[i];
@@ -254,11 +265,13 @@ export function* AvatarRequest({ payload }) {
         );
       }
     }
+    Logger.info(`[AvatarRequest] list to send: ${list.length}`);
     if (list.length > 0) {
       const avatar_request = yield call(() =>
         mgAPI.genAvatarRequest(seed, list),
       );
       yield call(SendMessage, { msg: avatar_request });
+      Logger.info("[AvatarRequest] sent to server");
     }
   } catch (e) {
     Logger.error("[AvatarRequest] failed:", e.message);
@@ -266,9 +279,16 @@ export function* AvatarRequest({ payload }) {
 }
 
 export function* RequestAvatarFile(payload) {
-  if (payload.hash === GenesisHash) return;
+  Logger.info(`[RequestAvatarFile] called: hash=${payload.hash}, address=${payload.address}`);
+  if (payload.hash === GenesisHash) {
+    Logger.info(`[RequestAvatarFile] hash is GenesisHash, skip`);
+    return;
+  }
   const seed = yield select((state) => state.User.Seed);
-  if (!seed) return;
+  if (!seed) {
+    Logger.info(`[RequestAvatarFile] no seed, skip`);
+    return;
+  }
 
   // Clean up expired file requests
   const now = Date.now();
@@ -456,6 +476,11 @@ export function* FetchFollowBulletin() {
 
     // --- Gap-check: batch all (address, sequence) pairs into one query per address ---
     const CHUNK_SIZE = 50;
+    // Rate limit: max concurrent requests and throttle between batches
+    const MAX_CONCURRENT_REQUESTS = 4;
+    const THROTTLE_MS = 100; // 100ms between individual requests
+    let activeRequests = 0;
+
     for (const { address: addr, maxSeq } of needGapCheck) {
       for (let start = 1; start <= maxSeq; start += CHUNK_SIZE) {
         const end = Math.min(start + CHUNK_SIZE - 1, maxSeq);
@@ -471,10 +496,19 @@ export function* FetchFollowBulletin() {
 
         for (let k = 0; k < pairs.length; k++) {
           if (!existingSet.has(`${addr}:${pairs[k].sequence}`)) {
+            // Rate limiting: throttle to prevent network storm
+            while (activeRequests >= MAX_CONCURRENT_REQUESTS) {
+              yield call(delay, THROTTLE_MS);
+            }
+            activeRequests++;
             const bulletin_request = yield call(() =>
               mgAPI.genBulletinRequest(seed, addr, pairs[k].sequence, addr),
             );
             yield call(SendMessage, { msg: bulletin_request });
+            // Decrement after a short delay to simulate network round-trip
+            setTimeout(() => {
+              activeRequests--;
+            }, THROTTLE_MS);
           }
         }
       }

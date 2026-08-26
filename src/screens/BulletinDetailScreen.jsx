@@ -21,10 +21,15 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { parseBulletinMarkdown } from "../lib/markdown";
 import { RenderHTML } from "react-native-render-html";
 
-import { selectDisplayBulletins, selectUserAddress } from "../selectors";
+import {
+  selectDisplayBulletins,
+  selectUserAddress,
+  selectContactMap,
+} from "../selectors";
 import {
   LoadBulletinDetail,
   BulletinReply,
@@ -47,7 +52,7 @@ import { ACCENT } from "../lib/theme";
 function formatTimestamp(ms) {
   if (!ms) return "";
   const d = new Date(ms);
-  return d.toLocaleString(undefined, {
+  return d.toLocaleString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -80,6 +85,17 @@ function bulletinHtmlStyles(isDark) {
  * Tapping navigates to the reply's bulletin detail view.
  */
 function ReplyCard({ bulletin, onPress }) {
+  const { t } = useTranslation();
+  const contactMap = useSelector(selectContactMap);
+  const selfAddress = useSelector(selectUserAddress);
+  const displayName = useMemo(() => {
+    if (bulletin.address === selfAddress) return t("common.me");
+    if (contactMap && contactMap[bulletin.address])
+      return contactMap[bulletin.address];
+    if (bulletin.json?.Nickname) return bulletin.json.Nickname;
+    return shortenAddress(bulletin.address);
+  }, [bulletin.address, bulletin.json?.Nickname, contactMap, selfAddress, t]);
+
   const preview =
     bulletin.content.length > 180
       ? bulletin.content.slice(0, 180) + "…"
@@ -95,12 +111,12 @@ function ReplyCard({ bulletin, onPress }) {
       <View className="flex-row items-center gap-2 mb-2">
         <AvatarImage
           address={bulletin.address}
-          nickname={bulletin.json?.Nickname}
+          nickname={displayName}
           size={28}
         />
         <View className="flex-1 min-w-0">
           <Text className="text-xs font-semibold text-text-primary truncate">
-            {bulletin.json?.Nickname || shortenAddress(bulletin.address)}
+            {displayName}
           </Text>
           <Text className="text-[10px] text-text-secondary/70">
             {formatTimestamp(bulletin.signed_at)} · #{bulletin.sequence}
@@ -119,12 +135,14 @@ function ReplyCard({ bulletin, onPress }) {
 const MAX_REPLY_LENGTH = 2000;
 
 export default function BulletinDetailScreen({ route, navigation }) {
+  const { t } = useTranslation();
   const { hash, address, sequence } = route.params ?? {};
   const dispatch = useDispatch();
   const { isDark } = useDarkMode();
   const { DisplayBulletin: bulletin, DisplayBulletinReplyList: replies } =
     useSelector(selectDisplayBulletins);
   const selfAddress = useSelector(selectUserAddress);
+  const contactMap = useSelector(selectContactMap);
   const followList = useSelector((state) => state.User.FollowList || []);
   const friendList = useSelector((state) => state.User.FriendList || []);
 
@@ -167,10 +185,10 @@ export default function BulletinDetailScreen({ route, navigation }) {
           className="text-base font-semibold text-primary"
           style={{ paddingLeft: 8 }}
         >
-          ← Back
+          {t("common.back")}
         </Text>
       ),
-      title: "Post",
+      title: t("ui.new_bulletin"),
       headerStyle: { backgroundColor: ACCENT },
       headerTintColor: "#1a1a2e",
     });
@@ -299,8 +317,8 @@ export default function BulletinDetailScreen({ route, navigation }) {
 
   const handleCopyContent = useCallback(() => {
     Clipboard.setString(bulletin.content || "");
-    Alert.alert("Copied", "Bulletin content copied to clipboard.", [
-      { text: "OK" },
+    Alert.alert(t("common.copied"), t("common.copied_to_clipboard"), [
+      { text: t("common.yes") },
     ]);
   }, [bulletin?.content]);
 
@@ -314,11 +332,9 @@ export default function BulletinDetailScreen({ route, navigation }) {
     // Step 2: Toggle friend status
     dispatch(ContactToggleIsFriendAction({ contact_address: authorAddr }));
     const nowFriend = !friendList.includes(authorAddr);
-    Alert.alert(
-      nowFriend ? "Added as Friend" : "Removed from Friends",
-      nickname,
-      [{ text: "OK" }],
-    );
+    Alert.alert(nowFriend ? t("common.friend") : t("common.friend"), nickname, [
+      { text: t("common.yes") },
+    ]);
   }, [dispatch, bulletin, friendList]);
 
   // Toggle Follow — first ensure contact exists, then toggle follow status
@@ -329,9 +345,11 @@ export default function BulletinDetailScreen({ route, navigation }) {
     dispatch(ContactAddAction({ address: authorAddr, nickname }));
     dispatch(ContactToggleIsFollowAction({ contact_address: authorAddr }));
     const nowFollowing = !followList.includes(authorAddr);
-    Alert.alert(nowFollowing ? "Now Following" : "Unfollowed", nickname, [
-      { text: "OK" },
-    ]);
+    Alert.alert(
+      nowFollowing ? t("common.following") : t("common.follow"),
+      nickname,
+      [{ text: t("common.yes") }],
+    );
   }, [dispatch, bulletin, followList]);
 
   // Navigate to the author's bulletins when tapping the author header
@@ -352,7 +370,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
       <View className="flex-1 bg-surface items-center justify-center">
         <ActivityIndicator size="large" color={ACCENT} />
         <Text className="text-sm text-text-secondary mt-3">
-          Loading bulletin…
+          {t("common.loading")}
         </Text>
       </View>
     );
@@ -385,12 +403,18 @@ export default function BulletinDetailScreen({ route, navigation }) {
             >
               <AvatarImage
                 address={bulletin.address}
-                nickname={bulletin.json?.Nickname}
+                nickname={
+                  contactMap?.[bulletin.address] || bulletin.json?.Nickname
+                }
                 size={40}
               />
               <View className="flex-1 min-w-0">
                 <Text className="text-base font-semibold text-text-primary">
-                  {bulletin.json?.Nickname || shortenAddress(bulletin.address)}
+                  {bulletin.address === selfAddress
+                    ? t("common.me")
+                    : contactMap?.[bulletin.address] ||
+                      bulletin.json?.Nickname ||
+                      shortenAddress(bulletin.address)}
                 </Text>
                 <Text className="text-xs text-text-secondary/80">
                   {shortenAddress(bulletin.address)}
@@ -460,7 +484,9 @@ export default function BulletinDetailScreen({ route, navigation }) {
               className="flex-row items-center gap-1"
             >
               <Ionicons name="copy-outline" size={16} color="#a89f85" />
-              <Text className="text-xs text-text-secondary/70">Copy</Text>
+              <Text className="text-xs text-text-secondary/70">
+                {t("common.copy")}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -469,7 +495,9 @@ export default function BulletinDetailScreen({ route, navigation }) {
               className="flex-row items-center gap-1"
             >
               <Ionicons name="link-outline" size={16} color="#a89f85" />
-              <Text className="text-xs text-text-secondary/70">Quote</Text>
+              <Text className="text-xs text-text-secondary/70">
+                {t("ui.quote")}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -482,7 +510,9 @@ export default function BulletinDetailScreen({ route, navigation }) {
                 size={16}
                 color="#a89f85"
               />
-              <Text className="text-xs text-text-secondary/70">Details</Text>
+              <Text className="text-xs text-text-secondary/70">
+                {t("ui.view_details")}
+              </Text>
             </TouchableOpacity>
 
             {/* Friend button — skip for own bulletins */}
@@ -556,7 +586,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
           {bulletin.file && bulletin.file.length > 0 && (
             <View className="mb-4">
               <Text className="text-sm font-semibold text-text-secondary mb-2">
-                Attachments ({bulletin.file.length})
+                {t("ui.attachments")} ({bulletin.file.length})
               </Text>
               {bulletin.file.map((f, i) => (
                 <View key={i} className="mb-1">
@@ -593,7 +623,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
           {bulletin.quote && bulletin.quote.length > 0 && (
             <View className="mb-4">
               <Text className="text-sm font-semibold text-text-secondary mb-2">
-                Quotes ({bulletin.quote.length})
+                {t("ui.quotes")} ({bulletin.quote.length})
               </Text>
               {bulletin.quote.map((q, i) => {
                 const isQuoteObj =
@@ -648,7 +678,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
             <View className="flex-row items-center mb-3">
               <Ionicons name="chatbubble-ellipses" size={20} color="#a89f85" />
               <Text className="text-base font-semibold text-text-primary ml-2">
-                Replies ({replies.length})
+                {t("ui.reply")} ({replies.length})
               </Text>
             </View>
 
@@ -664,11 +694,11 @@ export default function BulletinDetailScreen({ route, navigation }) {
               <View className="items-center py-8">
                 <Ionicons name="chatbubble-outline" size={48} color="#d4c8a8" />
                 <Text className="text-base text-text-secondary mt-3">
-                  No replies yet
+                  {t("ui.no_replies")}
                 </Text>
                 {selfAddress && (
                   <Text className="text-xs text-text-secondary/50 mt-1 italic">
-                    Be the first to reply
+                    {t("ui.be_first_reply")}
                   </Text>
                 )}
               </View>
@@ -681,7 +711,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
           <TextInput
             value={replyText}
             onChangeText={setReplyText}
-            placeholder="Write a reply..."
+            placeholder={t("ui.write_reply")}
             placeholderTextColor="#a89f85"
             className="flex-1 mr-2 bg-surface rounded-full px-4 py-2 text-base text-text-primary border border-secondary-light/30"
             multiline
@@ -715,10 +745,10 @@ export default function BulletinDetailScreen({ route, navigation }) {
         onRequestClose={() => setShowJsonModal(false)}
       >
         <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-surface rounded-t-2xl max-h-[80%] flex flex-col">
+          <View className="bg-surface rounded-t-2xl h-[80%] flex flex-col">
             <View className="flex-row items-center justify-between px-4 py-3 border-b border-secondary-light/30">
               <Text className="text-base font-semibold text-text-primary">
-                Bulletin JSON
+                {t("ui.bulletin_json")}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowJsonModal(false)}

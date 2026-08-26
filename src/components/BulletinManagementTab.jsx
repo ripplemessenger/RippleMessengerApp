@@ -16,12 +16,13 @@ import {
   ScrollView,
 } from "react-native";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { dbAPI } from "../db";
 
 import { selectUserAddress } from "../selectors";
-import { ACCENT } from '../lib/theme';
+import { ACCENT } from "../lib/theme";
 
 const BULLETIN_PAGE_SIZE = 20;
 
@@ -37,6 +38,7 @@ const FILTER_OPTIONS = [
  * Uses local state (transient data, no Redux slice needed).
  */
 export default function BulletinManagementTab() {
+  const { t } = useTranslation();
   const myAddress = useSelector(selectUserAddress);
 
   const [filter, setFilter] = useState("all");
@@ -214,7 +216,7 @@ export default function BulletinManagementTab() {
               loadBulletins(page);
               loadSummary();
             } catch (e) {
-              Alert.alert("Error", "Failed to delete bulletins.");
+              Alert.alert(t("common.error"), t("bulletin.delete_failed"));
             }
           },
         },
@@ -246,12 +248,12 @@ export default function BulletinManagementTab() {
 
   const handleClearAll = useCallback(() => {
     Alert.alert(
-      "Clear All Bulletins",
-      `This will remove ALL ${totalCount} bulletins from local storage. This cannot be undone.`,
+      t("bulletin.clear_all_title"),
+      t("bulletin.clear_all_confirm", { count: totalCount }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Clear All",
+          text: t("bulletin.clear_all"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -259,7 +261,7 @@ export default function BulletinManagementTab() {
               setBulletins([]);
               setTotalCount(0);
             } catch (e) {
-              Alert.alert("Error", "Failed to clear bulletins.");
+              Alert.alert(t("common.error"), t("bulletin.clear_failed"));
             }
           },
         },
@@ -393,7 +395,7 @@ export default function BulletinManagementTab() {
         <Text className="text-sm text-text-secondary/60 text-center px-8">
           {filter !== "all"
             ? `No ${filter} bulletins found`
-            : "Your cached bulletins will appear here"}
+            : t("bulletin.no_cached")}
         </Text>
       </View>
     ),
@@ -401,7 +403,7 @@ export default function BulletinManagementTab() {
   );
 
   return (
-    <View className="flex-1 gap-3">
+    <View className="flex-1 gap-3 bg-surface">
       {/* Select mode header */}
       {selectMode && (
         <View className="flex-row items-center justify-between bg-primary/10 rounded-xl px-4 py-2 border border-primary/30">

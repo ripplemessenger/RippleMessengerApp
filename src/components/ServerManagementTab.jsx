@@ -10,13 +10,11 @@ import {
   Switch,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { ACCENT } from "../lib/theme";
 
-import {
-  selectServerNetworkData,
-  selectConnectedServerCount,
-} from "../selectors";
+import { selectServerNetworkData } from "../selectors";
 import {
   ServerAdd,
   ServerDel,
@@ -30,9 +28,9 @@ import {
  * Extracted from SettingScreen so it can be a standalone full-screen route.
  */
 export default function ServerManagementTab({ navigation }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { ServerList, ConnsStatus } = useSelector(selectServerNetworkData);
-  const connectedCount = useSelector(selectConnectedServerCount);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUrl, setNewUrl] = useState("");
 
@@ -80,29 +78,18 @@ export default function ServerManagementTab({ navigation }) {
   );
 
   return (
-    <View className="flex-1 gap-4">
-      {/* Overall status + Add button */}
-      <View className="bg-surface-card rounded-2xl p-5 border border-secondary-light items-center gap-2">
-        <View className="flex-row items-center gap-2">
-          <View
-            className={`w-3 h-3 rounded-full ${
-              connectedCount > 0 ? "bg-status-success" : "bg-status-error"
-            }`}
-          />
-          <Text className="text-lg font-semibold text-text-primary">
-            {connectedCount > 0 ? "Connected" : "Disconnected"}
-          </Text>
-        </View>
-        <Text className="text-sm text-text-secondary">
-          {connectedCount} of {ServerList.length} servers active
-        </Text>
+    <View className="flex-1 gap-4 bg-surface">
+      {/* Add button */}
+      <View className="bg-surface-card rounded-2xl p-5 border border-secondary-light items-center">
         <TouchableOpacity
           onPress={() => setShowAddModal(true)}
           activeOpacity={0.7}
-          className="flex-row items-center gap-1.5 bg-primary/10 border border-primary/30 px-4 py-2 rounded-lg mt-2"
+          className="flex-row items-center gap-1.5 bg-primary/10 border border-primary/30 px-4 py-2 rounded-lg"
         >
           <Ionicons name="add" size={16} color={ACCENT} />
-          <Text className="text-sm font-medium text-primary">Add Server</Text>
+          <Text className="text-sm font-medium text-primary">
+            {t("common.add_server")}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -129,8 +116,8 @@ export default function ServerManagementTab({ navigation }) {
                         {server.url}
                       </Text>
                       <Text className="text-xs text-text-secondary/70">
-                        {online ? "Online" : "Offline"}
-                        {isDefault ? " • Default" : ""}
+                        {online ? t("server.online") : t("server.offline")}
+                        {isDefault ? ` • ${t("server.default")}` : ""}
                       </Text>
                     </View>
                   </View>
@@ -152,7 +139,9 @@ export default function ServerManagementTab({ navigation }) {
                         thumbColor={server.is_connect ? "#fff" : "#ccc"}
                       />
                       <Text className="text-xs text-text-secondary">
-                        {server.is_connect ? "Connected" : "Disconnected"}
+                        {server.is_connect
+                          ? t("common.connected")
+                          : t("common.disconnected")}
                       </Text>
                     </TouchableOpacity>
 
@@ -167,7 +156,7 @@ export default function ServerManagementTab({ navigation }) {
                         className="px-3 py-1.5 rounded-lg border border-primary/30"
                       >
                         <Text className="text-xs text-primary font-medium">
-                          View
+                          {t("ui.view")}
                         </Text>
                       </TouchableOpacity>
                       {!isDefault && (
@@ -177,7 +166,7 @@ export default function ServerManagementTab({ navigation }) {
                           className="px-3 py-1.5 rounded-lg border border-primary/30"
                         >
                           <Text className="text-xs text-primary font-medium">
-                            Set Default
+                            {t("ui.set_default")}
                           </Text>
                         </TouchableOpacity>
                       )}
@@ -188,7 +177,7 @@ export default function ServerManagementTab({ navigation }) {
                           className="px-3 py-1.5 rounded-lg bg-status-error/10"
                         >
                           <Text className="text-xs text-status-error font-medium">
-                            Delete
+                            {t("common.delete")}
                           </Text>
                         </TouchableOpacity>
                       )}
@@ -207,9 +196,11 @@ export default function ServerManagementTab({ navigation }) {
             color={ACCENT}
             opacity={0.4}
           />
-          <Text className="text-lg text-text-secondary">No servers</Text>
+          <Text className="text-lg text-text-secondary">
+            {t("ui.no_servers")}
+          </Text>
           <Text className="text-sm text-text-secondary/60 text-center px-8">
-            Add a server to get started
+            {t("ui.add_server_hint")}
           </Text>
         </View>
       )}
@@ -224,10 +215,12 @@ export default function ServerManagementTab({ navigation }) {
         <View className="flex-1 justify-center items-center bg-black/50 px-6">
           <View className="bg-surface-card rounded-2xl p-6 w-full gap-4 border border-secondary-light">
             <Text className="text-xl font-semibold text-text-primary text-center">
-              Add Server
+              {t("common.add_server")}
             </Text>
             <View className="gap-1">
-              <Text className="text-sm text-text-secondary">WebSocket URL</Text>
+              <Text className="text-sm text-text-secondary">
+                {t("ui.websocket_url")}
+              </Text>
               <TextInput
                 value={newUrl}
                 onChangeText={setNewUrl}

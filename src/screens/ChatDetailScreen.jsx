@@ -10,18 +10,20 @@ import {
   Platform,
   Modal,
   Clipboard,
+  ScrollView,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
 import AvatarImage from "../components/AvatarImage";
 import InlineImage from "../components/InlineImage";
+import useDarkMode from "../hooks/useDarkMode";
 import {
   selectCurrentSession,
   selectCurrentSessionMessages,
   selectUserAddress,
   selectContactMap,
-  selectMessengerConnStatus,
   selectGroupMembers,
 } from "../selectors";
 import {
@@ -41,11 +43,16 @@ import { ACCENT } from "../lib/theme";
 
 /**
  * Format a timestamp (ms epoch) into HH:mm time string.
+ * Uses fixed en-US locale for consistent output across all devices.
  */
 function formatTime(timestamp) {
   if (!timestamp || typeof timestamp !== "number") return "";
   const date = new Date(timestamp);
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 /**
@@ -59,24 +66,11 @@ function formatFileSize(bytes) {
 }
 
 /**
- * Get initials from an address for avatar placeholder.
- */
-function getInitials(address) {
-  if (!address) return "?";
-  return address.substring(0, 2).toUpperCase();
-}
-
-/**
  * Resolve a display name for an address using the contact map.
  */
 function resolveName(address, contactMap) {
   const nickname = contactMap[address];
   if (nickname) return nickname;
-  if (address.length > 10) {
-    return (
-      address.substring(0, 5) + "..." + address.substring(address.length - 4)
-    );
-  }
   return address;
 }
 
@@ -95,20 +89,30 @@ function extractContent(msg) {
   if (!msg) return "";
   if (msg.is_object && msg.content) {
     const obj = msg.content;
+    // File object (PrivateChatFile or GroupChatFile) — show full name with extension
+    if (
+      obj.ObjectType === MessageObjectType.PrivateChatFile ||
+      obj.ObjectType === MessageObjectType.GroupChatFile
+    ) {
+      let name = obj.Name || "File";
+      const ext = obj.Ext || "";
+      if (ext && !name.toLowerCase().endsWith(ext.toLowerCase())) {
+        // Strip trailing dot from name if present, then append ext
+        const cleanName = name.endsWith(".") ? name.slice(0, -1) : name;
+        const dot = ext.startsWith(".") ? "" : ".";
+        name = `${cleanName}${dot}${ext}`;
+      } else if (name.endsWith(".")) {
+        // Name has trailing dot but no ext — strip it
+        name = name.slice(0, -1);
+      }
+      return `📎 ${name}`;
+    }
     if (obj.Name) {
       return `📎 ${obj.Name}`;
     }
     // Bulletin reference
     if (obj.ObjectType === MessageObjectType.Bulletin) {
       return "📰 Shared a bulletin";
-    }
-    // File object (PrivateChatFile or GroupChatFile)
-    if (
-      obj.ObjectType === MessageObjectType.PrivateChatFile ||
-      obj.ObjectType === MessageObjectType.GroupChatFile
-    ) {
-      const name = obj.Name || "File";
-      return `📎 ${name}`;
     }
   }
   return typeof msg.content === "string" ? msg.content : "";
@@ -151,7 +155,9 @@ const MessageBubble = React.memo(function MessageBubble({
   contactMap,
   fileDownloadStatus,
   onFileTap,
+  onSequenceTap,
 }) {
+  const { t } = useTranslation();
   const senderField = mode === "group" ? "address" : "sour";
   const senderAddress = message[senderField] || "";
   const isSelf = senderAddress === selfAddress;
@@ -225,14 +231,31 @@ const MessageBubble = React.memo(function MessageBubble({
                     </Text>
                   )}
                   {fileStatus === "downloading" && (
-                    <Text className="text-xs text-warning">Downloading...</Text>
+                    <Text className="text-xs text-warning">
+                      {t("common.loading")}
+                    </Text>
                   )}
                 </View>
 
-                {/* Timestamp */}
-                <Text className="text-[10px] text-text-secondary/50 mt-1">
-                  {formatTime(message.signed_at)}
-                </Text>
+                {/* Sequence + Timestamp */}
+                <View className="flex-row items-center gap-1 mt-1">
+                  {message.sequence ? (
+                    <TouchableOpacity
+                      onPress={() => onSequenceTap?.(message)}
+                      hitSlop={6}
+                      activeOpacity={0.6}
+                    >
+                      <View className="px-1.5 py-0.5 rounded border border-secondary-light/30">
+                        <Text className="text-[10px] text-text-secondary/70">
+                          #{message.sequence}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ) : null}
+                  <Text className="text-[10px] text-text-secondary/50">
+                    {formatTime(message.signed_at)}
+                  </Text>
+                </View>
               </TouchableOpacity>
             </View>
           ) : (
@@ -248,10 +271,25 @@ const MessageBubble = React.memo(function MessageBubble({
                 </Text>
               )}
 
-              {/* Timestamp */}
-              <Text className="text-[10px] text-text-secondary/50 mt-1">
-                {formatTime(message.signed_at)}
-              </Text>
+              {/* Sequence + Timestamp */}
+              <View className="flex-row items-center gap-1 mt-1">
+                {message.sequence ? (
+                  <TouchableOpacity
+                    onPress={() => onSequenceTap?.(message)}
+                    hitSlop={6}
+                    activeOpacity={0.6}
+                  >
+                    <View className="px-1.5 py-0.5 rounded border border-secondary-light/30">
+                      <Text className="text-[10px] text-text-secondary/70">
+                        #{message.sequence}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ) : null}
+                <Text className="text-[10px] text-text-secondary/50">
+                  {formatTime(message.signed_at)}
+                </Text>
+              </View>
             </>
           )}
         </View>
@@ -266,6 +304,7 @@ const MessageBubble = React.memo(function MessageBubble({
  * Group chat: group name, member list, group hash.
  */
 function ChatInfoModal({ visible, session, mode, onClose }) {
+  const { t } = useTranslation();
   const selfAddress = useSelector(selectUserAddress);
   const contactMap = useSelector(selectContactMap);
   const groupMembers = useSelector(selectGroupMembers);
@@ -322,7 +361,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
           {/* Header */}
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-lg font-bold text-text-primary">
-              {mode === "private" ? "Contact Info" : "Group Info"}
+              {mode === "private" ? t("ui.contact_info") : t("ui.group_info")}
             </Text>
             <TouchableOpacity onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={24} color="#999" />
@@ -333,7 +372,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
             <View className="items-center py-8">
               <Ionicons name="hourglass" size={32} color="#d4c8a8" />
               <Text className="text-sm text-text-secondary mt-2">
-                Loading...
+                {t("common.loading")}
               </Text>
             </View>
           ) : mode === "private" ? (
@@ -342,7 +381,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
               {/* Contact name + address */}
               <View className="mb-3">
                 <Text className="text-xs text-text-secondary/60 mb-1">
-                  Contact
+                  {t("ui.contact")}
                 </Text>
                 <Text className="text-base font-semibold text-text-primary">
                   {resolveName(session.remote || session.address, contactMap)}
@@ -350,7 +389,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
               </View>
               <View className="mb-3">
                 <Text className="text-xs text-text-secondary/60 mb-1">
-                  Address
+                  {t("ui.address")}
                 </Text>
                 <Text
                   className="text-sm text-text-primary font-mono"
@@ -362,7 +401,9 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
 
               {/* Follow status */}
               <View className="flex-row items-center justify-between py-2 border-t border-secondary-light/20">
-                <Text className="text-sm text-text-primary">Following</Text>
+                <Text className="text-sm text-text-primary">
+                  {t("common.follow")}
+                </Text>
                 <View className="flex-row items-center gap-1.5">
                   <Ionicons
                     name={
@@ -374,14 +415,16 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
                   <Text
                     className={`text-sm ${info?.follow ? "text-status-success" : "text-text-secondary/60"}`}
                   >
-                    {info?.follow ? "Yes" : "No"}
+                    {info?.follow ? t("common.yes") : t("common.no")}
                   </Text>
                 </View>
               </View>
 
               {/* Friend status */}
               <View className="flex-row items-center justify-between py-2 border-t border-secondary-light/20">
-                <Text className="text-sm text-text-primary">Friend</Text>
+                <Text className="text-sm text-text-primary">
+                  {t("setting.friend")}
+                </Text>
                 <View className="flex-row items-center gap-1.5">
                   <Ionicons
                     name={
@@ -393,7 +436,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
                   <Text
                     className={`text-sm ${info?.friend ? "text-status-success" : "text-text-secondary/60"}`}
                   >
-                    {info?.friend ? "Yes" : "No"}
+                    {info?.friend ? t("common.yes") : t("common.no")}
                   </Text>
                 </View>
               </View>
@@ -401,7 +444,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
               {/* ECDH handshake status */}
               <View className="flex-row items-center justify-between py-2 border-t border-secondary-light/20">
                 <Text className="text-sm text-text-primary">
-                  ECDH Handshake
+                  {t("ui.ecdh_handshake")}
                 </Text>
                 <View className="flex-row items-center gap-1.5">
                   <Ionicons
@@ -418,7 +461,9 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
                   <Text
                     className={`text-sm ${session.aes_key !== undefined ? "text-status-success" : "text-warning"}`}
                   >
-                    {session.aes_key !== undefined ? "Established" : "Pending"}
+                    {session.aes_key !== undefined
+                      ? t("ui.established")
+                      : t("ui.pending")}
                   </Text>
                 </View>
               </View>
@@ -429,7 +474,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
               {/* Group name */}
               <View className="mb-3">
                 <Text className="text-xs text-text-secondary/60 mb-1">
-                  Group Name
+                  {t("ui.group_name")}
                 </Text>
                 <Text className="text-base font-semibold text-text-primary">
                   {session.name || "Group"}
@@ -439,7 +484,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
               {/* Group hash */}
               <View className="mb-3">
                 <Text className="text-xs text-text-secondary/60 mb-1">
-                  Group Hash
+                  {t("ui.group_hash")}
                 </Text>
                 <Text
                   className="text-xs text-text-primary font-mono"
@@ -452,7 +497,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
               {/* Member count */}
               <View className="mb-2">
                 <Text className="text-xs text-text-secondary/60 mb-1">
-                  Members ({info?.members?.length || 0})
+                  {t("ui.members", { count: info?.members?.length || 0 })}
                 </Text>
               </View>
 
@@ -483,7 +528,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
                         Clipboard.setString(member);
                         dispatch(
                           setFlashNoticeMessage({
-                            message: `Copied ${member.slice(0, 8)}...`,
+                            message: `${t("ui.copied_prefix")} ${member.slice(0, 8)}...`,
                             duration: 2000,
                           }),
                         );
@@ -505,7 +550,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
             className="mt-4 bg-primary/20 rounded-xl py-3 items-center"
           >
             <Text className="text-sm font-semibold text-text-primary">
-              Close
+              {t("common.close")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -527,6 +572,8 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
  * - Interactive file bubbles with download status
  */
 export default function ChatDetailScreen({ route, navigation }) {
+  const { t } = useTranslation();
+  const { isDark } = useDarkMode();
   const { session } = route.params;
   const dispatch = useDispatch();
 
@@ -534,11 +581,12 @@ export default function ChatDetailScreen({ route, navigation }) {
   const messages = useSelector(selectCurrentSessionMessages);
   const selfAddress = useSelector(selectUserAddress);
   const contactMap = useSelector(selectContactMap);
-  const isConnected = useSelector(selectMessengerConnStatus);
 
   const [inputText, setInputText] = useState("");
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [fileDownloadStatus, setFileDownloadStatus] = useState({});
+  const [showJsonModal, setShowJsonModal] = useState(false);
+  const [jsonContent, setJsonContent] = useState("");
   const refreshingRef = useRef(false);
   const flatListRef = useRef(null);
 
@@ -580,6 +628,16 @@ export default function ChatDetailScreen({ route, navigation }) {
     dispatch(SendContent({ content }));
     setInputText("");
   }, [inputText, dispatch]);
+
+  const handleSequenceTap = useCallback((message) => {
+    try {
+      const json = message.json || message;
+      setJsonContent(JSON.stringify(json, null, 2));
+    } catch (e) {
+      setJsonContent(String(json));
+    }
+    setShowJsonModal(true);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     if (refreshingRef.current) return;
@@ -643,9 +701,17 @@ export default function ChatDetailScreen({ route, navigation }) {
         contactMap={contactMap}
         fileDownloadStatus={fileDownloadStatus}
         onFileTap={handleFileTap}
+        onSequenceTap={handleSequenceTap}
       />
     ),
-    [mode, selfAddress, contactMap, fileDownloadStatus, handleFileTap],
+    [
+      mode,
+      selfAddress,
+      contactMap,
+      fileDownloadStatus,
+      handleFileTap,
+      handleSequenceTap,
+    ],
   );
 
   const keyExtractor = useCallback((item) => {
@@ -669,19 +735,17 @@ export default function ChatDetailScreen({ route, navigation }) {
 
         <View className="flex-row items-center flex-1 ml-2">
           {/* Session avatar */}
-          <View
-            className={`w-9 h-9 rounded-full items-center justify-center ${
-              mode === "group" ? "bg-secondary/40" : "bg-primary/30"
-            }`}
-          >
-            {mode === "group" ? (
+          {mode === "group" ? (
+            <View className="w-9 h-9 rounded-full bg-secondary/40 items-center justify-center">
               <Ionicons name="people" size={18} color="#8a7a5a" />
-            ) : (
-              <Text className="text-xs font-bold text-text-primary">
-                {getInitials(session.remote || session.address)}
-              </Text>
-            )}
-          </View>
+            </View>
+          ) : (
+            <AvatarImage
+              address={session.remote || session.address}
+              nickname={session.name}
+              size={36}
+            />
+          )}
 
           <View className="ml-2">
             <Text
@@ -690,16 +754,6 @@ export default function ChatDetailScreen({ route, navigation }) {
             >
               {sessionName}
             </Text>
-            <View className="flex-row items-center">
-              <View
-                className={`w-1.5 h-1.5 rounded-full ${
-                  isConnected ? "bg-status-success" : "bg-status-error"
-                }`}
-              />
-              <Text className="text-[10px] text-text-secondary/60 ml-1">
-                {isConnected ? "Online" : "Offline"}
-              </Text>
-            </View>
           </View>
         </View>
 
@@ -738,11 +792,11 @@ export default function ChatDetailScreen({ route, navigation }) {
               color="#d4c8a8"
             />
             <Text className="text-base text-text-secondary mt-3">
-              No messages yet
+              {t("ui.no_messages")}
             </Text>
             {!canSend && mode !== "group" && (
               <Text className="text-xs text-text-secondary/50 mt-1 italic">
-                Waiting for handshake...
+                {t("ui.waiting_handshake")}
               </Text>
             )}
           </View>
@@ -760,7 +814,7 @@ export default function ChatDetailScreen({ route, navigation }) {
         <TextInput
           value={inputText}
           onChangeText={setInputText}
-          placeholder="Type a message..."
+          placeholder={t("ui.type_message")}
           placeholderTextColor="#a89f85"
           className="flex-1 ml-2 mr-2 bg-surface rounded-full px-4 py-2 text-base text-text-primary border border-secondary-light/30"
           multiline
@@ -793,6 +847,70 @@ export default function ChatDetailScreen({ route, navigation }) {
         mode={mode}
         onClose={() => setShowInfoModal(false)}
       />
+
+      {/* JSON Viewer Modal */}
+      <Modal
+        visible={showJsonModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowJsonModal(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: isDark ? "#2a2a34" : "#fff",
+              borderRadius: 12,
+              maxHeight: "80%",
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: isDark ? "#3a3a45" : "#eee",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: "600",
+                  color: isDark ? "#e8e8ec" : "#333",
+                }}
+              >
+                {t("ui.message_json")}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowJsonModal(false)}
+                hitSlop={10}
+              >
+                <Text style={{ fontSize: 16, color: "#999" }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: 16 }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+                  color: isDark ? "#c8c8d0" : "#333",
+                }}
+              >
+                {jsonContent}
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

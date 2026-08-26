@@ -1,28 +1,34 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   FlatList,
   RefreshControl,
   ActivityIndicator,
-} from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useDispatch, useSelector } from 'react-redux';
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
-import BulletinCard from '../components/Bulletin/BulletinCard';
-import { selectAddressBulletins } from '../selectors';
-import { LoadAddressBulletin } from '../store/sagas/messenger.actions';
-import { ACCENT } from '../lib/theme';
+import BulletinCard from "../components/Bulletin/BulletinCard";
+import { selectAddressBulletins } from "../selectors";
+import { LoadAddressBulletin } from "../store/sagas/messenger.actions";
+import { ACCENT } from "../lib/theme";
 
 /**
  * AddressBulletinsScreen — displays bulletins by a specific address.
  * Accessed via route.params.address.
  */
 export default function AddressBulletinsScreen({ route, navigation }) {
+  const { t } = useTranslation();
   const { address: routeAddress } = route.params ?? {};
   const dispatch = useDispatch();
-  const { list: bulletins, page, totalPage, address: reduxAddress } =
-    useSelector(selectAddressBulletins);
+  const {
+    list: bulletins,
+    page,
+    totalPage,
+    address: reduxAddress,
+  } = useSelector(selectAddressBulletins);
 
   // Locally accumulated bulletin list across pages
   const [allBulletins, setAllBulletins] = useState([]);
@@ -42,16 +48,14 @@ export default function AddressBulletinsScreen({ route, navigation }) {
       setAllBulletins(bulletins);
       setLocalPage(1);
     } else if (page > 1 && bulletins.length > 0) {
-      setAllBulletins(prev => [...prev, ...bulletins]);
+      setAllBulletins((prev) => [...prev, ...bulletins]);
       setLocalPage(page);
     }
   }, [bulletins, page]);
 
   // Set header with address and back button
   React.useLayoutEffect(() => {
-    const displayAddr = routeAddress
-      ? `${routeAddress.slice(0, 8)}...${routeAddress.slice(-6)}`
-      : 'Address';
+    const displayAddr = routeAddress || "Address";
     navigation.setOptions({
       headerLeft: () => (
         <Text
@@ -59,12 +63,12 @@ export default function AddressBulletinsScreen({ route, navigation }) {
           className="text-base font-semibold text-primary"
           style={{ paddingLeft: 8 }}
         >
-          ← Back
+          ← {t("common.back")}
         </Text>
       ),
       title: displayAddr,
       headerStyle: { backgroundColor: ACCENT },
-      headerTintColor: '#1a1a2e',
+      headerTintColor: "#1a1a2e",
     });
   }, [navigation, routeAddress]);
 
@@ -73,7 +77,9 @@ export default function AddressBulletinsScreen({ route, navigation }) {
     refreshingRef.current = true;
     setLocalPage(0);
     dispatch(LoadAddressBulletin({ address: routeAddress, page: 1 }));
-    setTimeout(() => { refreshingRef.current = false; }, 3000);
+    setTimeout(() => {
+      refreshingRef.current = false;
+    }, 3000);
   }, [dispatch, routeAddress]);
 
   const handleLoadMore = useCallback(() => {
@@ -84,31 +90,40 @@ export default function AddressBulletinsScreen({ route, navigation }) {
     }
   }, [dispatch, routeAddress, localPage, page, totalPage]);
 
-  const handlePressBulletin = useCallback((bulletin) => {
-    navigation.getParent()?.navigate('MainTabs', {
-      screen: 'Bulletin',
-      params: {
-        screen: 'BulletinDetail',
+  const handlePressBulletin = useCallback(
+    (bulletin) => {
+      navigation.getParent()?.navigate("MainTabs", {
+        screen: "Bulletin",
         params: {
-          hash: bulletin.hash,
-          address: bulletin.address,
-          sequence: bulletin.sequence,
+          screen: "BulletinDetail",
+          params: {
+            hash: bulletin.hash,
+            address: bulletin.address,
+            sequence: bulletin.sequence,
+          },
         },
-      },
-    });
-  }, [navigation]);
+      });
+    },
+    [navigation],
+  );
 
-  const handleTagPress = useCallback((t) => {
-    navigation.navigate('TagBulletins', { tag: t });
-  }, [navigation]);
+  const handleTagPress = useCallback(
+    (t) => {
+      navigation.navigate("TagBulletins", { tag: t });
+    },
+    [navigation],
+  );
 
-  const renderItem = useCallback(({ item }) => (
-    <BulletinCard
-      bulletin={item}
-      onPress={() => handlePressBulletin(item)}
-      onTagPress={handleTagPress}
-    />
-  ), [handlePressBulletin, handleTagPress]);
+  const renderItem = useCallback(
+    ({ item }) => (
+      <BulletinCard
+        bulletin={item}
+        onPress={() => handlePressBulletin(item)}
+        onTagPress={handleTagPress}
+      />
+    ),
+    [handlePressBulletin, handleTagPress],
+  );
 
   const keyExtractor = useCallback((item) => item.hash, []);
 
@@ -121,7 +136,7 @@ export default function AddressBulletinsScreen({ route, navigation }) {
         <View className="flex-row items-center gap-2">
           <Ionicons name="person" size={20} color={ACCENT} />
           <Text className="text-lg font-bold text-text-primary">
-            Address Posts
+            {t("ui.address_posts")}
           </Text>
         </View>
         {reduxAddress && (
@@ -130,7 +145,7 @@ export default function AddressBulletinsScreen({ route, navigation }) {
           </Text>
         )}
         <Text className="text-xs text-text-secondary/70 mt-1">
-          {allBulletins.length} post{allBulletins.length !== 1 ? 's' : ''} loaded
+          {t("ui.posts_loaded", { count: allBulletins.length })}
         </Text>
       </View>
 
@@ -151,14 +166,12 @@ export default function AddressBulletinsScreen({ route, navigation }) {
         onEndReachedThreshold={0.3}
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center py-20">
-            <Ionicons name="document-text-outline" size={48} color="#d4c8a8" />
+            <Ionicons name="volume-high-outline" size={48} color="#d4c8a8" />
             <Text className="text-xl font-bold text-text-primary mt-3 mb-1">
-              No posts found
+              {t("ui.no_posts_found")}
             </Text>
             <Text className="text-sm text-text-secondary text-center px-8">
-              {routeAddress
-                ? 'This address has no posts or they have not been synced yet.'
-                : 'No address specified.'}
+              {routeAddress ? t("ui.address_no_posts") : t("ui.no_address")}
             </Text>
           </View>
         }
@@ -166,7 +179,9 @@ export default function AddressBulletinsScreen({ route, navigation }) {
           hasMore ? (
             <View className="py-4 items-center">
               <ActivityIndicator size="small" color={ACCENT} />
-              <Text className="text-xs text-text-secondary/70 mt-1">Loading more…</Text>
+              <Text className="text-xs text-text-secondary/70 mt-1">
+                {t("common.loading_more")}
+              </Text>
             </View>
           ) : null
         }
