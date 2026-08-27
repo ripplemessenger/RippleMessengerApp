@@ -65,20 +65,31 @@ export default function ServerManagementTab({ navigation }) {
 
   const handleDelete = useCallback(
     (url) => {
-      Alert.alert("Delete Server", `Are you sure you want to remove ${url}?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => dispatch(ServerDel({ url })),
-        },
-      ]);
+      Alert.alert(
+        t("server.delete_title"),
+        t("server.delete_confirm", { url }),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("common.delete"),
+            style: "destructive",
+            onPress: () => dispatch(ServerDel({ url })),
+          },
+        ],
+      );
     },
     [dispatch],
   );
 
   return (
     <View className="flex-1 gap-4 bg-surface">
+      {/* Title */}
+      <View className="px-5 pt-6 pb-2">
+        <Text className="text-3xl font-bold text-text-primary text-center">
+          {t("setting.servers")}
+        </Text>
+      </View>
+
       {/* Add button */}
       <View className="bg-surface-card rounded-2xl p-5 border border-secondary-light items-center">
         <TouchableOpacity

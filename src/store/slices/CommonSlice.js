@@ -5,11 +5,13 @@ const CommonSlice = createSlice({
   initialState: {
     FlashNoticeMessage: null,
     FlashNoticeDuration: 0,
+    FlashNoticeKey: 0,
   },
   reducers: {
     setFlashNoticeMessage: (state, action) => {
       state.FlashNoticeMessage = action.payload.message;
       state.FlashNoticeDuration = action.payload.duration;
+      state.FlashNoticeKey = Date.now();
     },
   },
 });

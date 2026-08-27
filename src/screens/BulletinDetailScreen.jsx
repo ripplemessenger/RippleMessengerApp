@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -48,23 +42,8 @@ import AvatarImage from "../components/AvatarImage";
 import InlineImage from "../components/InlineImage";
 import useDarkMode from "../hooks/useDarkMode";
 import { ACCENT } from "../lib/theme";
-
-function formatTimestamp(ms) {
-  if (!ms) return "";
-  const d = new Date(ms);
-  return d.toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function shortenAddress(addr) {
-  if (!addr || addr.length < 14) return addr || "";
-  return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
-}
+import { formatTime, shortenAddress } from "../lib/format";
+import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
 
 /* Shared HTML config for react-native-render-html — text color must follow
  * the theme (hardcoded #1a1a2e was invisible on the dark surface-card). */
@@ -119,7 +98,7 @@ function ReplyCard({ bulletin, onPress }) {
             {displayName}
           </Text>
           <Text className="text-[10px] text-text-secondary/70">
-            {formatTimestamp(bulletin.signed_at)} · #{bulletin.sequence}
+            {formatTime(bulletin.signed_at)} · #{bulletin.sequence}
           </Text>
         </View>
       </View>
@@ -148,7 +127,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
 
   const [replyText, setReplyText] = useState("");
   const [showJsonModal, setShowJsonModal] = useState(false);
-  const refreshingRef = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (hash || (address && sequence)) {
@@ -250,13 +229,13 @@ export default function BulletinDetailScreen({ route, navigation }) {
   }, [replyText, dispatch, bulletin?.hash]);
 
   const handleRefreshReplies = useCallback(() => {
-    if (refreshingRef.current || !bulletin?.hash) return;
-    refreshingRef.current = true;
+    if (refreshing || !bulletin?.hash) return;
+    setRefreshing(true);
     dispatch(RequestReplyBulletin({ hash: bulletin.hash, page: 1 }));
     setTimeout(() => {
-      refreshingRef.current = false;
+      setRefreshing(false);
     }, 2000);
-  }, [dispatch, bulletin?.hash]);
+  }, [dispatch, bulletin?.hash, refreshing]);
 
   const handleBookmarkMain = useCallback(
     (e) => {
@@ -317,10 +296,23 @@ export default function BulletinDetailScreen({ route, navigation }) {
 
   const handleCopyContent = useCallback(() => {
     Clipboard.setString(bulletin.content || "");
-    Alert.alert(t("common.copied"), t("common.copied_to_clipboard"), [
-      { text: t("common.yes") },
-    ]);
-  }, [bulletin?.content]);
+    dispatch(
+      setFlashNoticeMessage({
+        message: t("common.copied_to_clipboard"),
+      }),
+    );
+  }, [bulletin?.content, dispatch, t]);
+
+  // Copy the raw bulletin JSON to clipboard
+  const handleCopyJson = useCallback(() => {
+    const jsonStr = JSON.stringify(bulletin?.json ?? bulletin, null, 2);
+    Clipboard.setString(jsonStr);
+    dispatch(
+      setFlashNoticeMessage({
+        message: t("common.copied_to_clipboard"),
+      }),
+    );
+  }, [bulletin, dispatch, t]);
 
   // Toggle Friend — first ensure contact exists, then toggle friend status
   const handleToggleFriend = useCallback(() => {
@@ -388,7 +380,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
           contentContainerStyle={{ padding: 16, flexGrow: 1 }}
           refreshControl={
             <RefreshControl
-              refreshing={refreshingRef.current}
+              refreshing={refreshing}
               onRefresh={handleRefreshReplies}
               tintColor={ACCENT}
             />
@@ -427,7 +419,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
               className="items-end shrink-0"
             >
               <Text className="text-xs text-text-secondary/70">
-                {formatTimestamp(bulletin.signed_at)}
+                {formatTime(bulletin.signed_at)}
               </Text>
               <Text className="text-xs text-text-secondary/50">
                 #{bulletin.sequence}
@@ -601,7 +593,11 @@ export default function BulletinDetailScreen({ route, navigation }) {
                     activeOpacity={0.6}
                     className="flex-row items-center gap-2 py-2 px-2 rounded-lg bg-surface-alt/50"
                   >
-                    <Ionicons name="folder-open" size={18} color={ACCENT} />
+                    <Ionicons
+                      name="document-outline"
+                      size={18}
+                      color={ACCENT}
+                    />
                     <Text className="text-sm text-text-primary flex-1 ml-1">
                       {f.Name}
                     </Text>
@@ -625,41 +621,41 @@ export default function BulletinDetailScreen({ route, navigation }) {
               <Text className="text-sm font-semibold text-text-secondary mb-2">
                 {t("ui.quotes")} ({bulletin.quote.length})
               </Text>
-              {bulletin.quote.map((q, i) => {
-                const isQuoteObj =
-                  typeof q === "object" && q !== null && q.Hash;
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => {
-                      if (isQuoteObj) {
-                        navigation.navigate("BulletinDetail", {
-                          hash: q.Hash,
-                          address: q.Address,
-                          sequence: q.Sequence,
-                        });
-                      }
-                    }}
-                    activeOpacity={0.6}
-                    className={`pl-3 border-l-2 border-primary/40 py-1 mb-1 ${
-                      isQuoteObj ? "bg-surface-alt/50 rounded" : ""
-                    }`}
-                  >
-                    <View className="flex-row items-center gap-1">
+              <View className="flex-row flex-wrap gap-2">
+                {bulletin.quote.map((q, i) => {
+                  const isQuoteObj =
+                    typeof q === "object" && q !== null && q.Hash;
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      onPress={() => {
+                        if (isQuoteObj) {
+                          navigation.navigate("BulletinDetail", {
+                            hash: q.Hash,
+                            address: q.Address,
+                            sequence: q.Sequence,
+                          });
+                        }
+                      }}
+                      activeOpacity={0.6}
+                      className="flex-row items-center gap-1 px-3 py-1 rounded-full bg-primary/10"
+                    >
                       <Ionicons
                         name={isQuoteObj ? "link" : "quote"}
                         size={14}
                         color={ACCENT}
                       />
-                      <Text className="text-xs text-text-secondary">
+                      <Text className="text-sm text-primary-dark">
                         {typeof q === "string"
                           ? q
-                          : `#${q.Sequence} ${shortenAddress(q.Address)}`}
+                          : contactMap?.[q.Address]
+                            ? `${contactMap[q.Address]}#${q.Sequence}`
+                            : `${shortenAddress(q.Address)}#${q.Sequence}`}
                       </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
           )}
 
@@ -750,12 +746,20 @@ export default function BulletinDetailScreen({ route, navigation }) {
               <Text className="text-base font-semibold text-text-primary">
                 {t("ui.bulletin_json")}
               </Text>
-              <TouchableOpacity
-                onPress={() => setShowJsonModal(false)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="close" size={24} color="#a89f85" />
-              </TouchableOpacity>
+              <View className="flex-row items-center gap-1">
+                <TouchableOpacity
+                  onPress={handleCopyJson}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="copy-outline" size={22} color="#a89f85" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setShowJsonModal(false)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close" size={24} color="#a89f85" />
+                </TouchableOpacity>
+              </View>
             </View>
             <ScrollView
               className="flex-1 px-4 py-3"

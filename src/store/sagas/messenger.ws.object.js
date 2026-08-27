@@ -17,6 +17,7 @@ import {
   QuarterSHA512Message,
 } from "../../lib/AppUtil";
 import Logger from "../../lib/Logger";
+import { shortenAddress } from "../../lib/format";
 import { getSettingBool } from "../../lib/SettingsUtil";
 import { mgAPI } from "../../lib/MessageGenerator";
 import {
@@ -773,7 +774,7 @@ function* handleGroupMessageListObject(json, address, seed) {
           }),
         );
         // Push notification for group messages — title "Group message", body = group name + sender
-        const groupNotifBody = `${group.Name}: ${msg_address.slice(0, 8)}...${msg_address.slice(-6)}`;
+        const groupNotifBody = `${group.Name}: ${shortenAddress(msg_address)}`;
         showPushNotification("Group message", groupNotifBody);
         playNotificationSound();
       }

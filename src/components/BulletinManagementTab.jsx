@@ -11,8 +11,6 @@ import {
   TouchableOpacity,
   FlatList,
   Alert,
-  Modal,
-  TextInput,
   ScrollView,
 } from "react-native";
 import { useSelector } from "react-redux";
@@ -22,15 +20,19 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { dbAPI } from "../db";
 
 import { selectUserAddress } from "../selectors";
-import { ACCENT } from "../lib/theme";
+import { ACCENT, ICON_MUTED } from "../lib/theme";
+import { formatTime, shortenAddress } from "../lib/format";
+import SearchBar from "./common/SearchBar";
+import EmptyState from "./common/EmptyState";
+import BottomSheet from "./common/BottomSheet";
 
 const BULLETIN_PAGE_SIZE = 20;
 
 const FILTER_OPTIONS = [
-  { key: "all", label: "All", icon: "document" },
-  { key: "mine", label: "Mine", icon: "person" },
-  { key: "bookmarked", label: "Bookmarked", icon: "star" },
-  { key: "followed", label: "Followed", icon: "people" },
+  { key: "all", labelKey: "bulletin.filter_all", icon: "document" },
+  { key: "mine", labelKey: "bulletin.filter_mine", icon: "person" },
+  { key: "bookmarked", labelKey: "bulletin.filter_bookmarked", icon: "star" },
+  { key: "followed", labelKey: "bulletin.filter_followed", icon: "people" },
 ];
 
 /**
@@ -202,12 +204,12 @@ export default function BulletinManagementTab() {
   // Delete selected bulletins
   const handleDeleteSelected = useCallback(() => {
     Alert.alert(
-      "Delete Selected",
-      `Remove ${selectedHashes.length} bulletin(s) from local storage?`,
+      t("bulletin.delete_selected_title"),
+      t("bulletin.delete_selected_confirm", { count: selectedHashes.length }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -269,23 +271,6 @@ export default function BulletinManagementTab() {
     );
   }, [totalCount]);
 
-  const formatDate = useCallback((ts) => {
-    if (!ts) return "-";
-    const d = new Date(ts);
-    const y = d.getFullYear();
-    const now = new Date().getFullYear();
-    const pad = (n) => (n < 10 ? "0" + n : String(n));
-    if (y !== now) {
-      return `${y}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    }
-    return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }, []);
-
-  const truncateAddress = useCallback((addr) => {
-    if (!addr || addr.length < 20) return addr || "-";
-    return `${addr.slice(0, 10)}...${addr.slice(-6)}`;
-  }, []);
-
   const truncateContent = useCallback((content) => {
     if (!content) return "";
     return content.length > 256 ? content.slice(0, 256) + "..." : content;
@@ -336,11 +321,11 @@ export default function BulletinManagementTab() {
                 </View>
               )}
               <Text className="text-xs text-text-secondary/60">
-                {formatDate(b.SignedAt || b.signed_at)}
+                {formatTime(b.SignedAt || b.signed_at)}
               </Text>
             </View>
             <Text className="text-xs font-mono text-text-secondary/50 truncate max-w-[120px]">
-              {truncateAddress(address)}
+              {shortenAddress(address)}
             </Text>
           </View>
 
@@ -371,8 +356,7 @@ export default function BulletinManagementTab() {
       );
     },
     [
-      formatDate,
-      truncateAddress,
+      shortenAddress,
       truncateContent,
       selectMode,
       selectedHashes,
@@ -384,34 +368,38 @@ export default function BulletinManagementTab() {
 
   const emptyState = useMemo(
     () => (
-      <View className="flex-1 items-center justify-center gap-3 py-12">
-        <Ionicons
-          name="document-outline"
-          size={48}
-          color={ACCENT}
-          opacity={0.4}
-        />
-        <Text className="text-lg text-text-secondary">No bulletins</Text>
-        <Text className="text-sm text-text-secondary/60 text-center px-8">
-          {filter !== "all"
-            ? `No ${filter} bulletins found`
-            : t("bulletin.no_cached")}
-        </Text>
-      </View>
+      <EmptyState
+        icon="document-outline"
+        title={t("bulletin.no_bulletins")}
+        hint={
+          filter !== "all"
+            ? t("bulletin.no_filter_found", { filter: filter })
+            : t("bulletin.no_cached")
+        }
+      />
     ),
-    [filter],
+    [filter, t],
   );
 
   return (
     <View className="flex-1 gap-3 bg-surface">
+      {/* Title */}
+      <View className="px-5 pt-6 pb-2">
+        <Text className="text-3xl font-bold text-text-primary text-center">
+          {t("setting.bulletin_cache")}
+        </Text>
+      </View>
+
       {/* Select mode header */}
       {selectMode && (
         <View className="flex-row items-center justify-between bg-primary/10 rounded-xl px-4 py-2 border border-primary/30">
           <TouchableOpacity onPress={exitSelectMode}>
-            <Text className="text-sm font-medium text-primary">Done</Text>
+            <Text className="text-sm font-medium text-primary">
+              {t("common.done")}
+            </Text>
           </TouchableOpacity>
           <Text className="text-xs text-text-secondary">
-            {selectedHashes.length} selected
+            {t("bulletin.selected_count", { count: selectedHashes.length })}
           </Text>
           <TouchableOpacity
             onPress={handleDeleteSelected}
@@ -424,28 +412,18 @@ export default function BulletinManagementTab() {
                   : "text-text-secondary/30"
               }`}
             >
-              Delete ({selectedHashes.length})
+              {t("bulletin.delete_count", { count: selectedHashes.length })}
             </Text>
           </TouchableOpacity>
         </View>
       )}
 
       {/* Search bar */}
-      <View className="flex-row items-center bg-surface-card rounded-xl px-3 border border-secondary-light">
-        <Ionicons name="search-outline" size={16} color="#9a9590" />
-        <TextInput
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search content..."
-          placeholderTextColor="#9a9590"
-          className="flex-1 py-2 text-sm text-text-primary"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery("")}>
-            <Ionicons name="close-circle" size={18} color="#9a9590" />
-          </TouchableOpacity>
-        )}
-      </View>
+      <SearchBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder={t("bulletin.search_placeholder")}
+      />
 
       {/* Filter chips */}
       <View className="flex-row bg-surface-card rounded-xl p-1 border border-secondary-light">
@@ -462,14 +440,14 @@ export default function BulletinManagementTab() {
               <Ionicons
                 name={isActive ? opt.icon : `${opt.icon}-outline`}
                 size={14}
-                color={isActive ? ACCENT : "#9a9590"}
+                color={isActive ? ACCENT : ICON_MUTED}
               />
               <Text
                 className={`text-[10px] font-medium mt-0.5 ${
                   isActive ? "text-primary" : "text-text-secondary"
                 }`}
               >
-                {opt.label}
+                {t(opt.labelKey)}
               </Text>
             </TouchableOpacity>
           );
@@ -479,7 +457,7 @@ export default function BulletinManagementTab() {
       {/* Summary bar with tag filter and sort toggle */}
       <View className="flex-row items-center justify-between px-1">
         <Text className="text-xs text-text-secondary/70">
-          {totalCount.toLocaleString()} bulletins
+          {t("bulletin.total_count", { count: totalCount.toLocaleString() })}
         </Text>
         <View className="flex-row items-center gap-2">
           {/* Tag filter button */}
@@ -488,7 +466,7 @@ export default function BulletinManagementTab() {
               onPress={() => setTagModalVisible(true)}
               className="flex-row items-center gap-1 bg-surface-card px-2 py-1 rounded border border-secondary-light"
             >
-              <Ionicons name="pricetags-outline" size={14} color="#9a9590" />
+              <Ionicons name="pricetags-outline" size={14} color={ICON_MUTED} />
               {selectedTag && (
                 <>
                   <Text className="text-[10px] text-primary">
@@ -513,7 +491,7 @@ export default function BulletinManagementTab() {
             <Ionicons
               name={selectMode ? "checkmark-done" : "checkmark-circle-outline"}
               size={14}
-              color={selectMode ? ACCENT : "#9a9590"}
+              color={selectMode ? ACCENT : ICON_MUTED}
             />
           </TouchableOpacity>
 
@@ -525,7 +503,7 @@ export default function BulletinManagementTab() {
             <Ionicons
               name={sortOrder === "desc" ? "arrow-down" : "arrow-up"}
               size={14}
-              color="#9a9590"
+              color={ICON_MUTED}
             />
           </TouchableOpacity>
         </View>
@@ -567,19 +545,25 @@ export default function BulletinManagementTab() {
             }`}
           >
             <View className="flex-row items-center gap-1">
-              <Ionicons name="chevron-back" size={14} color="#9a9590" />
-              <Text className="text-xs text-text-secondary">Prev</Text>
+              <Ionicons name="chevron-back" size={14} color={ICON_MUTED} />
+              <Text className="text-xs text-text-secondary">
+                {t("common.prev")}
+              </Text>
             </View>
           </TouchableOpacity>
-          <Text className="text-xs text-text-secondary/60">Page {page}</Text>
+          <Text className="text-xs text-text-secondary/60">
+            {t("bulletin.page_indicator", { count: page })}
+          </Text>
           <TouchableOpacity
             onPress={() => handlePageChange(page + 1)}
             disabled={loading}
             className="py-2 px-4 rounded-lg bg-surface-card border border-secondary-light"
           >
             <View className="flex-row items-center gap-1">
-              <Text className="text-xs text-text-secondary">Next</Text>
-              <Ionicons name="chevron-forward" size={14} color="#9a9590" />
+              <Text className="text-xs text-text-secondary">
+                {t("common.next")}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={ICON_MUTED} />
             </View>
           </TouchableOpacity>
         </View>
@@ -601,89 +585,63 @@ export default function BulletinManagementTab() {
       )}
 
       {/* JSON Preview Modal */}
-      <Modal
+      <BottomSheet
         visible={jsonModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setJsonModalVisible(false)}
+        onClose={() => setJsonModalVisible(false)}
+        title={t("bulletin.json_title")}
       >
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-surface-card rounded-t-2xl p-4 max-h-[80vh]">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-base font-semibold text-text-primary">
-                Bulletin JSON
+        <ScrollView className="max-h-[70vh]">
+          {previewBulletin && (
+            <View className="bg-black/10 rounded-xl p-3">
+              <Text className="text-xs font-mono text-text-primary whitespace-pre-wrap">
+                {JSON.stringify(previewBulletin, null, 2)}
               </Text>
-              <TouchableOpacity onPress={() => setJsonModalVisible(false)}>
-                <Ionicons name="close-circle" size={24} color="#9a9590" />
-              </TouchableOpacity>
             </View>
-            <ScrollView className="max-h-[70vh]">
-              {previewBulletin && (
-                <View className="bg-black/10 rounded-xl p-3">
-                  <Text className="text-xs font-mono text-text-primary whitespace-pre-wrap">
-                    {JSON.stringify(previewBulletin, null, 2)}
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+          )}
+        </ScrollView>
+      </BottomSheet>
 
       {/* Tag Picker Modal */}
-      <Modal
+      <BottomSheet
         visible={tagModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setTagModalVisible(false)}
+        onClose={() => setTagModalVisible(false)}
+        title={t("bulletin.filter_by_tag")}
       >
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-surface-card rounded-t-2xl p-4 max-h-[60vh]">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-base font-semibold text-text-primary">
-                Filter by Tag
-              </Text>
-              <TouchableOpacity onPress={() => setTagModalVisible(false)}>
-                <Ionicons name="close-circle" size={24} color="#9a9590" />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={tags}
-              keyExtractor={(item) => item}
-              renderItem={({ item: tagName }) => (
-                <TouchableOpacity
-                  onPress={() => handleSelectTag(tagName)}
-                  className={`py-3 px-2 rounded-lg ${
-                    selectedTag === tagName ? "bg-primary/15" : ""
+        <FlatList
+          data={tags}
+          keyExtractor={(item) => item}
+          renderItem={({ item: tagName }) => (
+            <TouchableOpacity
+              onPress={() => handleSelectTag(tagName)}
+              className={`py-3 px-2 rounded-lg ${
+                selectedTag === tagName ? "bg-primary/15" : ""
+              }`}
+            >
+              <View className="flex-row items-center gap-2">
+                <Ionicons
+                  name={
+                    selectedTag === tagName
+                      ? "checkmark-circle"
+                      : "ellipse-outline"
+                  }
+                  size={18}
+                  color={selectedTag === tagName ? ACCENT : ICON_MUTED}
+                />
+                <Text
+                  className={`text-sm ${
+                    selectedTag === tagName
+                      ? "text-primary font-medium"
+                      : "text-text-primary"
                   }`}
                 >
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons
-                      name={
-                        selectedTag === tagName
-                          ? "checkmark-circle"
-                          : "ellipse-outline"
-                      }
-                      size={18}
-                      color={selectedTag === tagName ? ACCENT : "#9a9590"}
-                    />
-                    <Text
-                      className={`text-sm ${
-                        selectedTag === tagName
-                          ? "text-primary font-medium"
-                          : "text-text-primary"
-                      }`}
-                    >
-                      {tagName}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-              contentContainerClassName="gap-1 pb-4"
-            />
-          </View>
-        </View>
-      </Modal>
+                  {tagName}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          contentContainerClassName="gap-1 pb-4"
+        />
+      </BottomSheet>
     </View>
   );
 }

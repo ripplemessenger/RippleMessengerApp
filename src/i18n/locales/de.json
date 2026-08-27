@@ -431,7 +431,8 @@
     "login_saved": "Mit gespeichertem Konto anmelden",
     "invalid_seed": "Ungültiges Seed-Format",
     "seed_required": "Seed ist erforderlich",
-    "temp_login_desc": "Melde dich an, ohne dein Konto zu speichern. Dein Seed wird nicht gespeichert."
+    "temp_login_desc": "Melde dich an, ohne dein Konto zu speichern. Dein Seed wird nicht gespeichert.",
+    "remove_account_confirm": "Gespeichertes Konto {{address}} entfernen? Sie bleiben angemeldet."
   },
   "storage": {
     "files": "Dateien",
@@ -482,7 +483,8 @@
     "pending_invitations": "Ausstehende Einladungen ({{count}})",
     "select_members": "Mitglieder auswählen ({{count}}/{{max}})",
     "decline_title": "Einladung ablehnen",
-    "decline_confirm": "Einladung zu „{{name}}“ ablehnen?"
+    "decline_confirm": "Einladung zu „{{name}}“ ablehnen?",
+    "delete_confirm": "Diese Gruppe löschen? Nur der Ersteller kann dies tun."
   },
   "network": {
     "url": "URL:"

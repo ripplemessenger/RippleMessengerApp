@@ -1,10 +1,16 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
-import Ionicons from "react-native-vector-icons/Ionicons";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Clipboard,
+} from "react-native";
+import { useDispatch } from "react-redux";
 
 import { MasterAddress } from "../lib/MessengerConst";
-import { ACCENT } from "../lib/theme";
+import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
 
 /**
  * AboutScreen — content copied from the Client's AboutPage
@@ -32,28 +38,21 @@ const RULES = [
   "Publish(Comment) bulletin freely",
 ];
 
-export default function AboutScreen({ navigation }) {
+export default function AboutScreen() {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
+
+  const handleCopyAddress = useCallback(() => {
+    Clipboard.setString(MasterAddress);
+    dispatch(
+      setFlashNoticeMessage({
+        message: t("common.copied_to_clipboard"),
+      }),
+    );
+  }, [t, dispatch]);
   return (
     <ScrollView className="flex-1 bg-surface">
       <View className="px-6 py-8 gap-6">
-        {/* Header with back button */}
-        <View className="flex-row items-center gap-3 pt-6">
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-            style={{ padding: 4 }}
-          >
-            <Ionicons name="arrow-back" size={24} color={ACCENT} />
-          </TouchableOpacity>
-          <Text className="text-2xl font-bold text-text-primary">
-            {t("common.about")}
-          </Text>
-        </View>
-
-        {/* Divider */}
-        <View className="h-px bg-secondary" />
-
         {/* Rules */}
         <View className="bg-surface-card rounded-2xl p-5 border border-secondary-light gap-3">
           <Text className="text-xl font-bold text-text-primary">
@@ -74,9 +73,11 @@ export default function AboutScreen({ navigation }) {
           <Text className="text-xl font-bold text-text-primary">
             {t("about.donate")}
           </Text>
-          <Text className="text-sm font-mono text-text-secondary break-all">
-            {MasterAddress}
-          </Text>
+          <TouchableOpacity onPress={handleCopyAddress} activeOpacity={0.6}>
+            <Text className="text-sm font-mono text-text-secondary break-all">
+              {MasterAddress}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>

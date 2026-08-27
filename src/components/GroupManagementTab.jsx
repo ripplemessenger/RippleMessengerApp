@@ -13,6 +13,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { ACCENT } from "../lib/theme";
+import { formatTime, shortenAddress } from "../lib/format";
 
 import { selectGroupData, selectUserTabGroup } from "../selectors";
 import { GroupMemberMax } from "../lib/MessengerConst";
@@ -81,12 +82,12 @@ export default function GroupManagementTab() {
   const handleDeleteGroup = useCallback(
     (group) => {
       Alert.alert(
-        "Delete Group",
-        `Delete "${group.name || "Unnamed Group"}"? This can only be done by the creator.`,
+        t("group.delete_title"),
+        t("group.delete_confirm", { name: group.name || t("group.unnamed") }),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "Delete",
+            text: t("common.delete"),
             style: "destructive",
             onPress: () => dispatch(DeleteGroupAction({ hash: group.hash })),
           },
@@ -108,12 +109,12 @@ export default function GroupManagementTab() {
   const handleRejectRequest = useCallback(
     (group) => {
       Alert.alert(
-        "Decline Invitation",
-        `Decline the invitation to "${group.name || "Unnamed Group"}"?`,
+        t("group.decline_title"),
+        t("group.decline_confirm", { name: group.name || t("group.unnamed") }),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "Decline",
+            text: t("group.decline_title"),
             style: "destructive",
             onPress: () =>
               dispatch(RejectGroupRequestAction({ hash: group.hash })),
@@ -128,9 +129,7 @@ export default function GroupManagementTab() {
   const renderGroupItem = useCallback(
     ({ item: group }) => {
       const memberCount = group.member ? group.member.length + 1 : 0;
-      const createdAt = group.created_at
-        ? new Date(group.created_at).toLocaleDateString()
-        : "-";
+      const createdAt = group.created_at ? formatTime(group.created_at) : "-";
 
       return (
         <TouchableOpacity
@@ -185,13 +184,17 @@ export default function GroupManagementTab() {
             onPress={() => handleAcceptRequest(group)}
             className="flex-1 bg-status-success py-2 rounded-lg items-center"
           >
-            <Text className="text-sm font-medium text-white">Accept</Text>
+            <Text className="text-sm font-medium text-white">
+              {t("group.accept")}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handleRejectRequest(group)}
             className="flex-1 bg-status-error py-2 rounded-lg items-center"
           >
-            <Text className="text-sm font-medium text-white">Decline</Text>
+            <Text className="text-sm font-medium text-white">
+              {t("group.decline")}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -201,6 +204,13 @@ export default function GroupManagementTab() {
 
   return (
     <View className="flex-1 gap-4 bg-surface">
+      {/* Title */}
+      <View className="px-5 pt-6 pb-2">
+        <Text className="text-3xl font-bold text-text-primary text-center">
+          {t("setting.my_groups")}
+        </Text>
+      </View>
+
       {/* Create Group Modal */}
       <Modal
         visible={showCreateModal}
@@ -275,8 +285,7 @@ export default function GroupManagementTab() {
                           {contact.nickname || "Unknown"}
                         </Text>
                         <Text className="text-xs font-mono text-text-secondary/50">
-                          {contact.address.slice(0, 8)}...
-                          {contact.address.slice(-6)}
+                          {shortenAddress(contact.address)}
                         </Text>
                       </TouchableOpacity>
                     );

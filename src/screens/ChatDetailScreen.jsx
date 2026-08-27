@@ -40,46 +40,16 @@ import { SessionType } from "../lib/AppConst";
 import { MessageObjectType } from "../lib/MessengerConst";
 import { dbAPI } from "../db";
 import { ACCENT } from "../lib/theme";
-
-/**
- * Format a timestamp (ms epoch) into HH:mm time string.
- * Uses fixed en-US locale for consistent output across all devices.
- */
-function formatTime(timestamp) {
-  if (!timestamp || typeof timestamp !== "number") return "";
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-/**
- * Format file size in bytes to a human-readable string.
- */
-function formatFileSize(bytes) {
-  if (!bytes || bytes <= 0) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+import { formatTime, shortenAddress, formatFileSize } from "../lib/format";
 
 /**
  * Resolve a display name for an address using the contact map.
  */
-function resolveName(address, contactMap) {
+function resolveName(address, contactMap, selfAddress) {
+  if (selfAddress && address === selfAddress) return "Me";
   const nickname = contactMap[address];
   if (nickname) return nickname;
-  return address;
-}
-
-/**
- * Shorten an address for compact display.
- */
-function shortenAddress(addr) {
-  if (!addr || addr.length < 14) return addr || "";
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  return shortenAddress(address);
 }
 
 /**
@@ -110,9 +80,9 @@ function extractContent(msg) {
     if (obj.Name) {
       return `📎 ${obj.Name}`;
     }
-    // Bulletin reference
+    // Bulletin reference — return null, handled specially in MessageBubble
     if (obj.ObjectType === MessageObjectType.Bulletin) {
-      return "📰 Shared a bulletin";
+      return null;
     }
   }
   return typeof msg.content === "string" ? msg.content : "";
@@ -156,6 +126,7 @@ const MessageBubble = React.memo(function MessageBubble({
   fileDownloadStatus,
   onFileTap,
   onSequenceTap,
+  navigation,
 }) {
   const { t } = useTranslation();
   const senderField = mode === "group" ? "address" : "sour";
@@ -170,7 +141,11 @@ const MessageBubble = React.memo(function MessageBubble({
       {/* Sender avatar */}
       <AvatarImage
         address={senderAddress}
-        nickname={!isSelf ? resolveName(senderAddress, contactMap) : undefined}
+        nickname={
+          !isSelf
+            ? resolveName(senderAddress, contactMap, selfAddress)
+            : undefined
+        }
         size={32}
         style={{
           marginLeft: isSelf ? 8 : undefined,
@@ -182,7 +157,7 @@ const MessageBubble = React.memo(function MessageBubble({
         {/* Sender name (group mode, or when not self) */}
         {!isSelf && mode === "group" && (
           <Text className="text-xs text-text-secondary/70 mb-1 ml-1">
-            {resolveName(senderAddress, contactMap)}
+            {resolveName(senderAddress, contactMap, selfAddress)}
           </Text>
         )}
 
@@ -260,8 +235,35 @@ const MessageBubble = React.memo(function MessageBubble({
             </View>
           ) : (
             <>
-              {/* Message content */}
-              {content ? (
+              {/* Bulletin link — clickable, navigates to bulletin detail */}
+              {message.is_object &&
+              message.content?.ObjectType === MessageObjectType.Bulletin ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    const obj = message.content;
+                    navigation.navigate("Bulletin", {
+                      screen: "BulletinDetail",
+                      params: {
+                        hash: obj.hash,
+                        address: obj.address,
+                        sequence: obj.sequence,
+                      },
+                    });
+                  }}
+                  activeOpacity={0.6}
+                  className="flex-row items-center gap-1 px-3 py-1 rounded-full bg-primary/10"
+                >
+                  <Ionicons name="link" size={14} color={ACCENT} />
+                  <Text className="text-sm text-primary-dark">
+                    {resolveName(
+                      message.content.address,
+                      contactMap,
+                      selfAddress,
+                    )}
+                    #{message.content.sequence}
+                  </Text>
+                </TouchableOpacity>
+              ) : content ? (
                 <Text className="text-base text-text-primary whitespace-pre-wrap break-words">
                   {content}
                 </Text>
@@ -587,7 +589,7 @@ export default function ChatDetailScreen({ route, navigation }) {
   const [fileDownloadStatus, setFileDownloadStatus] = useState({});
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [jsonContent, setJsonContent] = useState("");
-  const refreshingRef = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
   const flatListRef = useRef(null);
 
   // Determine if this is private or group
@@ -640,13 +642,13 @@ export default function ChatDetailScreen({ route, navigation }) {
   }, []);
 
   const handleRefresh = useCallback(() => {
-    if (refreshingRef.current) return;
-    refreshingRef.current = true;
+    if (refreshing) return;
+    setRefreshing(true);
     dispatch(LoadCurrentSession(session));
     setTimeout(() => {
-      refreshingRef.current = false;
+      setRefreshing(false);
     }, 3000);
-  }, [dispatch, session]);
+  }, [dispatch, session, refreshing]);
 
   const handleBack = useCallback(() => {
     dispatch(LoadSessionList());
@@ -702,6 +704,7 @@ export default function ChatDetailScreen({ route, navigation }) {
         fileDownloadStatus={fileDownloadStatus}
         onFileTap={handleFileTap}
         onSequenceTap={handleSequenceTap}
+        navigation={navigation}
       />
     ),
     [
@@ -779,7 +782,7 @@ export default function ChatDetailScreen({ route, navigation }) {
         contentContainerStyle={{ padding: 12, flexGrow: 1 }}
         refreshControl={
           <RefreshControl
-            refreshing={refreshingRef.current}
+            refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={ACCENT}
           />

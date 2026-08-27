@@ -81,33 +81,12 @@ function SettingTab() {
       <Stack.Screen
         name="BulletinManagement"
         component={BulletinManagementTab}
-        options={{ headerShown: true, title: "Bulletin Cache" }}
       />
-      <Stack.Screen
-        name="StorageManagement"
-        component={StorageManagementTab}
-        options={{ headerShown: true, title: "File Storage" }}
-      />
-      <Stack.Screen
-        name="GroupManagement"
-        component={GroupManagementTab}
-        options={{ headerShown: true, title: "My Groups" }}
-      />
-      <Stack.Screen
-        name="ServerManagement"
-        component={ServerManagementTab}
-        options={{ headerShown: true, title: "Servers" }}
-      />
-      <Stack.Screen
-        name="ServerAddress"
-        component={ServerAddressScreen}
-        options={{ headerShown: true, title: "Server Stats" }}
-      />
-      <Stack.Screen
-        name="About"
-        component={AboutScreen}
-        options={{ title: "About" }}
-      />
+      <Stack.Screen name="StorageManagement" component={StorageManagementTab} />
+      <Stack.Screen name="GroupManagement" component={GroupManagementTab} />
+      <Stack.Screen name="ServerManagement" component={ServerManagementTab} />
+      <Stack.Screen name="ServerAddress" component={ServerAddressScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
     </Stack.Navigator>
   );
 }
@@ -154,7 +133,7 @@ function MainTabNav() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           if (route.name === "Bulletin")
-            iconName = focused ? "volume-high" : "volume-high-outline";
+            iconName = focused ? "newspaper" : "newspaper-outline";
           else if (route.name === "Chat")
             iconName = focused ? "chatbubbles" : "chatbubbles-outline";
           else if (route.name === "Contact")

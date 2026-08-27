@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Modal,
   TextInput,
   Keyboard,
 } from "react-native";
@@ -11,6 +10,8 @@ import { useTranslation } from "react-i18next";
 
 import { getWallet } from "../lib/RippleUtil";
 import Logger from "../lib/Logger";
+import ModalShell from "../components/common/ModalShell";
+import ConfirmButtonRow from "../components/common/ConfirmButtonRow";
 
 /**
  * TempLoginModal - Temporary login via seed paste.
@@ -62,89 +63,62 @@ export default function TempLoginModal({ visible, onClose, onLogin }) {
   if (!visible) return null;
 
   return (
-    <Modal transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 bg-black/60 justify-center items-center px-6">
-        <View className="w-full max-w-sm bg-surface rounded-2xl p-6">
-          {/* Header */}
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-semibold text-text-primary">
-              {t("auth.temporary_login")}
-            </Text>
-            <TouchableOpacity onPress={onClose}>
-              <Text className="text-base text-text-secondary">
-                {t("common.close")}
-              </Text>
-            </TouchableOpacity>
-          </View>
+    <ModalShell
+      visible={visible}
+      onClose={onClose}
+      title={t("auth.temporary_login")}
+    >
+      {/* Description */}
+      <Text className="text-sm text-text-secondary">
+        {t("auth.temp_login_desc")}
+      </Text>
 
-          {/* Description */}
-          <Text className="text-sm text-text-secondary mb-4">
-            {t("auth.temp_login_desc")}
-          </Text>
-
-          {/* Seed Input */}
-          <View className="mb-4">
-            <Text className="text-sm font-medium text-text-primary mb-1">
-              {t("auth.seed_label")}
-            </Text>
-            <View className="border border-secondary-light rounded-xl bg-surface-card px-3 py-2">
-              <TextInput
-                value={seed}
-                onChangeText={handleSeedChange}
-                placeholder="s.................................."
-                autoCapitalize="none"
-                keyboardType="visible-password"
-                secureTextEntry
-                className="text-text-primary font-mono"
-              />
-            </View>
-          </View>
-
-          {/* Derived Address (read-only) */}
-          {address !== "" && (
-            <View className="mb-4">
-              <Text className="text-sm font-medium text-text-primary mb-1">
-                {t("auth.address_label")}
-              </Text>
-              <View className="border border-secondary-light rounded-xl bg-surface-card px-3 py-2">
-                <Text className="text-xs text-text-secondary font-mono break-all">
-                  {address}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Error Display */}
-          {error !== null && (
-            <View className="p-3 rounded-xl border border-status-error/30 bg-status-error/5 mb-4">
-              <Text className="text-sm text-status-error text-center">
-                {error}
-              </Text>
-            </View>
-          )}
-
-          {/* Login Button */}
-          <TouchableOpacity
-            onPress={handleTempLogin}
-            disabled={seed.trim() === "" || error !== null}
-            className="bg-primary py-3 rounded-xl items-center mb-3"
-          >
-            <Text className="text-base font-semibold text-text-primary">
-              {t("auth.login_temporarily")}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Close Button */}
-          <TouchableOpacity
-            onPress={onClose}
-            className="bg-surface-card border border-secondary py-3 rounded-xl items-center"
-          >
-            <Text className="text-base font-medium text-text-secondary">
-              {t("common.cancel")}
-            </Text>
-          </TouchableOpacity>
+      {/* Seed Input */}
+      <View>
+        <Text className="text-sm font-medium text-text-primary mb-1">
+          {t("auth.seed_label")}
+        </Text>
+        <View className="border border-secondary-light rounded-xl bg-surface-card px-3 py-2">
+          <TextInput
+            value={seed}
+            onChangeText={handleSeedChange}
+            placeholder="s.................................."
+            autoCapitalize="none"
+            keyboardType="visible-password"
+            secureTextEntry
+            className="text-text-primary font-mono"
+          />
         </View>
       </View>
-    </Modal>
+
+      {/* Derived Address (read-only) */}
+      {address !== "" && (
+        <View>
+          <Text className="text-sm font-medium text-text-primary mb-1">
+            {t("auth.address_label")}
+          </Text>
+          <View className="border border-secondary-light rounded-xl bg-surface-card px-3 py-2">
+            <Text className="text-xs text-text-secondary font-mono break-all">
+              {address}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Error Display */}
+      {error !== null && (
+        <View className="p-3 rounded-xl border border-status-error/30 bg-status-error/5">
+          <Text className="text-sm text-status-error text-center">{error}</Text>
+        </View>
+      )}
+
+      {/* Buttons */}
+      <ConfirmButtonRow
+        onCancel={onClose}
+        onConfirm={handleTempLogin}
+        confirmText={t("auth.login_temporarily")}
+        confirmDisabled={seed.trim() === "" || error !== null}
+      />
+    </ModalShell>
   );
 }

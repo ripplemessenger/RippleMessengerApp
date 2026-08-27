@@ -431,7 +431,8 @@
     "login_saved": "保存済みアカウントでログイン",
     "invalid_seed": "シードの形式が無効です",
     "seed_required": "シードが必要です",
-    "temp_login_desc": "アカウントを保存せずにログインします。シードは保存されません。"
+    "temp_login_desc": "アカウントを保存せずにログインします。シードは保存されません。",
+    "remove_account_confirm": "保存済みのアカウント {{address}} を削除しますか？ログイン状態は維持されます。"
   },
   "storage": {
     "files": "ファイル",
@@ -482,7 +483,8 @@
     "pending_invitations": "保留中の招待 ({{count}})",
     "select_members": "メンバーを選択 ({{count}}/{{max}})",
     "decline_title": "招待を断る",
-    "decline_confirm": "「{{name}}」への招待を断りますか？"
+    "decline_confirm": "「{{name}}」への招待を断りますか？",
+    "delete_confirm": "このグループを削除しますか？作成者のみ操作可能です。"
   },
   "network": {
     "url": "URL:"

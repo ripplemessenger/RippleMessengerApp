@@ -4,9 +4,7 @@ import {
   Text,
   FlatList,
   RefreshControl,
-  ActivityIndicator,
   TouchableOpacity,
-  Modal,
   TextInput,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -17,9 +15,13 @@ import { useFocusEffect } from "@react-navigation/native";
 import BulletinCard from "../components/Bulletin/BulletinCard";
 import PublishModal from "../components/Bulletin/PublishModal";
 import PasteModal from "../components/Bulletin/PasteModal";
+import EmptyState from "../components/common/EmptyState";
+import ListFooter from "../components/common/ListFooter";
+import ModalShell from "../components/common/ModalShell";
+import ConfirmButtonRow from "../components/common/ConfirmButtonRow";
 import { selectPortalBulletins, selectMessengerConnStatus } from "../selectors";
 import { LoadPortalBulletin } from "../store/sagas/messenger.actions";
-import { ACCENT } from "../lib/theme";
+import { ACCENT, PLACEHOLDER } from "../lib/theme";
 import {
   setPublishFlag,
   setPublishTagList,
@@ -47,7 +49,7 @@ export default function BulletinScreen({ navigation }) {
   // Locally accumulated bulletin list (across pages)
   const [allBulletins, setAllBulletins] = useState([]);
   const [localPage, setLocalPage] = useState(0);
-  const refreshingRef = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Sync Redux page-1 data into local state whenever Redux updates
   useEffect(() => {
@@ -70,14 +72,14 @@ export default function BulletinScreen({ navigation }) {
   );
 
   const handleRefresh = useCallback(() => {
-    if (refreshingRef.current) return;
-    refreshingRef.current = true;
+    if (refreshing) return;
+    setRefreshing(true);
     setLocalPage(0);
     dispatch(LoadPortalBulletin({ page: 1 }));
     setTimeout(() => {
-      refreshingRef.current = false;
+      setRefreshing(false);
     }, 3000);
-  }, [dispatch]);
+  }, [dispatch, refreshing]);
 
   const handleLoadMore = useCallback(() => {
     const nextPage = localPage >= reduxPage ? reduxPage + 1 : localPage + 1;
@@ -219,7 +221,7 @@ export default function BulletinScreen({ navigation }) {
         className="bg-surface"
         refreshControl={
           <RefreshControl
-            refreshing={refreshingRef.current}
+            refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={ACCENT}
           />
@@ -227,26 +229,13 @@ export default function BulletinScreen({ navigation }) {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.3}
         ListEmptyComponent={
-          <View className="flex-1 items-center justify-center py-20">
-            <Text className="text-5xl mb-4">📝</Text>
-            <Text className="text-xl font-bold text-text-primary mb-2">
-              {t("ui.no_posts_yet")}
-            </Text>
-            <Text className="text-sm text-text-secondary text-center px-8">
-              {t("ui.feed_empty")}
-            </Text>
-          </View>
+          <EmptyState
+            icon="document-text-outline"
+            title={t("ui.no_posts_yet")}
+            hint={t("ui.feed_empty")}
+          />
         }
-        ListFooterComponent={
-          hasMore ? (
-            <View className="py-4 items-center">
-              <ActivityIndicator size="small" color={ACCENT} />
-              <Text className="text-xs text-text-secondary/70 mt-1">
-                {t("common.loading_more")}
-              </Text>
-            </View>
-          ) : null
-        }
+        ListFooterComponent={<ListFooter loading={hasMore} />}
       />
 
       {/* Floating Action Button — publish */}
@@ -288,54 +277,36 @@ export default function BulletinScreen({ navigation }) {
       />
 
       {/* Tag Search Modal */}
-      <Modal
+      <ModalShell
         visible={showTagSearch}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowTagSearch(false)}
+        onClose={() => {
+          setShowTagSearch(false);
+          setSearchTag("");
+        }}
+        title={t("ui.search_tags")}
       >
-        <View className="flex-1 justify-center items-center bg-black/50 px-6">
-          <View className="bg-surface-card rounded-2xl p-6 w-full gap-4 border border-secondary-light">
-            <Text className="text-xl font-semibold text-text-primary text-center">
-              {t("ui.search_tags")}
-            </Text>
-            <View className="flex-row items-center gap-2 bg-surface border border-secondary-light rounded-xl px-4">
-              <Ionicons name="pricetag" size={18} color={ACCENT} />
-              <TextInput
-                value={`#${searchTag}`}
-                onChangeText={(text) => setSearchTag(text.replace(/^#/, ""))}
-                placeholder={t("ui.enter_tag_name")}
-                placeholderTextColor="#9a9590"
-                autoCapitalize="none"
-                autoFocus
-                onSubmitEditing={handleTagSearchSubmit}
-                className="flex-1 py-3 text-text-primary text-sm"
-              />
-            </View>
-            <View className="flex-row gap-3 mt-2">
-              <TouchableOpacity
-                onPress={() => {
-                  setShowTagSearch(false);
-                  setSearchTag("");
-                }}
-                className="flex-1 py-3 rounded-xl border border-secondary-light items-center"
-              >
-                <Text className="text-base font-medium text-text-secondary">
-                  {t("common.cancel")}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleTagSearchSubmit}
-                className="flex-1 bg-primary py-3 rounded-xl items-center"
-              >
-                <Text className="text-base font-semibold text-text-primary">
-                  {t("ui.search")}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+        <View className="flex-row items-center gap-2 bg-surface border border-secondary-light rounded-xl px-4">
+          <Ionicons name="pricetag" size={18} color={ACCENT} />
+          <TextInput
+            value={`#${searchTag}`}
+            onChangeText={(text) => setSearchTag(text.replace(/^#/, ""))}
+            placeholder={t("ui.enter_tag_name")}
+            placeholderTextColor={PLACEHOLDER}
+            autoCapitalize="none"
+            autoFocus
+            onSubmitEditing={handleTagSearchSubmit}
+            className="flex-1 py-3 text-text-primary text-sm"
+          />
         </View>
-      </Modal>
+        <ConfirmButtonRow
+          onCancel={() => {
+            setShowTagSearch(false);
+            setSearchTag("");
+          }}
+          onConfirm={handleTagSearchSubmit}
+          confirmText={t("ui.search")}
+        />
+      </ModalShell>
     </View>
   );
 }

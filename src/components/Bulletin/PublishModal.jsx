@@ -14,6 +14,8 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { selectContactMap } from "../../selectors";
+import { shortenAddress } from "../../lib/format";
 
 import {
   PublishBulletin,
@@ -51,6 +53,7 @@ export default function PublishModal({ visible, onClose }) {
   const { isDark } = useDarkMode();
   const dispatch = useDispatch();
   const publishTags = useSelector((state) => state.Messenger.PublishTagList);
+  const contactMap = useSelector(selectContactMap);
   const publishFiles = useSelector((state) => state.Messenger.PublishFileList);
   const publishQuotes = useSelector(
     (state) => state.Messenger.PublishQuoteList,
@@ -294,7 +297,10 @@ export default function PublishModal({ visible, onClose }) {
                         activeOpacity={0.6}
                       >
                         <Text style={s.chipText} numberOfLines={1}>
-                          🔗 #{quote.Sequence} {quote.Address.slice(0, 6)}...
+                          🔗{" "}
+                          {contactMap?.[quote.Address]
+                            ? `${contactMap[quote.Address]}#${quote.Sequence}`
+                            : `${shortenAddress(quote.Address)}#${quote.Sequence}`}
                         </Text>
                         <Text style={s.chipRemove}> ✕</Text>
                       </TouchableOpacity>

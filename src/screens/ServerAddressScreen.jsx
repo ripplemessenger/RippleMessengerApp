@@ -33,7 +33,7 @@ export default function ServerAddressScreen({ route, navigation }) {
       ServerAddressList: state.Messenger.ServerAddressList,
     }));
 
-  const refreshingRef = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadPage = useCallback(
     (page) => {
@@ -50,13 +50,13 @@ export default function ServerAddressScreen({ route, navigation }) {
   );
 
   const handleRefresh = useCallback(() => {
-    if (refreshingRef.current) return;
-    refreshingRef.current = true;
+    if (refreshing) return;
+    setRefreshing(true);
     loadPage(1);
     setTimeout(() => {
-      refreshingRef.current = false;
+      setRefreshing(false);
     }, 3000);
-  }, [loadPage]);
+  }, [loadPage, refreshing]);
 
   const handleAddressPress = useCallback(
     (address) => {
@@ -112,7 +112,7 @@ export default function ServerAddressScreen({ route, navigation }) {
         contentContainerStyle={{ paddingHorizontal: 16, flexGrow: 1 }}
         refreshControl={
           <RefreshControl
-            refreshing={refreshingRef.current}
+            refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={ACCENT}
           />

@@ -18,6 +18,7 @@ import { selectContactMap } from "../../selectors";
 import AvatarImage from "../AvatarImage";
 import { dbAPI } from "../../db";
 import { ACCENT } from "../../lib/theme";
+import { shortenAddress } from "../../lib/format";
 
 let _forwardKeyCounter = 0;
 
@@ -31,11 +32,6 @@ let _forwardKeyCounter = 0;
  *   4. User picks a contact from friends list
  *   5. Modal dispatches ForwardBulletin({ session: { address: contact.remote } })
  */
-
-function shortenAddress(addr) {
-  if (!addr || addr.length < 14) return addr || "";
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
 
 export default function ForwardModal({ visible }) {
   const { t } = useTranslation();

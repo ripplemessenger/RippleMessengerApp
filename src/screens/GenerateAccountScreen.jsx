@@ -8,14 +8,16 @@ import {
   Alert,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useDispatch } from "react-redux";
+import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
 
 import { getWallet, generateWallet } from "../lib/RippleUtil";
 
 export default function GenerateAccountScreen({ navigation }) {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
   const [seed, setSeed] = useState("");
   const [address, setAddress] = useState("");
-  const [copiedField, setCopiedField] = useState(null);
 
   const handleGenerate = () => {
     try {
@@ -34,8 +36,11 @@ export default function GenerateAccountScreen({ navigation }) {
 
   const handleCopy = (text, label) => {
     Clipboard.setString(text);
-    setCopiedField(label);
-    setTimeout(() => setCopiedField(null), 1500);
+    dispatch(
+      setFlashNoticeMessage({
+        message: t("common.copied_to_clipboard"),
+      }),
+    );
   };
 
   return (
@@ -82,11 +87,6 @@ export default function GenerateAccountScreen({ navigation }) {
                   {seed}
                 </Text>
               </TouchableOpacity>
-              {copiedField === "seed" && (
-                <Text className="text-xs text-status-success mt-1 font-medium">
-                  {t("common.copied_to_clipboard")}
-                </Text>
-              )}
             </View>
           )}
 
@@ -108,11 +108,6 @@ export default function GenerateAccountScreen({ navigation }) {
                   {address}
                 </Text>
               </TouchableOpacity>
-              {copiedField === "address" && (
-                <Text className="text-xs text-status-success mt-1 font-medium">
-                  {t("common.copied_to_clipboard")}
-                </Text>
-              )}
             </View>
           )}
 

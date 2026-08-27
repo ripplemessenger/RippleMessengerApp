@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { parseBulletinMarkdown } from "../../lib/markdown";
 import { RenderHTML } from "react-native-render-html";
+import { formatTime, shortenAddress } from "../../lib/format";
 
 import {
   BulletinMarkToggle,
@@ -14,32 +15,6 @@ import AvatarImage from "../AvatarImage";
 import useDarkMode from "../../hooks/useDarkMode";
 import { ACCENT } from "../../lib/theme";
 import { selectContactMap, selectUserAddress } from "../../selectors";
-
-/**
- * Truncate an XRPL address to a short readable form.
- */
-function shortenAddress(addr) {
-  if (!addr || addr.length < 14) return addr || "";
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
-
-/**
- * Format a timestamp (ms epoch) into a human-readable relative string.
- * Requires i18n `t` function for translated time units.
- */
-function _formatTime(t, ms) {
-  const now = Date.now();
-  const diff = now - ms;
-  const sec = Math.floor(diff / 1000);
-  if (sec < 60) return t("time.just_now");
-  const min = Math.floor(sec / 60);
-  if (min < 60) return t("time.m_ago", { count: min });
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return t("time.h_ago", { count: hr });
-  const days = Math.floor(hr / 24);
-  if (days < 7) return t("time.d_ago", { count: days });
-  return new Date(ms).toLocaleDateString();
-}
 
 /* Shared HTML config for react-native-render-html — text color must follow
  * the theme (hardcoded #1a1a2e was invisible on the dark surface-card). */
@@ -129,10 +104,12 @@ export default React.memo(function BulletinCard({
             numberOfLines={1}
             className="text-sm font-semibold text-text-primary truncate"
           >
-            {displayName}
+            {displayName} #{bulletin.sequence}
+            {bulletin.quote?.length > 0 && ` · 📎${bulletin.quote.length}`}
+            {bulletin.file?.length > 0 && ` · 📁${bulletin.file.length}`}
           </Text>
           <Text className="text-xs text-text-secondary/80">
-            {_formatTime(t, bulletin.signed_at)} · #{bulletin.sequence}
+            {formatTime(bulletin.signed_at)}
           </Text>
         </View>
 
@@ -164,6 +141,25 @@ export default React.memo(function BulletinCard({
       {/* Divider */}
       <View className="h-px bg-secondary-light/30 mx-3 mt-2" />
 
+      {/* Tag chips row — tap to filter by tag (wraps to multiple lines) */}
+      {bulletin.tag && bulletin.tag.length > 0 && (
+        <View className="px-3 pt-2 flex flex-row flex-wrap">
+          {bulletin.tag.map((tag, i) => (
+            <TouchableOpacity
+              key={`${tag}-${i}`}
+              onPress={(e) => {
+                e.stopPropagation();
+                onTagPress?.(tag);
+              }}
+              activeOpacity={0.6}
+              className="flex-row px-2 py-1 rounded-full bg-primary/10 mr-2 mb-2"
+            >
+              <Text className="text-xs text-primary-dark">#{tag}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {/* Content preview — rendered as markdown when possible */}
       <View className="px-3 py-2">
         {isMd ? (
@@ -181,43 +177,6 @@ export default React.memo(function BulletinCard({
           </Text>
         )}
       </View>
-
-      {/* Tag chips row — tap to filter by tag (wraps to multiple lines) */}
-      {bulletin.tag && bulletin.tag.length > 0 && (
-        <View className="px-3 pb-2 flex flex-row flex-wrap">
-          {bulletin.tag.map((tag, i) => (
-            <TouchableOpacity
-              key={`${tag}-${i}`}
-              onPress={(e) => {
-                e.stopPropagation();
-                onTagPress?.(tag);
-              }}
-              activeOpacity={0.6}
-              className="flex-row px-2 py-1 rounded-full bg-primary/10 mr-2 mb-2"
-            >
-              <Text className="text-xs text-primary-dark">#{tag}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      {/* Attachment counts row */}
-      {(bulletin.quote?.length || bulletin.file?.length) && (
-        <View className="flex-row px-3 pb-2 gap-3">
-          {bulletin.quote?.length > 0 && (
-            <Text className="text-xs text-text-secondary/70">
-              📎 {bulletin.quote.length} quote
-              {bulletin.quote.length > 1 ? "s" : ""}
-            </Text>
-          )}
-          {bulletin.file?.length > 0 && (
-            <Text className="text-xs text-text-secondary/70">
-              📁 {bulletin.file.length} file
-              {bulletin.file.length > 1 ? "s" : ""}
-            </Text>
-          )}
-        </View>
-      )}
     </TouchableOpacity>
   );
 });

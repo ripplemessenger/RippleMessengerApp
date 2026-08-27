@@ -52,7 +52,10 @@
     "contacts": "联系人",
     "prev": "上一页",
     "next": "下一页",
-    "me": "我"
+    "me": "我",
+    "done": "完成",
+    "unfollow": "取消关注",
+    "remove_friend": "删除好友"
   },
   "file": {
     "saved_to_download": "文件已保存到下载目录",
@@ -138,7 +141,16 @@
     "delete_count": "删除 ({{count}})",
     "total_count": "{{count}} 条公告",
     "page_indicator": "第 {{count}} 页",
-    "not_logged_in": "未登录"
+    "not_logged_in": "未登录",
+    "delete_selected_title": "删除所选",
+    "search_placeholder": "搜索内容...",
+    "filter_all": "全部",
+    "filter_mine": "我的",
+    "filter_bookmarked": "已收藏",
+    "filter_followed": "已关注",
+    "json_title": "公告 JSON",
+    "filter_by_tag": "按标签筛选",
+    "no_bulletins": "暂无公告"
   },
   "setting": {
     "theme_changed": "主题已切换为 {{value}}",
@@ -396,7 +408,8 @@
     "try_different_search": "请尝试其他搜索词。",
     "add_friends_first": "请先添加好友以转发帖子。",
     "valid_bulletin": "✓ 有效帖子 — 可以保存",
-    "tags_max": "标签（最多 {{max}} 个）"
+    "tags_max": "标签（最多 {{max}} 个）",
+    "bookmarks": "收藏"
   },
   "auth": {
     "open_account": "打开账户",
@@ -431,7 +444,8 @@
     "login_saved": "使用已保存账户登录",
     "invalid_seed": "种子格式无效",
     "seed_required": "请输入种子",
-    "temp_login_desc": "临时登录不会保存账户，种子不会被存储。"
+    "temp_login_desc": "临时登录不会保存账户，种子不会被存储。",
+    "remove_account_confirm": "删除已保存的账户 {{address}}？您将继续保持登录状态。"
   },
   "storage": {
     "files": "文件",
@@ -469,7 +483,12 @@
     "sum_chat": "聊天文件：",
     "sum_avatars": "头像：",
     "sum_orphaned": "孤儿文件：",
-    "clear_orphaned_count": "清理孤儿文件 ({{count}})"
+    "clear_orphaned_count": "清理孤儿文件 ({{count}})",
+    "no_files": "暂无文件",
+    "selected_count": "已选 {{count}} 项",
+    "delete_count": "删除 ({{count}})",
+    "page_indicator": "第 {{count}} 页",
+    "chip_all": "全部"
   },
   "group": {
     "group_name": "群组名称:",
@@ -482,7 +501,8 @@
     "pending_invitations": "待处理邀请 ({{count}})",
     "select_members": "选择成员 ({{count}}/{{max}})",
     "decline_title": "拒绝邀请",
-    "decline_confirm": "确定拒绝加入「{{name}}」的邀请？"
+    "decline_confirm": "确定拒绝加入「{{name}}」的邀请？",
+    "delete_confirm": "确定删除此群？仅创建者可操作。"
   },
   "network": {
     "url": "URL:"

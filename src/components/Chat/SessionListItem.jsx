@@ -3,46 +3,8 @@ import { View, Text, TouchableOpacity } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useTranslation } from "react-i18next";
 import { SessionType } from "../../lib/AppConst";
+import { formatTime, truncate, shortenAddress } from "../../lib/format";
 import AvatarImage from "../AvatarImage";
-
-/**
- * Format a timestamp (ms epoch) into a human-readable relative string.
- */
-function formatTimestamp(timestamp, t) {
-  if (!timestamp || typeof timestamp !== "number" || timestamp <= 0) return "";
-  const now = Date.now();
-  const diff = now - timestamp;
-
-  // Within today: show time HH:mm
-  if (diff < 24 * 60 * 60 * 1000) {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-
-  // Yesterday
-  if (diff < 48 * 60 * 60 * 1000) {
-    return t("time.yesterday", { defaultValue: "Yesterday" });
-  }
-
-  // Within a week: day name
-  if (diff < 7 * 24 * 60 * 60 * 1000) {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString([], { weekday: "short" });
-  }
-
-  // Older: full date
-  const date = new Date(timestamp);
-  return date.toLocaleDateString([], { month: "short", day: "numeric" });
-}
-
-/**
- * Truncate a string to a max length and append ellipsis.
- */
-function truncate(text, maxLength = 40) {
-  if (!text) return "";
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength).trimEnd() + "…";
-}
 
 /**
  * Extract a text preview from a message that may be plain text or an object.
@@ -81,10 +43,7 @@ function buildSessionPreview(session, t) {
     // For group chats, prefix with sender address
     if (session.type === 1) {
       const senderAddr = lastMsg.address || "";
-      const senderShort =
-        senderAddr.length >= 10
-          ? `${senderAddr.slice(0, 5)}...${senderAddr.slice(-4)}`
-          : senderAddr;
+      const senderShort = shortenAddress(senderAddr);
       return preview
         ? `${senderShort}: ${preview}`
         : `${session.member?.length || 0} ${t("chat.group_members")}`;
@@ -181,7 +140,7 @@ export default React.memo(function SessionListItem({
             {displayName}
           </Text>
           <Text className="text-xs text-text-secondary/60 ml-2">
-            {formatTimestamp(session.updated_at, t)}
+            {formatTime(session.updated_at)}
           </Text>
         </View>
         <Text

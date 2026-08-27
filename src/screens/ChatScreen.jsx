@@ -5,20 +5,15 @@ import React, {
   useRef,
   useState,
 } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  RefreshControl,
-  TextInput,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, FlatList, RefreshControl } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 
 import SessionListItem from "../components/Chat/SessionListItem";
+import SearchBar from "../components/common/SearchBar";
+import EmptyState from "../components/common/EmptyState";
 import {
   selectChatSessions,
   selectUserAddress,
@@ -47,7 +42,7 @@ export default function ChatScreen({ navigation }) {
 
   // Search filter text
   const [searchText, setSearchText] = useState("");
-  const refreshingRef = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Load session list on focus
   useFocusEffect(
@@ -57,13 +52,13 @@ export default function ChatScreen({ navigation }) {
   );
 
   const handleRefresh = useCallback(() => {
-    if (refreshingRef.current) return;
-    refreshingRef.current = true;
+    if (refreshing) return;
+    setRefreshing(true);
     dispatch(LoadSessionList());
     setTimeout(() => {
-      refreshingRef.current = false;
+      setRefreshing(false);
     }, 3000);
-  }, [dispatch]);
+  }, [dispatch, refreshing]);
 
   // Filter sessions by search text
   const filteredSessions = useMemo(() => {
@@ -122,23 +117,12 @@ export default function ChatScreen({ navigation }) {
         </View>
 
         {/* Search input */}
-        <View className="flex-row items-center mt-2 bg-surface-alt rounded-lg px-3 py-1.5 border border-secondary-light/30">
-          <Ionicons name="search" size={16} color="#a89f85" />
-          <TextInput
-            placeholder={t("ui.search_conversations")}
-            placeholderTextColor="#a89f85"
+        <View className="mt-2">
+          <SearchBar
             value={searchText}
-            onChangeText={setSearchText}
-            className="flex-1 ml-2 text-sm text-text-primary py-0.5"
+            onChange={setSearchText}
+            placeholder={t("ui.search_conversations")}
           />
-          {searchText.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearchText("")}
-              activeOpacity={0.6}
-            >
-              <Ionicons name="close-circle" size={18} color="#a89f85" />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -150,23 +134,21 @@ export default function ChatScreen({ navigation }) {
         contentContainerStyle={{ flexGrow: 1 }}
         refreshControl={
           <RefreshControl
-            refreshing={refreshingRef.current}
+            refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={ACCENT}
           />
         }
         ListEmptyComponent={
-          <View className="flex-1 items-center justify-center py-20 px-8">
-            <Ionicons name="chatbubbles-outline" size={56} color="#d4c8a8" />
-            <Text className="text-xl font-bold text-text-primary mt-4 mb-2">
-              {t("ui.no_conversations")}
-            </Text>
-            <Text className="text-sm text-text-secondary text-center">
-              {isConnected
+          <EmptyState
+            icon="chatbubbles-outline"
+            title={t("ui.no_conversations")}
+            hint={
+              isConnected
                 ? t("chat.sessions_empty")
-                : t("chat.sessions_empty_disconnected")}
-            </Text>
-          </View>
+                : t("chat.sessions_empty_disconnected")
+            }
+          />
         }
       />
     </View>

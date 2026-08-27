@@ -232,7 +232,7 @@ export const mgAPI = {
     const mg = getMessageGenerator(seed)
     let json = {
       Action: ActionCode.TagBulletinRequest,
-      Tag: tag,
+      Tag: Array.isArray(tag) ? tag : [tag],
       Page: page,
       Timestamp: Date.now(),
       PublicKey: mg.PublicKey

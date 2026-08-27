@@ -431,7 +431,8 @@
     "login_saved": "Entrar com conta salva",
     "invalid_seed": "Formato de seed inválido",
     "seed_required": "A seed é obrigatória",
-    "temp_login_desc": "Entre sem salvar sua conta. Sua seed não será armazenada."
+    "temp_login_desc": "Entre sem salvar sua conta. Sua seed não será armazenada.",
+    "remove_account_confirm": "Remover conta {{address}}? Você continuará conectado."
   },
   "storage": {
     "files": "Arquivos",
@@ -482,7 +483,8 @@
     "pending_invitations": "Convites pendentes ({{count}})",
     "select_members": "Selecionar membros ({{count}}/{{max}})",
     "decline_title": "Recusar convite",
-    "decline_confirm": "Recusar o convite para «{{name}}»?"
+    "decline_confirm": "Recusar o convite para «{{name}}»?",
+    "delete_confirm": "Excluir este grupo? Apenas o criador pode fazer isso."
   },
   "network": {
     "url": "URL:"

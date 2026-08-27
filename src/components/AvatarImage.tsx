@@ -1,6 +1,5 @@
 import React, { useCallback } from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
-import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { CheckAvatar } from "../store/sagas/messenger.actions";
 import { useDispatch } from "react-redux";
@@ -113,10 +112,9 @@ export default function AvatarImage({
               { fontSize: size * 0.38, lineHeight: size * 0.42 },
             ]}
           >
-            {" "}
             {initials.slice(0, 2)}
             {"\n"}
-            {initials.slice(2, 4)}{" "}
+            {initials.slice(2, 4)}
           </Text>
         </View>
       )}
@@ -139,5 +137,6 @@ const styles = StyleSheet.create({
   initials: {
     fontWeight: "700",
     color: "#e6b420",
+    textAlign: "center",
   },
 });

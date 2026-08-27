@@ -17,6 +17,7 @@ import { useSelector } from "react-redux";
 export default function FlashNotice() {
   const message = useSelector((state) => state.Common.FlashNoticeMessage);
   const duration = useSelector((state) => state.Common.FlashNoticeDuration);
+  const key = useSelector((state) => state.Common.FlashNoticeKey);
 
   const [visible, setVisible] = useState(false);
   const [text, setText] = useState("");
@@ -31,7 +32,7 @@ export default function FlashNotice() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [message, duration]);
+  }, [key]);
 
   if (!visible) return null;
 

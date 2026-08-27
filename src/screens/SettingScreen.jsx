@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Modal,
   Switch,
   Keyboard,
   Clipboard,
@@ -17,12 +16,16 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import RNFS from "react-native-fs";
 import AvatarImage from "../components/AvatarImage";
+import BottomSheet from "../components/common/BottomSheet";
+import ModalShell from "../components/common/ModalShell";
+import ConfirmButtonRow from "../components/common/ConfirmButtonRow";
 import useDarkMode from "../hooks/useDarkMode";
 import { dbAPI } from "../db";
 import { AvatarRequest } from "../store/sagas/messenger.bulletin";
 import * as fileService from "../services/fileService";
 import ImageCropPicker from "react-native-image-crop-picker";
 import { selectUserTabMe, selectConnectedServerCount } from "../selectors";
+import { shortenAddress } from "../lib/format";
 import { logoutStart, setNickname } from "../store/slices/UserSlice";
 import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
 import {
@@ -37,7 +40,12 @@ import {
   setSetting,
 } from "../lib/SettingsUtil";
 import { previewSound } from "../lib/SoundUtil";
-import { ACCENT } from "../lib/theme";
+import {
+  ACCENT,
+  ICON_MUTED,
+  PLACEHOLDER,
+  SWITCH_TRACK_OFF,
+} from "../lib/theme";
 import i18n from "../i18n";
 
 const APP_VERSION = "1.0.0";
@@ -109,7 +117,7 @@ function SwitchRow({ icon, iconColor = ACCENT, label, value, onValueChange }) {
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: "#d4c8a8", true: ACCENT }}
+        trackColor={{ false: SWITCH_TRACK_OFF, true: ACCENT }}
         thumbColor={value ? "#fff" : "#f4f3f4"}
       />
     </View>
@@ -240,7 +248,7 @@ export default function SettingScreen({ navigation }) {
   const handleDelAccount = useCallback(() => {
     Alert.alert(
       t("auth.remove_account"),
-      `Remove saved account ${Address?.slice(0, 10)}...${Address?.slice(-6)}? You will stay logged in.`,
+      t("auth.remove_account_confirm", { address: shortenAddress(Address) }),
       [
         { text: t("common.cancel"), style: "cancel" },
         {
@@ -364,7 +372,7 @@ export default function SettingScreen({ navigation }) {
   return (
     <View className="flex-1 bg-surface">
       {/* Header */}
-      <View className="px-5 pt-14 pb-2">
+      <View className="px-5 pt-6 pb-2">
         <Text className="text-3xl font-bold text-text-primary text-center">
           {t("setting.title")}
         </Text>
@@ -393,7 +401,7 @@ export default function SettingScreen({ navigation }) {
               <Text className="text-lg font-semibold text-text-primary truncate">
                 {Nickname || t("setting.no_nickname")}
               </Text>
-              <Ionicons name="create-outline" size={16} color="#a89f85" />
+              <Ionicons name="create-outline" size={16} color={ICON_MUTED} />
             </TouchableOpacity>
             {Address ? (
               <TouchableOpacity
@@ -561,154 +569,107 @@ export default function SettingScreen({ navigation }) {
       </ScrollView>
 
       {/* Message sound bottom sheet */}
-      <Modal
+      <BottomSheet
         visible={showSoundSheet}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowSoundSheet(false)}
+        onClose={() => setShowSoundSheet(false)}
+        title={t("setting.message_sound")}
       >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-surface-card rounded-t-3xl p-5 pb-8 border-t border-secondary-light">
-            <View className="w-10 h-1 bg-secondary-light rounded-full mx-auto mb-4" />
-            <Text className="text-lg font-semibold text-text-primary text-center mb-4">
-              {t("setting.message_sound")}
-            </Text>
-            <View className="flex-row flex-wrap gap-2.5">
-              {SOUND_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.value}
-                  activeOpacity={0.7}
-                  onPress={() => handleSoundChange(opt.value)}
-                  className={`flex-row items-center gap-1.5 px-4 py-2.5 rounded-xl border ${
-                    messageSound === opt.value
-                      ? "border-primary bg-primary/10"
-                      : "border-secondary-light"
-                  }`}
-                >
-                  <Text className="text-base">{opt.icon}</Text>
-                  <Text
-                    className={`text-sm font-medium ${
-                      messageSound === opt.value
-                        ? "text-primary"
-                        : "text-text-secondary"
-                    }`}
-                  >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+        <View className="flex-row flex-wrap gap-2.5">
+          {SOUND_OPTIONS.map((opt) => (
             <TouchableOpacity
-              onPress={() => setShowSoundSheet(false)}
-              className="mt-5 py-3 rounded-xl border border-secondary-light items-center"
+              key={opt.value}
+              activeOpacity={0.7}
+              onPress={() => handleSoundChange(opt.value)}
+              className={`flex-row items-center gap-1.5 px-4 py-2.5 rounded-xl border ${
+                messageSound === opt.value
+                  ? "border-primary bg-primary/10"
+                  : "border-secondary-light"
+              }`}
             >
-              <Text className="text-base font-medium text-text-secondary">
-                {t("common.cancel")}
+              <Text className="text-base">{opt.icon}</Text>
+              <Text
+                className={`text-sm font-medium ${
+                  messageSound === opt.value
+                    ? "text-primary"
+                    : "text-text-secondary"
+                }`}
+              >
+                {opt.label}
               </Text>
             </TouchableOpacity>
-          </View>
+          ))}
         </View>
-      </Modal>
+        <TouchableOpacity
+          onPress={() => setShowSoundSheet(false)}
+          className="mt-5 py-3 rounded-xl border border-secondary-light items-center"
+        >
+          <Text className="text-base font-medium text-text-secondary">
+            {t("common.cancel")}
+          </Text>
+        </TouchableOpacity>
+      </BottomSheet>
 
       {/* Language bottom sheet */}
-      <Modal
+      <BottomSheet
         visible={showLanguageSheet}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowLanguageSheet(false)}
+        onClose={() => setShowLanguageSheet(false)}
+        title={t("ui.language")}
+        subtitle={t("ui.language_hint")}
       >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-surface-card rounded-t-3xl p-5 pb-8 border-t border-secondary-light">
-            <View className="w-10 h-1 bg-secondary-light rounded-full mx-auto mb-4" />
-            <Text className="text-lg font-semibold text-text-primary text-center mb-1">
-              {t("ui.language")}
-            </Text>
-            <Text className="text-sm text-text-secondary text-center mb-4">
-              {t("ui.language_hint")}
-            </Text>
-            <View className="flex-row flex-wrap gap-2.5">
-              {LANGUAGE_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.code}
-                  activeOpacity={0.7}
-                  onPress={() => handleLanguageChange(opt.code)}
-                  className={`px-4 py-2.5 rounded-xl border ${
-                    language === opt.code
-                      ? "border-primary bg-primary/10"
-                      : "border-secondary-light"
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-medium ${
-                      language === opt.code
-                        ? "text-primary"
-                        : "text-text-secondary"
-                    }`}
-                  >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+        <View className="flex-row flex-wrap gap-2.5">
+          {LANGUAGE_OPTIONS.map((opt) => (
             <TouchableOpacity
-              onPress={() => setShowLanguageSheet(false)}
-              className="mt-5 py-3 rounded-xl border border-secondary-light items-center"
+              key={opt.code}
+              activeOpacity={0.7}
+              onPress={() => handleLanguageChange(opt.code)}
+              className={`px-4 py-2.5 rounded-xl border ${
+                language === opt.code
+                  ? "border-primary bg-primary/10"
+                  : "border-secondary-light"
+              }`}
             >
-              <Text className="text-base font-medium text-text-secondary">
-                {t("common.cancel")}
+              <Text
+                className={`text-sm font-medium ${
+                  language === opt.code ? "text-primary" : "text-text-secondary"
+                }`}
+              >
+                {opt.label}
               </Text>
             </TouchableOpacity>
-          </View>
+          ))}
         </View>
-      </Modal>
+        <TouchableOpacity
+          onPress={() => setShowLanguageSheet(false)}
+          className="mt-5 py-3 rounded-xl border border-secondary-light items-center"
+        >
+          <Text className="text-base font-medium text-text-secondary">
+            {t("common.cancel")}
+          </Text>
+        </TouchableOpacity>
+      </BottomSheet>
 
       {/* Nickname edit modal */}
-      <Modal
+      <ModalShell
         visible={showNicknameModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowNicknameModal(false)}
+        onClose={() => setShowNicknameModal(false)}
+        title={t("setting.edit_nickname")}
+        bottom
+        bottomPadding={kbHeight}
       >
-        <View
-          className="flex-1 bg-black/50 px-6"
-          style={{
-            justifyContent: "flex-end",
-            paddingBottom: kbHeight + 24,
-          }}
-        >
-          <View className="bg-surface-card rounded-2xl p-5">
-            <Text className="text-lg font-semibold text-text-primary mb-3">
-              {t("setting.edit_nickname")}
-            </Text>
-            <TextInput
-              value={nicknameInput}
-              onChangeText={setNicknameInput}
-              placeholder={t("setting.enter_nickname")}
-              placeholderTextColor="#999"
-              className="border border-secondary-light rounded-xl px-4 py-3 text-base text-text-primary mb-4"
-              autoFocus
-            />
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                onPress={() => setShowNicknameModal(false)}
-                className="flex-1 py-3 rounded-xl border border-secondary-light items-center"
-              >
-                <Text className="text-base text-text-secondary">
-                  {t("common.cancel")}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleNicknameSave}
-                className="flex-1 py-3 rounded-xl bg-primary items-center"
-              >
-                <Text className="text-base font-medium text-white">
-                  {t("common.save")}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        <TextInput
+          value={nicknameInput}
+          onChangeText={setNicknameInput}
+          placeholder={t("setting.enter_nickname")}
+          placeholderTextColor={PLACEHOLDER}
+          className="border border-secondary-light rounded-xl px-4 py-3 text-base text-text-primary"
+          autoFocus
+        />
+        <ConfirmButtonRow
+          onCancel={() => setShowNicknameModal(false)}
+          onConfirm={handleNicknameSave}
+          confirmText={t("common.save")}
+        />
+      </ModalShell>
     </View>
   );
 }

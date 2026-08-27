@@ -7,15 +7,17 @@ import RNFS from "react-native-fs";
 import { dbAPI } from "../db";
 import * as fileService from "../services/fileService";
 import { filesize_format } from "../lib/AppUtil";
-import { ACCENT } from "../lib/theme";
+import { formatTime } from "../lib/format";
+import { ACCENT, ICON_MUTED } from "../lib/theme";
+import EmptyState from "./common/EmptyState";
 
 const STORAGE_PAGE_SIZE = 20;
 
 const CATEGORY_CHIPS = [
-  { key: "all", label: "All" },
-  { key: "bulletin", label: "Bulletin Attachments" },
-  { key: "private_chat", label: "Chat Files" },
-  { key: "orphaned", label: "Orphaned" },
+  { key: "all", labelKey: "storage.chip_all" },
+  { key: "bulletin", labelKey: "storage.chip_bulletin" },
+  { key: "private_chat", labelKey: "storage.chip_chat" },
+  { key: "orphaned", labelKey: "storage.chip_orphaned" },
 ];
 
 const CATEGORY_META = {
@@ -182,12 +184,14 @@ export default function StorageManagementTab() {
   const handleDeleteFile = useCallback(
     async (fileRow) => {
       Alert.alert(
-        "Delete File",
-        `Remove "${fileRow.file_name || fileRow.hash.slice(0, 16)}" from storage?`,
+        t("storage.delete_file_title"),
+        t("storage.delete_file_confirm", {
+          name: fileRow.file_name || fileRow.hash.slice(0, 16),
+        }),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "Delete",
+            text: t("common.delete"),
             style: "destructive",
             onPress: async () => {
               try {
@@ -312,13 +316,6 @@ export default function StorageManagementTab() {
     ]);
   }, [loadSummary]);
 
-  const formatDate = useCallback((ts) => {
-    if (!ts) return "-";
-    const d = new Date(ts);
-    const pad = (n) => (n < 10 ? "0" + n : String(n));
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }, []);
-
   // Filter files by category
   const filteredFiles = useMemo(() => {
     if (categoryFilter === "all") return files;
@@ -387,7 +384,7 @@ export default function StorageManagementTab() {
                 {filesize_format(f.realSize || f.size || 0)}
               </Text>
               <Text className="text-[10px] text-text-secondary/40">
-                {formatDate(f.updated_at)}
+                {formatTime(f.updated_at)}
               </Text>
             </View>
           </View>
@@ -395,13 +392,7 @@ export default function StorageManagementTab() {
           {/* Category badge */}
           <View className={`${meta.bgColor} px-2 py-0.5 rounded-full`}>
             <Text style={{ color: meta.color }} className="text-[10px]">
-              {f.category === "bulletin"
-                ? "Bulletin"
-                : f.category === "private_chat"
-                  ? "Chat"
-                  : f.category === "group_chat"
-                    ? "Group"
-                    : "Orphaned"}
+              {t(`storage.cat_${f.category}`)}
             </Text>
           </View>
 
@@ -419,46 +410,48 @@ export default function StorageManagementTab() {
     },
     [
       handleDeleteFile,
-      formatDate,
       selectMode,
       selectedHashes,
       toggleSelectHash,
       enterSelectMode,
+      t,
     ],
   );
 
   const emptyState = useMemo(
     () => (
-      <View className="flex-1 items-center justify-center gap-3 py-12">
-        <Ionicons
-          name="folder-open-outline"
-          size={48}
-          color={ACCENT}
-          opacity={0.4}
-        />
-        <Text className="text-lg text-text-secondary">No files</Text>
-        <Text className="text-sm text-text-secondary/60 text-center px-8">
-          {categoryFilter !== "all"
-            ? `No ${categoryFilter} files found`
-            : t("storage.no_cached")}
-        </Text>
-      </View>
+      <EmptyState
+        icon="folder-open-outline"
+        title={t("storage.no_files")}
+        hint={
+          categoryFilter !== "all"
+            ? t("storage.no_category_found", { category: categoryFilter })
+            : t("storage.no_cached")
+        }
+      />
     ),
-    [categoryFilter],
+    [categoryFilter, t],
   );
 
   return (
     <View className="flex-1 gap-3 bg-surface">
+      {/* Title */}
+      <View className="px-5 pt-6 pb-2">
+        <Text className="text-3xl font-bold text-text-primary text-center">
+          {t("setting.storage")}
+        </Text>
+      </View>
+
       {/* Storage Summary Card */}
       <View className="bg-surface-card rounded-2xl p-4 border border-secondary-light gap-2">
         <Text className="text-sm font-semibold text-text-primary mb-1">
-          Storage Summary
+          {t("storage.summary")}
         </Text>
         <View className="flex-row flex-wrap gap-x-4 gap-y-1.5">
           <View className="flex-row items-center gap-1.5">
             <Ionicons name="document-outline" size={14} color="#3b82f6" />
             <Text className="text-xs text-text-secondary">
-              Bulletins:{" "}
+              {t("storage.sum_bulletins")}{" "}
               <Text className="font-medium">
                 {filesize_format(summary.bulletinSize)}
               </Text>
@@ -467,7 +460,7 @@ export default function StorageManagementTab() {
           <View className="flex-row items-center gap-1.5">
             <Ionicons name="chatbubble-outline" size={14} color="#10b981" />
             <Text className="text-xs text-text-secondary">
-              Chat Files:{" "}
+              {t("storage.sum_chat")}{" "}
               <Text className="font-medium">
                 {filesize_format(summary.chatFileSize)}
               </Text>
@@ -476,7 +469,7 @@ export default function StorageManagementTab() {
           <View className="flex-row items-center gap-1.5">
             <Ionicons name="image-outline" size={14} color="#a855f7" />
             <Text className="text-xs text-text-secondary">
-              Avatars:{" "}
+              {t("storage.sum_avatars")}{" "}
               <Text className="font-medium">
                 {filesize_format(summary.avatarSize)}
               </Text>
@@ -485,7 +478,7 @@ export default function StorageManagementTab() {
           <View className="flex-row items-center gap-1.5">
             <Ionicons name="warning-outline" size={14} color="#ef4444" />
             <Text className="text-xs text-text-secondary">
-              Orphaned:{" "}
+              {t("storage.sum_orphaned")}{" "}
               <Text className="font-medium">
                 {filesize_format(summary.orphanedSize)}
               </Text>
@@ -501,7 +494,7 @@ export default function StorageManagementTab() {
           >
             <Ionicons name="trash-outline" size={14} color="#ef4444" />
             <Text className="text-xs font-medium text-status-error">
-              Clear Avatar Cache
+              {t("storage.clear_avatar_title")}
             </Text>
           </TouchableOpacity>
         )}
@@ -511,10 +504,12 @@ export default function StorageManagementTab() {
       {selectMode && (
         <View className="flex-row items-center justify-between bg-primary/10 rounded-xl px-4 py-2 border border-primary/30">
           <TouchableOpacity onPress={exitSelectMode}>
-            <Text className="text-sm font-medium text-primary">Done</Text>
+            <Text className="text-sm font-medium text-primary">
+              {t("common.done")}
+            </Text>
           </TouchableOpacity>
           <Text className="text-xs text-text-secondary">
-            {selectedHashes.length} selected
+            {t("storage.selected_count", { count: selectedHashes.length })}
           </Text>
           <TouchableOpacity
             onPress={handleDeleteSelected}
@@ -527,7 +522,7 @@ export default function StorageManagementTab() {
                   : "text-text-secondary/30"
               }`}
             >
-              Delete ({selectedHashes.length})
+              {t("storage.delete_count", { count: selectedHashes.length })}
             </Text>
           </TouchableOpacity>
         </View>
@@ -550,7 +545,7 @@ export default function StorageManagementTab() {
                   isActive ? "text-primary" : "text-text-secondary"
                 }`}
               >
-                {chip.label}
+                {t(chip.labelKey)}
               </Text>
             </TouchableOpacity>
           );
@@ -568,7 +563,7 @@ export default function StorageManagementTab() {
           <Ionicons
             name={selectMode ? "checkmark-done" : "checkmark-circle-outline"}
             size={16}
-            color={selectMode ? ACCENT : "#9a9590"}
+            color={selectMode ? ACCENT : ICON_MUTED}
           />
         </TouchableOpacity>
       </View>
@@ -598,19 +593,25 @@ export default function StorageManagementTab() {
           }`}
         >
           <View className="flex-row items-center gap-1">
-            <Ionicons name="chevron-back" size={14} color="#9a9590" />
-            <Text className="text-xs text-text-secondary">Prev</Text>
+            <Ionicons name="chevron-back" size={14} color={ICON_MUTED} />
+            <Text className="text-xs text-text-secondary">
+              {t("common.prev")}
+            </Text>
           </View>
         </TouchableOpacity>
-        <Text className="text-xs text-text-secondary/60">Page {page}</Text>
+        <Text className="text-xs text-text-secondary/60">
+          {t("storage.page_indicator", { count: page })}
+        </Text>
         <TouchableOpacity
           onPress={() => handlePageChange(page + 1)}
           disabled={loading}
           className="py-2 px-4 rounded-lg bg-surface-card border border-secondary-light"
         >
           <View className="flex-row items-center gap-1">
-            <Text className="text-xs text-text-secondary">Next</Text>
-            <Ionicons name="chevron-forward" size={14} color="#9a9590" />
+            <Text className="text-xs text-text-secondary">
+              {t("common.next")}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={ICON_MUTED} />
           </View>
         </TouchableOpacity>
       </View>
@@ -624,7 +625,7 @@ export default function StorageManagementTab() {
           <View className="flex-row items-center gap-2">
             <Ionicons name="trash-outline" size={16} color="#ef4444" />
             <Text className="text-base font-semibold text-status-error">
-              Clear Orphaned ({orphanedCount})
+              {t("storage.clear_orphaned_count", { count: orphanedCount })}
             </Text>
           </View>
         </TouchableOpacity>

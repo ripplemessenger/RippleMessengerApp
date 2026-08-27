@@ -102,9 +102,9 @@ export default function PasteModal({ visible, onClose }) {
 
           {/* Status */}
           {errorText ? (
-            <Text className="mt-2 text-sm text-red-500">{errorText}</Text>
+            <Text className="mt-2 text-sm text-status-error">{errorText}</Text>
           ) : status.valid ? (
-            <Text className="mt-2 text-sm text-green-600">
+            <Text className="mt-2 text-sm text-status-success">
               {t("ui.valid_bulletin")}
             </Text>
           ) : null}

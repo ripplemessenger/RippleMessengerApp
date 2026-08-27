@@ -5,7 +5,6 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
-  Modal,
   TextInput,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -14,8 +13,11 @@ import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { selectContactList } from "../selectors";
-import { ACCENT } from "../lib/theme";
+import { ACCENT, PLACEHOLDER } from "../lib/theme";
 import AvatarImage from "../components/AvatarImage";
+import ModalShell from "../components/common/ModalShell";
+import ConfirmButtonRow from "../components/common/ConfirmButtonRow";
+import EmptyState from "../components/common/EmptyState";
 import {
   LoadContactList,
   ContactAdd as ContactAddAction,
@@ -67,7 +69,7 @@ function ContactCard({ contact, onOpenDetail, onViewBulletins, onStartChat }) {
             onPress={() => onViewBulletins(contact)}
             className="p-2"
           >
-            <Ionicons name="volume-high-outline" size={20} color={ACCENT} />
+            <Ionicons name="newspaper-outline" size={20} color={ACCENT} />
           </TouchableOpacity>
         )}
 
@@ -104,77 +106,41 @@ function AddContactModal({ visible, onClose, onAdd }) {
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View className="flex-1 justify-center items-center bg-black/50 px-6">
-        <View className="bg-surface-card rounded-2xl p-6 w-full gap-4 border border-secondary-light">
-          <Text className="text-xl font-semibold text-text-primary text-center">
-            {t("ui.add_contact")}
-          </Text>
-
-          <View className="gap-1">
-            <Text className="text-sm text-text-secondary">
-              {t("ui.xrpl_address")}
-            </Text>
-            <TextInput
-              value={address}
-              onChangeText={setAddress}
-              placeholder="r..."
-              placeholderTextColor="#9a9590"
-              autoCapitalize="none"
-              className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm font-mono"
-            />
-          </View>
-
-          <View className="gap-1">
-            <Text className="text-sm text-text-secondary">
-              {t("ui.nickname_optional")}
-            </Text>
-            <TextInput
-              value={nickname}
-              onChangeText={setNickname}
-              placeholder={t("ui.nickname")}
-              placeholderTextColor="#9a9590"
-              className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm"
-            />
-          </View>
-
-          <View className="flex-row gap-3 mt-2">
-            <TouchableOpacity
-              onPress={onClose}
-              activeOpacity={0.7}
-              className="flex-1 py-3 rounded-xl border border-secondary-light items-center"
-            >
-              <Text className="text-base font-medium text-text-secondary">
-                {t("common.cancel")}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleAdd}
-              disabled={!address.trim()}
-              activeOpacity={0.7}
-              className={`flex-1 py-3 rounded-xl items-center ${
-                address.trim() ? "bg-primary" : "bg-primary/20"
-              }`}
-            >
-              <Text
-                className={`text-base font-semibold ${
-                  address.trim()
-                    ? "text-text-primary"
-                    : "text-text-secondary/50"
-                }`}
-              >
-                {t("ui.add")}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+    <ModalShell visible={visible} onClose={onClose} title={t("ui.add_contact")}>
+      <View className="gap-1">
+        <Text className="text-sm text-text-secondary">
+          {t("ui.xrpl_address")}
+        </Text>
+        <TextInput
+          value={address}
+          onChangeText={setAddress}
+          placeholder="r..."
+          placeholderTextColor={PLACEHOLDER}
+          autoCapitalize="none"
+          className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm font-mono"
+        />
       </View>
-    </Modal>
+
+      <View className="gap-1">
+        <Text className="text-sm text-text-secondary">
+          {t("ui.nickname_optional")}
+        </Text>
+        <TextInput
+          value={nickname}
+          onChangeText={setNickname}
+          placeholder={t("ui.nickname")}
+          placeholderTextColor={PLACEHOLDER}
+          className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm"
+        />
+      </View>
+
+      <ConfirmButtonRow
+        onCancel={onClose}
+        onConfirm={handleAdd}
+        confirmText={t("ui.add")}
+        confirmDisabled={!address.trim()}
+      />
+    </ModalShell>
   );
 }
 
@@ -185,7 +151,7 @@ export default function ContactScreen({ navigation }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const contacts = useSelector(selectContactList);
-  const refreshingRef = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Load contact list on focus
@@ -196,13 +162,13 @@ export default function ContactScreen({ navigation }) {
   );
 
   const handleRefresh = useCallback(() => {
-    if (refreshingRef.current) return;
-    refreshingRef.current = true;
+    if (refreshing) return;
+    setRefreshing(true);
     dispatch(LoadContactList());
     setTimeout(() => {
-      refreshingRef.current = false;
+      setRefreshing(false);
     }, 3000);
-  }, [dispatch]);
+  }, [dispatch, refreshing]);
 
   const handleOpenDetail = useCallback(
     (contact) => {
@@ -298,21 +264,17 @@ export default function ContactScreen({ navigation }) {
         contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1 }}
         refreshControl={
           <RefreshControl
-            refreshing={refreshingRef.current}
+            refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={ACCENT}
           />
         }
         ListEmptyComponent={
-          <View className="flex-1 items-center justify-center py-20 px-8">
-            <Ionicons name="people-outline" size={56} color="#d4c8a8" />
-            <Text className="text-xl font-bold text-text-primary mt-4 mb-2">
-              {t("ui.no_contacts")}
-            </Text>
-            <Text className="text-sm text-text-secondary text-center">
-              {t("contact.add_hint")}
-            </Text>
-          </View>
+          <EmptyState
+            icon="people-outline"
+            title={t("ui.no_contacts")}
+            hint={t("contact.add_hint")}
+          />
         }
       />
 

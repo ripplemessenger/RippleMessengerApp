@@ -431,7 +431,8 @@
     "login_saved": "저장된 계정으로 로그인",
     "invalid_seed": "시드 형식이 잘못되었습니다",
     "seed_required": "시드가 필요합니다",
-    "temp_login_desc": "계정을 저장하지 않고 로그인합니다. 시드는 저장되지 않습니다."
+    "temp_login_desc": "계정을 저장하지 않고 로그인합니다. 시드는 저장되지 않습니다.",
+    "remove_account_confirm": "저장된 계정 {{address}}을(를) 삭제할까요? 로그인 상태는 유지됩니다."
   },
   "storage": {
     "files": "파일",
@@ -482,7 +483,8 @@
     "pending_invitations": "대기 중인 초대 ({{count}})",
     "select_members": "멤버 선택 ({{count}}/{{max}})",
     "decline_title": "초대 거절",
-    "decline_confirm": "「{{name}}」 초대를 거절할까요?"
+    "decline_confirm": "「{{name}}」 초대를 거절할까요?",
+    "delete_confirm": "이 그룹을 삭제할까요? 생성자만 가능합니다."
   },
   "network": {
     "url": "URL:"

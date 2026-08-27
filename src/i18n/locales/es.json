@@ -431,7 +431,8 @@
     "login_saved": "Iniciar sesión con cuenta guardada",
     "invalid_seed": "Formato de seed inválido",
     "seed_required": "El seed es obligatorio",
-    "temp_login_desc": "Inicia sesión sin guardar tu cuenta. Tu seed no se almacenará."
+    "temp_login_desc": "Inicia sesión sin guardar tu cuenta. Tu seed no se almacenará.",
+    "remove_account_confirm": "¿Eliminar la cuenta {{address}}? Seguirás conectado."
   },
   "storage": {
     "files": "Archivos",
@@ -482,7 +483,8 @@
     "pending_invitations": "Invitaciones pendientes ({{count}})",
     "select_members": "Seleccionar miembros ({{count}}/{{max}})",
     "decline_title": "Rechazar invitación",
-    "decline_confirm": "¿Rechazar la invitación a «{{name}}»?"
+    "decline_confirm": "¿Rechazar la invitación a «{{name}}»?",
+    "delete_confirm": "¿Eliminar este grupo? Solo el creador puede hacerlo."
   },
   "network": {
     "url": "URL:"

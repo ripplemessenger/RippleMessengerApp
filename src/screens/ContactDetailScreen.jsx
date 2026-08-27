@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Modal,
   TextInput,
   Alert,
   ScrollView,
@@ -14,8 +13,10 @@ import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { selectContactList } from "../selectors";
-import { ACCENT } from "../lib/theme";
+import { ACCENT, ICON_MUTED, PLACEHOLDER } from "../lib/theme";
 import AvatarImage from "../components/AvatarImage";
+import ModalShell from "../components/common/ModalShell";
+import ConfirmButtonRow from "../components/common/ConfirmButtonRow";
 import {
   LoadContactList,
   ContactAdd as ContactAddAction,
@@ -23,6 +24,7 @@ import {
   ContactToggleIsFollow,
   ContactToggleIsFriend,
 } from "../store/sagas/messenger.actions";
+import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
 
 /**
  * ContactDetailScreen — detail page for a single contact.
@@ -74,12 +76,15 @@ export default function ContactDetailScreen({ navigation, route }) {
   }, [dispatch, address, editNickname]);
 
   const handleCopyAddress = useCallback(() => {
-    // Copy to clipboard (RN Clipboard API)
     import("react-native").then(({ Clipboard }) => {
       Clipboard.setString(address);
-      Alert.alert(t("common.copied"), address);
+      dispatch(
+        setFlashNoticeMessage({
+          message: t("common.copied_to_clipboard"),
+        }),
+      );
     });
-  }, [address, t]);
+  }, [address, t, dispatch]);
 
   const handleStartChat = useCallback(() => {
     // Navigate to ChatDetail with this contact
@@ -134,9 +139,11 @@ export default function ContactDetailScreen({ navigation, route }) {
         <Text className="text-xl font-semibold text-text-primary mt-4">
           {contact.nickname || t("common.unknown")}
         </Text>
-        <Text className="text-sm font-mono text-text-secondary/70 mt-1">
-          {address}
-        </Text>
+        <TouchableOpacity onPress={handleCopyAddress} activeOpacity={0.7}>
+          <Text className="text-sm font-mono text-text-secondary/70 mt-1">
+            {address}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Action buttons */}
@@ -147,7 +154,7 @@ export default function ContactDetailScreen({ navigation, route }) {
           activeOpacity={0.7}
           className="flex-row items-center justify-center py-3 rounded-xl bg-secondary-light/20 border border-secondary-light/30"
         >
-          <Ionicons name="create-outline" size={18} color="#a89f85" />
+          <Ionicons name="create-outline" size={18} color={ICON_MUTED} />
           <Text className="text-base font-medium ml-2 text-text-primary">
             {t("setting.edit_nickname")}
           </Text>
@@ -207,18 +214,6 @@ export default function ContactDetailScreen({ navigation, route }) {
           </Text>
         </TouchableOpacity>
 
-        {/* Copy address */}
-        <TouchableOpacity
-          onPress={handleCopyAddress}
-          activeOpacity={0.7}
-          className="flex-row items-center justify-center py-3 rounded-xl bg-secondary-light/20 border border-secondary-light/30"
-        >
-          <Ionicons name="copy-outline" size={18} color="#a89f85" />
-          <Text className="text-base font-medium ml-2 text-text-primary">
-            {t("setting.copy_address")}
-          </Text>
-        </TouchableOpacity>
-
         {/* Start chat (friend only) */}
         {contact.is_friend && (
           <TouchableOpacity
@@ -239,7 +234,7 @@ export default function ContactDetailScreen({ navigation, route }) {
           activeOpacity={0.7}
           className="flex-row items-center justify-center py-3 rounded-xl bg-secondary-light/20 border border-secondary-light/30"
         >
-          <Ionicons name="volume-high-outline" size={18} color="#a89f85" />
+          <Ionicons name="newspaper-outline" size={18} color={ICON_MUTED} />
           <Text className="text-base font-medium ml-2 text-text-primary">
             {t("ui.view_bulletins")}
           </Text>
@@ -261,48 +256,25 @@ export default function ContactDetailScreen({ navigation, route }) {
       </View>
 
       {/* Edit nickname modal */}
-      <Modal
+      <ModalShell
         visible={showEditModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowEditModal(false)}
+        onClose={() => setShowEditModal(false)}
+        title={t("setting.edit_nickname")}
       >
-        <View className="flex-1 justify-center items-center bg-black/50 px-6">
-          <View className="bg-surface-card rounded-2xl p-6 w-full gap-4 border border-secondary-light">
-            <Text className="text-xl font-semibold text-text-primary text-center">
-              {t("setting.edit_nickname")}
-            </Text>
-            <TextInput
-              value={editNickname}
-              onChangeText={setEditNickname}
-              placeholder={t("ui.nickname")}
-              placeholderTextColor="#9a9590"
-              autoFocus
-              className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm"
-            />
-            <View className="flex-row gap-3 mt-2">
-              <TouchableOpacity
-                onPress={() => setShowEditModal(false)}
-                activeOpacity={0.7}
-                className="flex-1 py-3 rounded-xl border border-secondary-light items-center"
-              >
-                <Text className="text-base font-medium text-text-secondary">
-                  {t("common.cancel")}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSaveNickname}
-                activeOpacity={0.7}
-                className="flex-1 py-3 rounded-xl bg-primary items-center"
-              >
-                <Text className="text-base font-semibold text-text-primary">
-                  {t("common.save")}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        <TextInput
+          value={editNickname}
+          onChangeText={setEditNickname}
+          placeholder={t("ui.nickname")}
+          placeholderTextColor={PLACEHOLDER}
+          autoFocus
+          className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm"
+        />
+        <ConfirmButtonRow
+          onCancel={() => setShowEditModal(false)}
+          onConfirm={handleSaveNickname}
+          confirmText={t("common.save")}
+        />
+      </ModalShell>
     </ScrollView>
   );
 }

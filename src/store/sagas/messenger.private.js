@@ -12,6 +12,7 @@ import {
   SessionType,
   DefaultPartition,
 } from "../../lib/AppConst";
+import { MessageObjectType } from "../../lib/MessengerConst";
 import {
   AesEncrypt,
   ConsoleError,
@@ -242,7 +243,7 @@ export function* SendPrivateContent({ payload }) {
       (state) => state.Messenger.CurrentSession,
     );
     if (!CurrentSession) {
-      return;
+      return false;
     }
 
     if (CurrentSession.aes_key !== undefined) {
@@ -311,11 +312,20 @@ export function* SendPrivateContent({ payload }) {
       yield call(RefreshPrivateMessageList);
 
       yield call(SendMessage, { msg: JSON.stringify(msg_json) });
+      return true;
     } else {
       ConsoleError("aeskey not ready...");
+      yield put(
+        setFlashNoticeMessage({
+          message: "Handshake not complete, please try again",
+          duration: FLASH_DURATION_MS,
+        }),
+      );
+      return false;
     }
   } catch (e) {
     Logger.error("[SendPrivateContent] failed:", e.message);
+    return false;
   }
 }
 
@@ -349,17 +359,24 @@ export function* ForwardBulletin({ payload }) {
     const forward_bulletin = yield select(
       (state) => state.Messenger.ForwardBulletin,
     );
-    yield call(SendPrivateContent, {
+    // Ensure the bulletin object has ObjectType set for addPrivateMessage
+    const content = {
+      ...forward_bulletin,
+      ObjectType: MessageObjectType.Bulletin,
+    };
+    const success = yield call(SendPrivateContent, {
       payload: {
-        content: forward_bulletin,
+        content: content,
       },
     });
-    yield put(
-      setFlashNoticeMessage({
-        message: "Bulletin forwarded successfully",
-        duration: FLASH_DURATION_MS,
-      }),
-    );
+    if (success) {
+      yield put(
+        setFlashNoticeMessage({
+          message: "Bulletin forwarded successfully",
+          duration: FLASH_DURATION_MS,
+        }),
+      );
+    }
   } catch (e) {
     Logger.error("[ForwardBulletin] failed:", e.message);
     yield put(

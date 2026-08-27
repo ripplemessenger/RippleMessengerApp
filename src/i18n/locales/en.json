@@ -55,7 +55,8 @@
     "contacts": "Contacts",
     "prev": "Prev",
     "next": "Next",
-    "me": "Me"
+    "me": "Me",
+    "done": "Done"
   },
   "file": {
     "saved_to_download": "File saved to download directory",
@@ -141,7 +142,16 @@
     "delete_count": "Delete ({{count}})",
     "total_count": "{{count}} bulletins",
     "page_indicator": "Page {{count}}",
-    "not_logged_in": "Not logged in"
+    "not_logged_in": "Not logged in",
+    "delete_selected_title": "Delete Selected",
+    "search_placeholder": "Search content...",
+    "filter_all": "All",
+    "filter_mine": "Mine",
+    "filter_bookmarked": "Bookmarked",
+    "filter_followed": "Followed",
+    "json_title": "Bulletin JSON",
+    "filter_by_tag": "Filter by Tag",
+    "no_bulletins": "No bulletins"
   },
   "setting": {
     "title": "Settings",
@@ -400,7 +410,8 @@
     "try_different_search": "Try a different search term.",
     "add_friends_first": "Add friends first to forward bulletins.",
     "valid_bulletin": "✓ Valid bulletin — ready to save",
-    "tags_max": "Tags (max {{max}})"
+    "tags_max": "Tags (max {{max}})",
+    "bookmarks": "Bookmarks"
   },
   "auth": {
     "open_account": "Open Account",
@@ -435,7 +446,8 @@
     "login_saved": "Login with saved account",
     "invalid_seed": "Invalid seed format",
     "seed_required": "Seed is required",
-    "temp_login_desc": "Log in without saving your account. Your seed will not be stored."
+    "temp_login_desc": "Log in without saving your account. Your seed will not be stored.",
+    "remove_account_confirm": "Remove saved account {{address}}? You will stay logged in."
   },
   "storage": {
     "files": "Files",
@@ -473,7 +485,12 @@
     "sum_chat": "Chat Files:",
     "sum_avatars": "Avatars:",
     "sum_orphaned": "Orphaned:",
-    "clear_orphaned_count": "Clear Orphaned ({{count}})"
+    "clear_orphaned_count": "Clear Orphaned ({{count}})",
+    "no_files": "No files",
+    "selected_count": "{{count}} selected",
+    "delete_count": "Delete ({{count}})",
+    "page_indicator": "Page {{count}}",
+    "chip_all": "All"
   },
   "group": {
     "group_name": "Group Name:",
@@ -486,7 +503,8 @@
     "pending_invitations": "Pending Invitations ({{count}})",
     "select_members": "Select Members ({{count}}/{{max}})",
     "decline_title": "Decline Invitation",
-    "decline_confirm": "Decline the invitation to \"{{name}}\"?"
+    "decline_confirm": "Decline the invitation to \"{{name}}\"?",
+    "delete_confirm": "Delete this group? This can only be done by the creator."
   },
   "network": {
     "url": "URL:"
