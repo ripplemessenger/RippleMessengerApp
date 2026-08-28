@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { RequestServerAddress } from "../store/sagas/messenger.actions";
-import { ACCENT } from "../lib/theme";
+import { ACCENT, ICON_MUTED } from "../lib/theme";
 
 /**
  * ServerAddressScreen — shows the addresses (accounts) discovered on a server,
@@ -96,9 +96,18 @@ export default function ServerAddressScreen({ route, navigation }) {
     <View className="flex-1 bg-surface">
       {/* Header */}
       <View className="px-4 py-3 bg-primary/5 border-b border-secondary-light/30">
-        <Text className="text-lg font-bold text-text-primary">
-          {t("ui.server_stats")}
-        </Text>
+        <View className="flex-row items-center gap-2">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.6}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="arrow-back" size={22} color={ICON_MUTED} />
+          </TouchableOpacity>
+          <Text className="text-lg font-bold text-text-primary flex-1">
+            {t("ui.server_stats")}
+          </Text>
+        </View>
         <Text className="text-xs font-mono text-text-secondary/70 mt-0.5 truncate">
           {url}
         </Text>

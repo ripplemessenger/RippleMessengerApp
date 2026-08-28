@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from "react";
-import { Modal, View, Text, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
+import BottomSheet from "../common/BottomSheet";
 
 import { UploadBulletin } from "../../store/sagas/messenger.actions";
 import { checkBulletinSchema } from "../../lib/MessageSchemaVerifier";
@@ -69,65 +70,49 @@ export default function PasteModal({ visible, onClose }) {
     : null;
 
   return (
-    <Modal
+    <BottomSheet
       visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
+      onClose={handleClose}
+      title={t("ui.paste_bulletin_title")}
     >
-      <View className="flex-1 bg-black/45 justify-end">
-        <View className="w-[40px] h-[5px] bg-text-secondary/30 rounded-full self-center mt-3 mb-2" />
-        <View className="bg-surface-card rounded-t-3xl px-5 pt-4 pb-6 border-t border-secondary-light">
-          {/* Header */}
-          <View className="flex-row items-center justify-between pb-3 border-b border-secondary-light/20">
-            <Text className="text-lg font-bold text-text-primary">
-              {t("ui.paste_bulletin_title")}
-            </Text>
-            <TouchableOpacity onPress={handleClose} hitSlop={10}>
-              <Ionicons name="close" size={24} color="#999" />
-            </TouchableOpacity>
-          </View>
+      {/* Input */}
+      <TextInput
+        value={tmpBulletin}
+        onChangeText={handleChange}
+        placeholder={t("ui.paste_bulletin_hint")}
+        placeholderTextColor="#a89f85"
+        multiline
+        numberOfLines={8}
+        className="bg-surface rounded-lg px-3 py-2 border border-secondary-light/30 text-sm text-text-primary"
+        style={{ minHeight: 160, textAlignVertical: "top" }}
+      />
 
-          {/* Input */}
-          <TextInput
-            value={tmpBulletin}
-            onChangeText={handleChange}
-            placeholder={t("ui.paste_bulletin_hint")}
-            placeholderTextColor="#a89f85"
-            multiline
-            numberOfLines={8}
-            className="mt-3 bg-surface rounded-lg px-3 py-2 border border-secondary-light/30 text-sm text-text-primary"
-            style={{ minHeight: 160, textAlignVertical: "top" }}
-          />
+      {/* Status */}
+      {errorText ? (
+        <Text className="text-sm text-status-error">{errorText}</Text>
+      ) : status.valid ? (
+        <Text className="text-sm text-status-success">
+          {t("ui.valid_bulletin")}
+        </Text>
+      ) : null}
 
-          {/* Status */}
-          {errorText ? (
-            <Text className="mt-2 text-sm text-status-error">{errorText}</Text>
-          ) : status.valid ? (
-            <Text className="mt-2 text-sm text-status-success">
-              {t("ui.valid_bulletin")}
-            </Text>
-          ) : null}
-
-          {/* Save */}
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={!status.valid}
-            activeOpacity={0.8}
-            className={`mt-4 py-3 rounded-xl items-center ${
-              status.valid ? "bg-primary" : "bg-surface-alt"
-            }`}
-          >
-            <Text
-              className={`text-base font-medium ${
-                status.valid ? "text-white" : "text-text-secondary/50"
-              }`}
-            >
-              {t("ui.save_bulletin")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
+      {/* Save */}
+      <TouchableOpacity
+        onPress={handleSave}
+        disabled={!status.valid}
+        activeOpacity={0.8}
+        className={`py-3 rounded-xl items-center ${
+          status.valid ? "bg-primary" : "bg-surface-alt"
+        }`}
+      >
+        <Text
+          className={`text-base font-medium ${
+            status.valid ? "text-white" : "text-text-secondary/50"
+          }`}
+        >
+          {t("ui.save_bulletin")}
+        </Text>
+      </TouchableOpacity>
+    </BottomSheet>
   );
 }

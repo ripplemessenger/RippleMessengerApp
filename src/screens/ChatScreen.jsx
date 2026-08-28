@@ -5,14 +5,19 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { View, Text, FlatList, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  RefreshControl,
+  TouchableOpacity,
+} from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 
 import SessionListItem from "../components/Chat/SessionListItem";
-import SearchBar from "../components/common/SearchBar";
 import EmptyState from "../components/common/EmptyState";
 import {
   selectChatSessions,
@@ -114,15 +119,18 @@ export default function ChatScreen({ navigation }) {
           <Text className="text-xl font-bold text-text-primary">
             {t("common.chat")}
           </Text>
+          <Text className="text-xs text-text-secondary/50">
+            {t("common.sessions_count", { count: sessions.length })}
+          </Text>
         </View>
-
-        {/* Search input */}
-        <View className="mt-2">
-          <SearchBar
-            value={searchText}
-            onChange={setSearchText}
-            placeholder={t("ui.search_conversations")}
-          />
+        <View className="flex-row items-center gap-2 mt-2">
+          <TouchableOpacity
+            onPress={() => setSearchText("")}
+            activeOpacity={0.7}
+            className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+          >
+            <Ionicons name="search" size={20} color={ACCENT} />
+          </TouchableOpacity>
         </View>
       </View>
 

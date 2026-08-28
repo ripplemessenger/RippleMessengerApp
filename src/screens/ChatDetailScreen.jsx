@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 
 import AvatarImage from "../components/AvatarImage";
 import InlineImage from "../components/InlineImage";
+import ModalShell from "../components/common/ModalShell";
 import useDarkMode from "../hooks/useDarkMode";
 import {
   selectCurrentSession,
@@ -39,7 +40,7 @@ import { pickFile } from "../services/mediaPicker";
 import { SessionType } from "../lib/AppConst";
 import { MessageObjectType } from "../lib/MessengerConst";
 import { dbAPI } from "../db";
-import { ACCENT } from "../lib/theme";
+import { ACCENT, ICON_MUTED } from "../lib/theme";
 import { formatTime, shortenAddress, formatFileSize } from "../lib/format";
 
 /**
@@ -206,7 +207,7 @@ const MessageBubble = React.memo(function MessageBubble({
                     </Text>
                   )}
                   {fileStatus === "downloading" && (
-                    <Text className="text-xs text-warning">
+                    <Text className="text-xs text-primary">
                       {t("common.loading")}
                     </Text>
                   )}
@@ -307,6 +308,7 @@ const MessageBubble = React.memo(function MessageBubble({
  */
 function ChatInfoModal({ visible, session, mode, onClose }) {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
   const selfAddress = useSelector(selectUserAddress);
   const contactMap = useSelector(selectContactMap);
   const groupMembers = useSelector(selectGroupMembers);
@@ -358,16 +360,21 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/45 justify-center items-center px-6">
-        <View className="w-full max-w-sm bg-surface-card rounded-2xl p-5 border border-secondary-light">
+      <TouchableOpacity
+        className="flex-1 bg-black/45 justify-center items-center px-6"
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <TouchableOpacity
+          className="w-full max-w-sm bg-surface-card rounded-2xl p-5 border border-secondary-light"
+          activeOpacity={1}
+          onPress={() => {}}
+        >
           {/* Header */}
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-lg font-bold text-text-primary">
               {mode === "private" ? t("ui.contact_info") : t("ui.group_info")}
             </Text>
-            <TouchableOpacity onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={24} color="#999" />
-            </TouchableOpacity>
           </View>
 
           {loading ? (
@@ -401,48 +408,6 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
                 </Text>
               </View>
 
-              {/* Follow status */}
-              <View className="flex-row items-center justify-between py-2 border-t border-secondary-light/20">
-                <Text className="text-sm text-text-primary">
-                  {t("common.follow")}
-                </Text>
-                <View className="flex-row items-center gap-1.5">
-                  <Ionicons
-                    name={
-                      info?.follow ? "checkmark-circle" : "close-circle-outline"
-                    }
-                    size={18}
-                    color={info?.follow ? "#22c55e" : "#999"}
-                  />
-                  <Text
-                    className={`text-sm ${info?.follow ? "text-status-success" : "text-text-secondary/60"}`}
-                  >
-                    {info?.follow ? t("common.yes") : t("common.no")}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Friend status */}
-              <View className="flex-row items-center justify-between py-2 border-t border-secondary-light/20">
-                <Text className="text-sm text-text-primary">
-                  {t("setting.friend")}
-                </Text>
-                <View className="flex-row items-center gap-1.5">
-                  <Ionicons
-                    name={
-                      info?.friend ? "checkmark-circle" : "close-circle-outline"
-                    }
-                    size={18}
-                    color={info?.friend ? "#22c55e" : "#999"}
-                  />
-                  <Text
-                    className={`text-sm ${info?.friend ? "text-status-success" : "text-text-secondary/60"}`}
-                  >
-                    {info?.friend ? t("common.yes") : t("common.no")}
-                  </Text>
-                </View>
-              </View>
-
               {/* ECDH handshake status */}
               <View className="flex-row items-center justify-between py-2 border-t border-secondary-light/20">
                 <Text className="text-sm text-text-primary">
@@ -461,7 +426,7 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
                     }
                   />
                   <Text
-                    className={`text-sm ${session.aes_key !== undefined ? "text-status-success" : "text-warning"}`}
+                    className={`text-sm ${session.aes_key !== undefined ? "text-status-success" : "text-primary"}`}
                   >
                     {session.aes_key !== undefined
                       ? t("ui.established")
@@ -504,7 +469,10 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
               </View>
 
               {/* Member list */}
-              <View className="max-h-[300px] overflow-y-auto">
+              <ScrollView
+                style={{ maxHeight: 300 }}
+                showsVerticalScrollIndicator={false}
+              >
                 {info?.members?.map((member, idx) => (
                   <View
                     key={member || `member-${idx}`}
@@ -516,12 +484,6 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
                       numberOfLines={1}
                     >
                       {resolveName(member, contactMap)}
-                    </Text>
-                    <Text
-                      className="text-[10px] text-text-secondary/50 font-mono"
-                      numberOfLines={1}
-                    >
-                      {shortenAddress(member)}
                     </Text>
                     <TouchableOpacity
                       activeOpacity={0.6}
@@ -541,22 +503,11 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
                     </TouchableOpacity>
                   </View>
                 ))}
-              </View>
+              </ScrollView>
             </View>
           )}
-
-          {/* Close button */}
-          <TouchableOpacity
-            onPress={onClose}
-            activeOpacity={0.6}
-            className="mt-4 bg-primary/20 rounded-xl py-3 items-center"
-          >
-            <Text className="text-sm font-semibold text-text-primary">
-              {t("common.close")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 }
@@ -733,14 +684,14 @@ export default function ChatDetailScreen({ route, navigation }) {
       {/* Header */}
       <View className="flex-row items-center px-3 py-2 bg-primary/5 border-b border-secondary-light/30">
         <TouchableOpacity onPress={handleBack} activeOpacity={0.6}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a2e" />
+          <Ionicons name="arrow-back" size={24} color={ICON_MUTED} />
         </TouchableOpacity>
 
         <View className="flex-row items-center flex-1 ml-2">
           {/* Session avatar */}
           {mode === "group" ? (
             <View className="w-9 h-9 rounded-full bg-secondary/40 items-center justify-center">
-              <Ionicons name="people" size={18} color="#8a7a5a" />
+              <Ionicons name="people" size={18} color={ICON_MUTED} />
             </View>
           ) : (
             <AvatarImage
@@ -768,7 +719,7 @@ export default function ChatDetailScreen({ route, navigation }) {
           <Ionicons
             name="information-circle-outline"
             size={22}
-            color="#a89f85"
+            color={ICON_MUTED}
           />
         </TouchableOpacity>
       </View>
@@ -852,68 +803,23 @@ export default function ChatDetailScreen({ route, navigation }) {
       />
 
       {/* JSON Viewer Modal */}
-      <Modal
+      <ModalShell
         visible={showJsonModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowJsonModal(false)}
+        onClose={() => setShowJsonModal(false)}
+        title={t("ui.message_json")}
       >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            justifyContent: "center",
-            padding: 20,
-          }}
-        >
-          <View
+        <ScrollView style={{ maxHeight: "60%" }}>
+          <Text
             style={{
-              backgroundColor: isDark ? "#2a2a34" : "#fff",
-              borderRadius: 12,
-              maxHeight: "80%",
+              fontSize: 12,
+              fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+              color: isDark ? "#c8c8d0" : "#333",
             }}
           >
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderBottomWidth: 1,
-                borderBottomColor: isDark ? "#3a3a45" : "#eee",
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: "600",
-                  color: isDark ? "#e8e8ec" : "#333",
-                }}
-              >
-                {t("ui.message_json")}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setShowJsonModal(false)}
-                hitSlop={10}
-              >
-                <Text style={{ fontSize: 16, color: "#999" }}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ padding: 16 }}>
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-                  color: isDark ? "#c8c8d0" : "#333",
-                }}
-              >
-                {jsonContent}
-              </Text>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+            {jsonContent}
+          </Text>
+        </ScrollView>
+      </ModalShell>
     </KeyboardAvoidingView>
   );
 }

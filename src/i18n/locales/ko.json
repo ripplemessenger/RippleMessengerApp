@@ -28,6 +28,7 @@
     "followed_bulletins": "팔로우한 게시문",
     "search_tags": "태그 검색",
     "bookmarks": "북마크",
+    "bulletin_detail": "공지",
     "random_bulletin": "랜덤 게시문",
     "paste_bulletin": "게시문 붙여넣기",
     "create_group": "그룹 만들기",
@@ -52,7 +53,9 @@
     "contacts": "연락처",
     "prev": "이전",
     "next": "다음",
-    "me": "나"
+    "me": "나",
+    "sessions_count": "{{count}} sessions",
+    "contacts_count": "{{count}} contacts"
   },
   "file": {
     "saved_to_download": "파일이 다운로드 디렉토리에 저장되었습니다",
@@ -481,10 +484,18 @@
     "member_count": "{{count}}명 멤버",
     "created_on": "{{date}}에 생성됨",
     "pending_invitations": "대기 중인 초대 ({{count}})",
-    "select_members": "멤버 선택 ({{count}}/{{max}})",
+    "select_members": "멤버 선택",
     "decline_title": "초대 거절",
     "decline_confirm": "「{{name}}」 초대를 거절할까요?",
-    "delete_confirm": "이 그룹을 삭제할까요? 생성자만 가능합니다."
+    "delete_confirm": "이 그룹을 삭제할까요? 생성자만 가능합니다.",
+    "name": "그룹 이름",
+    "name_placeholder": "그룹 이름 입력",
+    "create": "만들기",
+    "clear_all": "모두 지우기",
+    "accept": "수락",
+    "decline": "거절",
+    "invited_by": "초대자: {{name}}",
+    "members_suffix": "명"
   },
   "network": {
     "url": "URL:"

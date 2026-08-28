@@ -11,13 +11,13 @@ import {
   Platform,
   Clipboard,
   Alert,
-  Modal,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { parseBulletinMarkdown } from "../lib/markdown";
 import { RenderHTML } from "react-native-render-html";
+import BottomSheet from "../components/common/BottomSheet";
 
 import {
   selectDisplayBulletins,
@@ -142,8 +142,6 @@ export default function BulletinDetailScreen({ route, navigation }) {
     }
   }, [dispatch, bulletin?.hash]);
 
-  const goBack = useCallback(() => navigation.goBack(), [navigation]);
-
   // Forward bulletin — opens the forward contact selector modal
   const handleForward = useCallback(
     (e) => {
@@ -154,72 +152,6 @@ export default function BulletinDetailScreen({ route, navigation }) {
     },
     [dispatch, bulletin],
   );
-
-  // Set header back button
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => (
-        <Text
-          onPress={goBack}
-          className="text-base font-semibold text-primary"
-          style={{ paddingLeft: 8 }}
-        >
-          {t("common.back")}
-        </Text>
-      ),
-      title: t("ui.new_bulletin"),
-      headerStyle: { backgroundColor: ACCENT },
-      headerTintColor: "#1a1a2e",
-    });
-  }, [navigation, goBack]);
-
-  // Header right: forward + bookmark for the main bulletin
-  React.useLayoutEffect(() => {
-    if (bulletin) {
-      navigation.setOptions({
-        ...navigation.options,
-        headerRight: () => (
-          <View className="flex-row items-center">
-            {/* Forward */}
-            <TouchableOpacity
-              onPress={handleForward}
-              activeOpacity={0.5}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              className="mr-2"
-            >
-              <Ionicons
-                name="arrow-forward-outline"
-                size={24}
-                color="#a89f85"
-              />
-            </TouchableOpacity>
-
-            {/* Bookmark */}
-            <TouchableOpacity
-              onPress={(e) => {
-                e.stopPropagation();
-                dispatch(BulletinMarkToggle({ hash: bulletin.hash }));
-              }}
-              activeOpacity={0.5}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons
-                name={bulletin.is_marked ? "star" : "star-outline"}
-                size={24}
-                color={bulletin.is_marked ? ACCENT : "#a89f85"}
-              />
-            </TouchableOpacity>
-          </View>
-        ),
-      });
-    }
-  }, [
-    navigation,
-    bulletin?.hash,
-    bulletin?.is_marked,
-    dispatch,
-    handleForward,
-  ]);
 
   const handleReplySend = useCallback(() => {
     const content = replyText.trim();
@@ -493,6 +425,21 @@ export default function BulletinDetailScreen({ route, navigation }) {
             </TouchableOpacity>
 
             <TouchableOpacity
+              onPress={handleForward}
+              activeOpacity={0.6}
+              className="flex-row items-center gap-1"
+            >
+              <Ionicons
+                name="arrow-forward-outline"
+                size={16}
+                color="#a89f85"
+              />
+              <Text className="text-xs text-text-secondary/70">
+                {t("common.forward")}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               onPress={() => setShowJsonModal(true)}
               activeOpacity={0.6}
               className="flex-row items-center gap-1"
@@ -734,53 +681,34 @@ export default function BulletinDetailScreen({ route, navigation }) {
       </KeyboardAvoidingView>
 
       {/* JSON details modal */}
-      <Modal
+      <BottomSheet
         visible={showJsonModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowJsonModal(false)}
+        onClose={() => setShowJsonModal(false)}
+        title={t("ui.bulletin_json")}
       >
-        <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-surface rounded-t-2xl h-[80%] flex flex-col">
-            <View className="flex-row items-center justify-between px-4 py-3 border-b border-secondary-light/30">
-              <Text className="text-base font-semibold text-text-primary">
-                {t("ui.bulletin_json")}
-              </Text>
-              <View className="flex-row items-center gap-1">
-                <TouchableOpacity
-                  onPress={handleCopyJson}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="copy-outline" size={22} color="#a89f85" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setShowJsonModal(false)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="close" size={24} color="#a89f85" />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <ScrollView
-              className="flex-1 px-4 py-3"
-              contentContainerStyle={{ paddingBottom: 16 }}
-            >
-              <Text
-                className="text-xs font-mono text-text-primary"
-                selectable
-                style={{
-                  padding: 12,
-                  backgroundColor: "#1a1a2e",
-                  borderRadius: 8,
-                  color: "#e0e0e0",
-                }}
-              >
-                {JSON.stringify(bulletin?.json ?? bulletin, null, 2)}
-              </Text>
-            </ScrollView>
-          </View>
+        <View className="flex-row items-center justify-end gap-2">
+          <TouchableOpacity
+            onPress={handleCopyJson}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="copy-outline" size={22} color="#a89f85" />
+          </TouchableOpacity>
         </View>
-      </Modal>
+        <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
+          <Text
+            className="text-xs font-mono text-text-primary"
+            selectable
+            style={{
+              padding: 12,
+              backgroundColor: "#1a1a2e",
+              borderRadius: 8,
+              color: "#e0e0e0",
+            }}
+          >
+            {JSON.stringify(bulletin?.json ?? bulletin, null, 2)}
+          </Text>
+        </ScrollView>
+      </BottomSheet>
     </>
   );
 }

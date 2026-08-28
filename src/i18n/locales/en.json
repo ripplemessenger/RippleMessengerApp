@@ -30,6 +30,7 @@
     "followed_bulletins": "Followed bulletins",
     "search_tags": "Search tags",
     "bookmarks": "Bookmarks",
+    "bulletin_detail": "Bulletin",
     "random_bulletin": "Random bulletin",
     "paste_bulletin": "Paste bulletin",
     "create_group": "Create group",
@@ -56,7 +57,9 @@
     "prev": "Prev",
     "next": "Next",
     "me": "Me",
-    "done": "Done"
+    "done": "Done",
+    "sessions_count": "{{count}} sessions",
+    "contacts_count": "{{count}} contacts"
   },
   "file": {
     "saved_to_download": "File saved to download directory",
@@ -501,10 +504,18 @@
     "member_count": "{{count}} members",
     "created_on": "Created {{date}}",
     "pending_invitations": "Pending Invitations ({{count}})",
-    "select_members": "Select Members ({{count}}/{{max}})",
+    "select_members": "Select Members",
     "decline_title": "Decline Invitation",
     "decline_confirm": "Decline the invitation to \"{{name}}\"?",
-    "delete_confirm": "Delete this group? This can only be done by the creator."
+    "delete_confirm": "Delete this group? This can only be done by the creator.",
+    "name": "Group Name",
+    "name_placeholder": "Enter group name",
+    "create": "Create",
+    "clear_all": "Clear All",
+    "accept": "Accept",
+    "decline": "Decline",
+    "invited_by": "Invited by {{name}}",
+    "members_suffix": " members"
   },
   "network": {
     "url": "URL:"

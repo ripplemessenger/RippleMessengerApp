@@ -299,12 +299,9 @@ export default function BulletinScreen({ navigation }) {
           />
         </View>
         <ConfirmButtonRow
-          onCancel={() => {
-            setShowTagSearch(false);
-            setSearchTag("");
-          }}
           onConfirm={handleTagSearchSubmit}
           confirmText={t("ui.search")}
+          showCancel={false}
         />
       </ModalShell>
     </View>

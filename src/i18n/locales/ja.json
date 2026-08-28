@@ -28,6 +28,7 @@
     "followed_bulletins": "フォロー中のブuletin",
     "search_tags": "タグを検索",
     "bookmarks": "ブックマーク",
+    "bulletin_detail": "公告",
     "random_bulletin": "ランダムブuletin",
     "paste_bulletin": "ブuletinを貼り付け",
     "create_group": "グループを作成",
@@ -52,7 +53,9 @@
     "contacts": "連絡先",
     "prev": "前へ",
     "next": "次へ",
-    "me": "自分"
+    "me": "自分",
+    "sessions_count": "{{count}} sessions",
+    "contacts_count": "{{count}} contacts"
   },
   "file": {
     "saved_to_download": "ファイルがダウンロードディレクトリに保存されました",
@@ -481,10 +484,18 @@
     "member_count": "{{count}}名のメンバー",
     "created_on": "{{date}} に作成",
     "pending_invitations": "保留中の招待 ({{count}})",
-    "select_members": "メンバーを選択 ({{count}}/{{max}})",
+    "select_members": "メンバーを選択",
     "decline_title": "招待を断る",
     "decline_confirm": "「{{name}}」への招待を断りますか？",
-    "delete_confirm": "このグループを削除しますか？作成者のみ操作可能です。"
+    "delete_confirm": "このグループを削除しますか？作成者のみ操作可能です。",
+    "name": "グループ名",
+    "name_placeholder": "グループ名を入力",
+    "create": "作成",
+    "clear_all": "すべてクリア",
+    "accept": "受ける",
+    "decline": "断る",
+    "invited_by": "招待者：{{name}}",
+    "members_suffix": " 人"
   },
   "network": {
     "url": "URL:"

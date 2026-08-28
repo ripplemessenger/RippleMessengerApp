@@ -5,15 +5,17 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Modal,
   TextInput,
   FlatList,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { ACCENT } from "../lib/theme";
+import { ACCENT, ICON_MUTED } from "../lib/theme";
 import { formatTime, shortenAddress } from "../lib/format";
+import ModalShell from "./common/ModalShell";
+import ConfirmButtonRow from "./common/ConfirmButtonRow";
 
 import { selectGroupData, selectUserTabGroup } from "../selectors";
 import { GroupMemberMax } from "../lib/MessengerConst";
@@ -33,6 +35,7 @@ import {
  */
 export default function GroupManagementTab() {
   const { t } = useTranslation();
+  const navigation = useNavigation();
   const dispatch = useDispatch();
   const { GroupList, GroupRequestList } = useSelector(selectGroupData);
   const { ContactList: userContacts } = useSelector(selectUserTabGroup);
@@ -204,130 +207,110 @@ export default function GroupManagementTab() {
 
   return (
     <View className="flex-1 gap-4 bg-surface">
-      {/* Title */}
-      <View className="px-5 pt-6 pb-2">
-        <Text className="text-3xl font-bold text-text-primary text-center">
+      {/* Header */}
+      <View className="flex-row items-center px-3 py-2 bg-primary/5 border-b border-secondary-light/30">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.6}
+        >
+          <Ionicons name="arrow-back" size={24} color={ICON_MUTED} />
+        </TouchableOpacity>
+        <Text
+          className="text-lg font-semibold text-text-primary flex-1 ml-2"
+          numberOfLines={1}
+        >
           {t("setting.my_groups")}
         </Text>
       </View>
 
       {/* Create Group Modal */}
-      <Modal
+      <ModalShell
         visible={showCreateModal}
-        transparent
-        animationType="slide"
-        onRequestClose={closeCreateModal}
+        onClose={closeCreateModal}
+        title={t("common.create_group")}
       >
-        <View className="flex-1 bg-black/50 justify-center px-6">
-          <View
-            className="bg-surface-card rounded-2xl border border-secondary-light overflow-hidden"
-            style={{ maxHeight: "80%" }}
-          >
-            {/* Modal header */}
-            <View className="p-4 border-b border-secondary-light">
-              <Text className="text-xl font-semibold text-text-primary text-center">
-                Create Group
-              </Text>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Group name input */}
-              <View className="p-4 gap-1">
-                <Text className="text-sm text-text-secondary">Group Name</Text>
-                <TextInput
-                  value={groupName}
-                  onChangeText={setGroupName}
-                  placeholder="Enter group name"
-                  placeholderTextColor="#9a9590"
-                  className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm"
-                />
-              </View>
-
-              {/* Member count indicator */}
-              <View className="px-4 pt-2 flex-row items-center justify-between">
-                <Text className="text-sm text-text-secondary">
-                  Select Members ({selectedMembers.length}/{GroupMemberMax})
-                </Text>
-                {selectedMembers.length > 0 && (
-                  <TouchableOpacity onPress={() => setSelectedMembers([])}>
-                    <Text className="text-xs text-status-error">Clear All</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* Member selection list */}
-              <View className="px-4 py-2">
-                {(userContacts || []).length > 0 ? (
-                  (userContacts || []).map((contact) => {
-                    const isSelected = selectedMembers.includes(
-                      contact.address,
-                    );
-                    return (
-                      <TouchableOpacity
-                        key={contact.address}
-                        onPress={() => onToggleMemberWithSaga(contact.address)}
-                        className={`flex-row items-center gap-3 py-3 px-2 rounded-xl ${
-                          isSelected ? "bg-primary/10" : ""
-                        }`}
-                      >
-                        <View
-                          className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
-                            isSelected
-                              ? "border-primary bg-primary"
-                              : "border-text-secondary/40"
-                          }`}
-                        >
-                          {isSelected && (
-                            <Ionicons name="checkmark" size={14} color="#fff" />
-                          )}
-                        </View>
-                        <Text className="text-sm text-text-primary flex-1">
-                          {contact.nickname || "Unknown"}
-                        </Text>
-                        <Text className="text-xs font-mono text-text-secondary/50">
-                          {shortenAddress(contact.address)}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })
-                ) : (
-                  <View className="py-6 items-center">
-                    <Ionicons
-                      name="people-outline"
-                      size={32}
-                      color="#9a9590"
-                      opacity={0.4}
-                    />
-                    <Text className="text-sm text-text-secondary/60 mt-2">
-                      No contacts available to add
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </ScrollView>
-
-            {/* Modal footer */}
-            <View className="p-4 flex-row gap-3 border-t border-secondary-light">
-              <TouchableOpacity
-                onPress={closeCreateModal}
-                className="flex-1 py-3 rounded-xl border border-secondary-light items-center"
-              >
-                <Text className="text-base font-medium text-text-secondary">
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleCreateGroup}
-                className="flex-1 bg-primary py-3 rounded-xl items-center"
-              >
-                <Text className="text-base font-semibold text-text-primary">
-                  Create
-                </Text>
-              </TouchableOpacity>
-            </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{ maxHeight: "60%" }}
+        >
+          <View className="gap-1">
+            <Text className="text-sm text-text-secondary">
+              {t("group.name")}
+            </Text>
+            <TextInput
+              value={groupName}
+              onChangeText={setGroupName}
+              placeholder={t("group.name_placeholder")}
+              placeholderTextColor="#9a9590"
+              className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm"
+            />
           </View>
-        </View>
-      </Modal>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm text-text-secondary">
+              {t("group.select_members")} ({selectedMembers.length}/
+              {GroupMemberMax})
+            </Text>
+            {selectedMembers.length > 0 && (
+              <TouchableOpacity onPress={() => setSelectedMembers([])}>
+                <Text className="text-xs text-status-error">
+                  {t("group.clear_all")}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <View>
+            {(userContacts || []).length > 0 ? (
+              (userContacts || []).map((contact) => {
+                const isSelected = selectedMembers.includes(contact.address);
+                return (
+                  <TouchableOpacity
+                    key={contact.address}
+                    onPress={() => onToggleMemberWithSaga(contact.address)}
+                    className={`flex-row items-center gap-3 py-3 px-2 rounded-xl ${
+                      isSelected ? "bg-primary/10" : ""
+                    }`}
+                  >
+                    <View
+                      className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
+                        isSelected
+                          ? "border-primary bg-primary"
+                          : "border-text-secondary/40"
+                      }`}
+                    >
+                      {isSelected && (
+                        <Ionicons name="checkmark" size={14} color="#fff" />
+                      )}
+                    </View>
+                    <Text className="text-sm text-text-primary flex-1">
+                      {contact.nickname || t("common.unknown")}
+                    </Text>
+                    <Text className="text-xs font-mono text-text-secondary/50">
+                      {shortenAddress(contact.address)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <View className="py-6 items-center">
+                <Ionicons
+                  name="people-outline"
+                  size={32}
+                  color="#9a9590"
+                  opacity={0.4}
+                />
+                <Text className="text-sm text-text-secondary/60 mt-2">
+                  {t("group.no_contacts")}
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+        <ConfirmButtonRow
+          onConfirm={handleCreateGroup}
+          confirmText={t("group.create")}
+          showCancel={false}
+        />
+      </ModalShell>
 
       {/* Pending Invitations */}
       {GroupRequestList.length > 0 && (

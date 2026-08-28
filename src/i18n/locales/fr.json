@@ -28,6 +28,7 @@
     "followed_bulletins": "Bulletins suivis",
     "search_tags": "Rechercher des tags",
     "bookmarks": "Signets",
+    "bulletin_detail": "Bulletin",
     "random_bulletin": "Bulletin aléatoire",
     "paste_bulletin": "Coller un bulletin",
     "create_group": "Créer un groupe",
@@ -52,7 +53,9 @@
     "contacts": "Contacts",
     "prev": "Préc.",
     "next": "Suiv.",
-    "me": "Moi"
+    "me": "Moi",
+    "sessions_count": "{{count}} sessions",
+    "contacts_count": "{{count}} contacts"
   },
   "file": {
     "saved_to_download": "Fichier enregistré dans le répertoire de téléchargement",
@@ -481,10 +484,18 @@
     "member_count": "{{count}} membres",
     "created_on": "Créé le {{date}}",
     "pending_invitations": "Invitations en attente ({{count}})",
-    "select_members": "Sélectionner des membres ({{count}}/{{max}})",
+    "select_members": "Sélectionner des membres",
     "decline_title": "Refuser l'invitation",
     "decline_confirm": "Refuser l'invitation à « {{name}} » ?",
-    "delete_confirm": "Supprimer ce groupe ? Seul le créateur peut le faire."
+    "delete_confirm": "Supprimer ce groupe ? Seul le créateur peut le faire.",
+    "name": "Nom du groupe",
+    "name_placeholder": "Saisir le nom du groupe",
+    "create": "Créer",
+    "clear_all": "Tout effacer",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "invited_by": "Invité par {{name}}",
+    "members_suffix": " membres"
   },
   "network": {
     "url": "URL :"

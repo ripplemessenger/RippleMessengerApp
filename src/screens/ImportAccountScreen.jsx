@@ -25,7 +25,9 @@ export default function ImportAccountScreen({ navigation }) {
 
   // Validate seed as user types - derive address if valid
   const handleSeedChange = (value) => {
-    const trimmed = value.trim();
+    // Strip null bytes and other non-printable chars from clipboard paste
+    const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, "");
+    const trimmed = cleaned.trim();
     setSeed(trimmed);
     setAddress("");
     setError(null);
@@ -36,7 +38,12 @@ export default function ImportAccountScreen({ navigation }) {
       const wallet = getWallet(trimmed);
       setAddress(wallet.classicAddress);
     } catch (e) {
-      Logger.debug("[ImportAccount] invalid seed:", e);
+      Logger.error(
+        "[ImportAccount] invalid seed:",
+        e.message || String(e),
+        "input:",
+        trimmed.substring(0, 10) + "...",
+      );
       setError(t("auth.invalid_seed"));
     }
   };

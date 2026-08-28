@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, FlatList, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  RefreshControl,
+  TouchableOpacity,
+} from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
@@ -8,7 +14,7 @@ import BulletinCard from "./BulletinCard";
 import EmptyState from "../common/EmptyState";
 import ListFooter from "../common/ListFooter";
 import { selectMessengerConnStatus } from "../../selectors";
-import { ACCENT } from "../../lib/theme";
+import { ACCENT, ICON_MUTED } from "../../lib/theme";
 
 /**
  * BulletinListScreen — generic paginated/flat bulletin list.
@@ -91,24 +97,6 @@ export default function BulletinListScreen({
     }
   }, [bulletins, page, paginated]);
 
-  // Set header with back button
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => (
-        <Text
-          onPress={() => navigation.goBack()}
-          className="text-base font-semibold text-primary"
-          style={{ paddingLeft: 8 }}
-        >
-          ← {t("common.back")}
-        </Text>
-      ),
-      title: navTitle || title,
-      headerStyle: { backgroundColor: ACCENT },
-      headerTintColor: "#1a1a2e",
-    });
-  }, [navigation, title, navTitle]);
-
   const handleRefresh = useCallback(() => {
     if (refreshing || !guardOk) return;
     setRefreshing(true);
@@ -175,11 +163,23 @@ export default function BulletinListScreen({
 
   return (
     <View className="flex-1 bg-surface">
-      {/* Header info */}
+      {/* Header */}
       <View className="px-4 py-3 bg-primary/5 border-b border-secondary-light/30">
         <View className="flex-row items-center gap-2">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.6}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="arrow-back" size={22} color={ICON_MUTED} />
+          </TouchableOpacity>
           <Ionicons name={icon} size={20} color={ACCENT} />
-          <Text className="text-lg font-bold text-text-primary">{title}</Text>
+          <Text
+            className="text-lg font-bold text-text-primary flex-1"
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
         </View>
         {headerExtra}
         <Text className="text-xs text-text-secondary/70 mt-1">

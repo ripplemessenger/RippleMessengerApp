@@ -5,14 +5,15 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Modal,
   TextInput,
   Switch,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { ACCENT } from "../lib/theme";
+import { ACCENT, ICON_MUTED } from "../lib/theme";
+import ModalShell from "./common/ModalShell";
+import ConfirmButtonRow from "./common/ConfirmButtonRow";
 
 import { selectServerNetworkData } from "../selectors";
 import {
@@ -83,9 +84,18 @@ export default function ServerManagementTab({ navigation }) {
 
   return (
     <View className="flex-1 gap-4 bg-surface">
-      {/* Title */}
-      <View className="px-5 pt-6 pb-2">
-        <Text className="text-3xl font-bold text-text-primary text-center">
+      {/* Header */}
+      <View className="flex-row items-center px-3 py-2 bg-primary/5 border-b border-secondary-light/30">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.6}
+        >
+          <Ionicons name="arrow-back" size={24} color={ICON_MUTED} />
+        </TouchableOpacity>
+        <Text
+          className="text-lg font-semibold text-text-primary flex-1 ml-2"
+          numberOfLines={1}
+        >
           {t("setting.servers")}
         </Text>
       </View>
@@ -217,64 +227,33 @@ export default function ServerManagementTab({ navigation }) {
       )}
 
       {/* Add Server Modal */}
-      <Modal
+      <ModalShell
         visible={showAddModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowAddModal(false)}
+        onClose={() => setShowAddModal(false)}
+        title={t("common.add_server")}
       >
-        <View className="flex-1 justify-center items-center bg-black/50 px-6">
-          <View className="bg-surface-card rounded-2xl p-6 w-full gap-4 border border-secondary-light">
-            <Text className="text-xl font-semibold text-text-primary text-center">
-              {t("common.add_server")}
-            </Text>
-            <View className="gap-1">
-              <Text className="text-sm text-text-secondary">
-                {t("ui.websocket_url")}
-              </Text>
-              <TextInput
-                value={newUrl}
-                onChangeText={setNewUrl}
-                placeholder="wss://example.com"
-                placeholderTextColor="#9a9590"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm font-mono"
-              />
-            </View>
-            <View className="flex-row gap-3 mt-2">
-              <TouchableOpacity
-                onPress={() => setShowAddModal(false)}
-                activeOpacity={0.7}
-                className="flex-1 py-3 rounded-xl border border-secondary-light items-center"
-              >
-                <Text className="text-base font-medium text-text-secondary">
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleAdd}
-                disabled={!newUrl.trim()}
-                activeOpacity={0.7}
-                className={`flex-1 py-3 rounded-xl items-center ${
-                  newUrl.trim() ? "bg-primary" : "bg-primary/20"
-                }`}
-              >
-                <Text
-                  className={`text-base font-semibold ${
-                    newUrl.trim()
-                      ? "text-text-primary"
-                      : "text-text-secondary/50"
-                  }`}
-                >
-                  Add
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+        <View className="gap-1">
+          <Text className="text-sm text-text-secondary">
+            {t("ui.websocket_url")}
+          </Text>
+          <TextInput
+            value={newUrl}
+            onChangeText={setNewUrl}
+            placeholder="wss://example.com"
+            placeholderTextColor="#9a9590"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm font-mono"
+          />
         </View>
-      </Modal>
+        <ConfirmButtonRow
+          onConfirm={handleAdd}
+          confirmText={t("common.add")}
+          confirmDisabled={!newUrl.trim()}
+          showCancel={false}
+        />
+      </ModalShell>
     </View>
   );
 }

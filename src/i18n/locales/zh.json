@@ -28,6 +28,7 @@
     "followed_bulletins": "已关注的公告",
     "search_tags": "搜索标签",
     "bookmarks": "书签",
+    "bulletin_detail": "公告",
     "random_bulletin": "随机公告",
     "paste_bulletin": "粘贴公告",
     "create_group": "创建群组",
@@ -55,7 +56,9 @@
     "me": "我",
     "done": "完成",
     "unfollow": "取消关注",
-    "remove_friend": "删除好友"
+    "remove_friend": "删除好友",
+    "sessions_count": "{{count}} sessions",
+    "contacts_count": "{{count}} contacts"
   },
   "file": {
     "saved_to_download": "文件已保存到下载目录",
@@ -499,10 +502,18 @@
     "member_count": "{{count}} 名成员",
     "created_on": "创建于 {{date}}",
     "pending_invitations": "待处理邀请 ({{count}})",
-    "select_members": "选择成员 ({{count}}/{{max}})",
+    "select_members": "选择成员",
     "decline_title": "拒绝邀请",
     "decline_confirm": "确定拒绝加入「{{name}}」的邀请？",
-    "delete_confirm": "确定删除此群？仅创建者可操作。"
+    "delete_confirm": "确定删除此群？仅创建者可操作。",
+    "name": "群名称",
+    "name_placeholder": "输入群名称",
+    "create": "创建",
+    "clear_all": "清除全部",
+    "accept": "接受",
+    "decline": "拒绝",
+    "invited_by": "邀请人：{{name}}",
+    "members_suffix": " 人"
   },
   "network": {
     "url": "URL:"

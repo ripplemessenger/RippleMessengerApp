@@ -133,7 +133,23 @@ export default function ContactDetailScreen({ navigation, route }) {
 
   return (
     <ScrollView className="flex-1 bg-surface">
-      {/* Header: avatar + name + address */}
+      {/* Header */}
+      <View className="flex-row items-center px-3 py-2 bg-primary/5 border-b border-secondary-light/30">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.6}
+        >
+          <Ionicons name="arrow-back" size={24} color={ICON_MUTED} />
+        </TouchableOpacity>
+        <Text
+          className="text-lg font-semibold text-text-primary flex-1 ml-2"
+          numberOfLines={1}
+        >
+          {t("ui.contact")}
+        </Text>
+      </View>
+
+      {/* Hero: avatar + name + address */}
       <View className="items-center py-8 px-6">
         <AvatarImage address={address} nickname={contact.nickname} size={80} />
         <Text className="text-xl font-semibold text-text-primary mt-4">
@@ -270,9 +286,9 @@ export default function ContactDetailScreen({ navigation, route }) {
           className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm"
         />
         <ConfirmButtonRow
-          onCancel={() => setShowEditModal(false)}
           onConfirm={handleSaveNickname}
           confirmText={t("common.save")}
+          showCancel={false}
         />
       </ModalShell>
     </ScrollView>

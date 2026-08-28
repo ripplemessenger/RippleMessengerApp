@@ -28,6 +28,7 @@
     "followed_bulletins": "Boletins seguidos",
     "search_tags": "Buscar tags",
     "bookmarks": "Favoritos",
+    "bulletin_detail": "Boletim",
     "random_bulletin": "Boletim aleatório",
     "paste_bulletin": "Colar boletim",
     "create_group": "Criar grupo",
@@ -52,7 +53,9 @@
     "contacts": "Contatos",
     "prev": "Anterior",
     "next": "Próximo",
-    "me": "Eu"
+    "me": "Eu",
+    "sessions_count": "{{count}} sessions",
+    "contacts_count": "{{count}} contacts"
   },
   "file": {
     "saved_to_download": "Arquivo salvo no diretório de downloads",
@@ -481,10 +484,18 @@
     "member_count": "{{count}} membros",
     "created_on": "Criado em {{date}}",
     "pending_invitations": "Convites pendentes ({{count}})",
-    "select_members": "Selecionar membros ({{count}}/{{max}})",
+    "select_members": "Selecionar membros",
     "decline_title": "Recusar convite",
     "decline_confirm": "Recusar o convite para «{{name}}»?",
-    "delete_confirm": "Excluir este grupo? Apenas o criador pode fazer isso."
+    "delete_confirm": "Excluir este grupo? Apenas o criador pode fazer isso.",
+    "name": "Nome do grupo",
+    "name_placeholder": "Digite o nome do grupo",
+    "create": "Criar",
+    "clear_all": "Limpar tudo",
+    "accept": "Aceitar",
+    "decline": "Recusar",
+    "invited_by": "Convidado por {{name}}",
+    "members_suffix": " membros"
   },
   "network": {
     "url": "URL:"

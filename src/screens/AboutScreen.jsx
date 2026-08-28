@@ -8,8 +8,11 @@ import {
   Clipboard,
 } from "react-native";
 import { useDispatch } from "react-redux";
+import { useNavigation } from "@react-navigation/native";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { MasterAddress } from "../lib/MessengerConst";
+import { ICON_MUTED } from "../lib/theme";
 import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
 
 /**
@@ -41,6 +44,7 @@ const RULES = [
 export default function AboutScreen() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const navigation = useNavigation();
 
   const handleCopyAddress = useCallback(() => {
     Clipboard.setString(MasterAddress);
@@ -52,6 +56,22 @@ export default function AboutScreen() {
   }, [t, dispatch]);
   return (
     <ScrollView className="flex-1 bg-surface">
+      {/* Header */}
+      <View className="flex-row items-center px-3 py-2 bg-primary/5 border-b border-secondary-light/30">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.6}
+        >
+          <Ionicons name="arrow-back" size={24} color={ICON_MUTED} />
+        </TouchableOpacity>
+        <Text
+          className="text-lg font-semibold text-text-primary flex-1 ml-2"
+          numberOfLines={1}
+        >
+          {t("ui.about")}
+        </Text>
+      </View>
+
       <View className="px-6 py-8 gap-6">
         {/* Rules */}
         <View className="bg-surface-card rounded-2xl p-5 border border-secondary-light gap-3">

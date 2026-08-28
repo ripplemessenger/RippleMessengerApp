@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { dbAPI } from "../db";
@@ -41,6 +42,7 @@ const FILTER_OPTIONS = [
  */
 export default function BulletinManagementTab() {
   const { t } = useTranslation();
+  const navigation = useNavigation();
   const myAddress = useSelector(selectUserAddress);
 
   const [filter, setFilter] = useState("all");
@@ -383,9 +385,18 @@ export default function BulletinManagementTab() {
 
   return (
     <View className="flex-1 gap-3 bg-surface">
-      {/* Title */}
-      <View className="px-5 pt-6 pb-2">
-        <Text className="text-3xl font-bold text-text-primary text-center">
+      {/* Header */}
+      <View className="flex-row items-center px-3 py-2 bg-primary/5 border-b border-secondary-light/30">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.6}
+        >
+          <Ionicons name="arrow-back" size={24} color={ICON_MUTED} />
+        </TouchableOpacity>
+        <Text
+          className="text-lg font-semibold text-text-primary flex-1 ml-2"
+          numberOfLines={1}
+        >
           {t("setting.bulletin_cache")}
         </Text>
       </View>

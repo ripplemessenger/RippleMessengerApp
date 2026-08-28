@@ -599,14 +599,6 @@ export default function SettingScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity
-          onPress={() => setShowSoundSheet(false)}
-          className="mt-5 py-3 rounded-xl border border-secondary-light items-center"
-        >
-          <Text className="text-base font-medium text-text-secondary">
-            {t("common.cancel")}
-          </Text>
-        </TouchableOpacity>
       </BottomSheet>
 
       {/* Language bottom sheet */}
@@ -638,14 +630,6 @@ export default function SettingScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity
-          onPress={() => setShowLanguageSheet(false)}
-          className="mt-5 py-3 rounded-xl border border-secondary-light items-center"
-        >
-          <Text className="text-base font-medium text-text-secondary">
-            {t("common.cancel")}
-          </Text>
-        </TouchableOpacity>
       </BottomSheet>
 
       {/* Nickname edit modal */}
@@ -665,9 +649,9 @@ export default function SettingScreen({ navigation }) {
           autoFocus
         />
         <ConfirmButtonRow
-          onCancel={() => setShowNicknameModal(false)}
           onConfirm={handleNicknameSave}
           confirmText={t("common.save")}
+          showCancel={false}
         />
       </ModalShell>
     </View>

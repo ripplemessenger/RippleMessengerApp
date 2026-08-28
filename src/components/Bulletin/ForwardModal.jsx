@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
-  Modal,
   View,
   Text,
   FlatList,
@@ -11,6 +10,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import BottomSheet from "../common/BottomSheet";
 
 import { ForwardBulletin } from "../../store/sagas/messenger.actions";
 import { setForwardFlag } from "../../store/slices/MessengerSlice";
@@ -117,84 +117,66 @@ export default function ForwardModal({ visible }) {
   );
 
   return (
-    <Modal
+    <BottomSheet
       visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
+      onClose={handleClose}
+      title={t("ui.forward_bulletin")}
     >
-      <View className="flex-1 bg-black/45 justify-end">
-        {/* Drag indicator */}
-        <View className="w-[40px] h-[5px] bg-text-secondary/30 rounded-full self-center mt-3 mb-2" />
-
-        <View className="bg-surface-card rounded-t-3xl max-h-[85%] pb-6 border-t border-secondary-light">
-          {/* Header */}
-          <View className="flex-row items-center justify-between px-5 pb-3 border-b border-secondary-light/20">
-            <Text className="text-lg font-bold text-text-primary">
-              {t("ui.forward_bulletin")}
-            </Text>
-            <TouchableOpacity onPress={handleClose} hitSlop={10}>
-              <Ionicons name="close" size={24} color="#999" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Search input */}
-          <View className="flex-row items-center mx-5 mt-3 bg-surface rounded-lg px-3 py-2 border border-secondary-light/30">
-            <Ionicons name="search" size={16} color="#a89f85" />
-            <TextInput
-              placeholder={t("ui.search_contacts")}
-              placeholderTextColor="#a89f85"
-              value={searchText}
-              onChangeText={setSearchText}
-              className="flex-1 ml-2 text-sm text-text-primary py-0.5"
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setSearchText("")}
-                activeOpacity={0.6}
-              >
-                <Ionicons name="close-circle" size={18} color="#a89f85" />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Friends list */}
-          <View className="mt-3 px-2">
-            {loading ? (
-              <View className="items-center py-16">
-                <ActivityIndicator size="large" color={ACCENT} />
-                <Text className="text-sm text-text-secondary mt-3">
-                  {t("ui.loading_contacts")}
-                </Text>
-              </View>
-            ) : filteredFriends.length > 0 ? (
-              <FlatList
-                data={filteredFriends}
-                renderItem={renderFriend}
-                keyExtractor={(item) =>
-                  item.remote || `friend-${++_forwardKeyCounter}`
-                }
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 10 }}
-              />
-            ) : (
-              <View className="items-center py-16">
-                <Ionicons name="people-outline" size={48} color="#d4c8a8" />
-                <Text className="text-base text-text-primary mt-3 font-semibold">
-                  {searchText.trim()
-                    ? t("ui.no_contacts_available")
-                    : t("ui.no_contacts")}
-                </Text>
-                <Text className="text-xs text-text-secondary/60 mt-1 px-8 text-center">
-                  {searchText.trim()
-                    ? t("ui.try_different_search")
-                    : t("ui.add_friends_first")}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
+      {/* Search input */}
+      <View className="flex-row items-center bg-surface rounded-lg px-3 py-2 border border-secondary-light/30">
+        <Ionicons name="search" size={16} color="#a89f85" />
+        <TextInput
+          placeholder={t("ui.search_contacts")}
+          placeholderTextColor="#a89f85"
+          value={searchText}
+          onChangeText={setSearchText}
+          className="flex-1 ml-2 text-sm text-text-primary py-0.5"
+        />
+        {searchText.length > 0 && (
+          <TouchableOpacity
+            onPress={() => setSearchText("")}
+            activeOpacity={0.6}
+          >
+            <Ionicons name="close-circle" size={18} color="#a89f85" />
+          </TouchableOpacity>
+        )}
       </View>
-    </Modal>
+
+      {/* Friends list */}
+      <View>
+        {loading ? (
+          <View className="items-center py-16">
+            <ActivityIndicator size="large" color={ACCENT} />
+            <Text className="text-sm text-text-secondary mt-3">
+              {t("ui.loading_contacts")}
+            </Text>
+          </View>
+        ) : filteredFriends.length > 0 ? (
+          <FlatList
+            data={filteredFriends}
+            renderItem={renderFriend}
+            keyExtractor={(item) =>
+              item.remote || `friend-${++_forwardKeyCounter}`
+            }
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 10 }}
+          />
+        ) : (
+          <View className="items-center py-16">
+            <Ionicons name="people-outline" size={48} color="#d4c8a8" />
+            <Text className="text-base text-text-primary mt-3 font-semibold">
+              {searchText.trim()
+                ? t("ui.no_contacts_available")
+                : t("ui.no_contacts")}
+            </Text>
+            <Text className="text-xs text-text-secondary/60 mt-1 px-8 text-center">
+              {searchText.trim()
+                ? t("ui.try_different_search")
+                : t("ui.add_friends_first")}
+            </Text>
+          </View>
+        )}
+      </View>
+    </BottomSheet>
   );
 }

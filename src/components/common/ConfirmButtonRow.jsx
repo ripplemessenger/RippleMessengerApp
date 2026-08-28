@@ -19,8 +19,29 @@ export default function ConfirmButtonRow({
   cancelText,
   confirmText,
   confirmDisabled = false,
+  showCancel = true,
 }) {
   const { t } = useTranslation();
+  if (!showCancel) {
+    return (
+      <TouchableOpacity
+        onPress={onConfirm}
+        disabled={confirmDisabled}
+        activeOpacity={0.7}
+        className={`mt-2 py-3 rounded-xl items-center ${
+          confirmDisabled ? "bg-primary/20" : "bg-primary"
+        }`}
+      >
+        <Text
+          className={`text-base font-semibold ${
+            confirmDisabled ? "text-text-secondary/50" : "text-text-primary"
+          }`}
+        >
+          {confirmText}
+        </Text>
+      </TouchableOpacity>
+    );
+  }
   return (
     <View className="flex-row gap-3 mt-2">
       <TouchableOpacity

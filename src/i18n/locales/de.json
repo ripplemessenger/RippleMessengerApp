@@ -28,6 +28,7 @@
     "followed_bulletins": "Gefolgte Bulletins",
     "search_tags": "Tags suchen",
     "bookmarks": "Lesezeichen",
+    "bulletin_detail": "Bulletin",
     "random_bulletin": "Zufälliges Bulletin",
     "paste_bulletin": "Bulletin einfügen",
     "create_group": "Gruppe erstellen",
@@ -52,7 +53,9 @@
     "contacts": "Kontakte",
     "prev": "Zurück",
     "next": "Weiter",
-    "me": "Ich"
+    "me": "Ich",
+    "sessions_count": "{{count}} sessions",
+    "contacts_count": "{{count}} contacts"
   },
   "file": {
     "saved_to_download": "Datei im Download-Verzeichnis gespeichert",
@@ -481,10 +484,18 @@
     "member_count": "{{count}} Mitglieder",
     "created_on": "Erstellt am {{date}}",
     "pending_invitations": "Ausstehende Einladungen ({{count}})",
-    "select_members": "Mitglieder auswählen ({{count}}/{{max}})",
+    "select_members": "Mitglieder auswählen",
     "decline_title": "Einladung ablehnen",
     "decline_confirm": "Einladung zu „{{name}}“ ablehnen?",
-    "delete_confirm": "Diese Gruppe löschen? Nur der Ersteller kann dies tun."
+    "delete_confirm": "Diese Gruppe löschen? Nur der Ersteller kann dies tun.",
+    "name": "Gruppenname",
+    "name_placeholder": "Gruppenname eingeben",
+    "create": "Erstellen",
+    "clear_all": "Alle löschen",
+    "accept": "Akzeptieren",
+    "decline": "Ablehnen",
+    "invited_by": "Eingeladen von {{name}}",
+    "members_suffix": " Mitglieder"
   },
   "network": {
     "url": "URL:"

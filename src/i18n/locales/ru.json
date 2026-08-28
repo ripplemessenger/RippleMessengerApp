@@ -28,6 +28,7 @@
     "followed_bulletins": "Подписки на бюллетени",
     "search_tags": "Поиск тегов",
     "bookmarks": "Закладки",
+    "bulletin_detail": "Бюллетень",
     "random_bulletin": "Случайный бюллетень",
     "paste_bulletin": "Вставить бюллетень",
     "create_group": "Создать группу",
@@ -52,7 +53,9 @@
     "contacts": "Контакты",
     "prev": "Назад",
     "next": "Вперёд",
-    "me": "Я"
+    "me": "Я",
+    "sessions_count": "{{count}} sessions",
+    "contacts_count": "{{count}} contacts"
   },
   "file": {
     "saved_to_download": "Файл сохранён в папку загрузок",
@@ -481,10 +484,18 @@
     "member_count": "{{count}} участн.",
     "created_on": "Создано {{date}}",
     "pending_invitations": "Ожидающие приглашения ({{count}})",
-    "select_members": "Выбор участников ({{count}}/{{max}})",
+    "select_members": "Выбрать участников",
     "decline_title": "Отклонить приглашение",
     "decline_confirm": "Отклонить приглашение в «{{name}}»?",
-    "delete_confirm": "Удалить группу? Только создатель может это сделать."
+    "delete_confirm": "Удалить группу? Только создатель может это сделать.",
+    "name": "Название группы",
+    "name_placeholder": "Введите название группы",
+    "create": "Создать",
+    "clear_all": "Очистить всё",
+    "accept": "Принять",
+    "decline": "Отклонить",
+    "invited_by": "Пригласил(а): {{name}}",
+    "members_suffix": " участников"
   },
   "network": {
     "url": "URL:"

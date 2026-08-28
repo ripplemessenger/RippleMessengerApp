@@ -114,10 +114,10 @@ export default function TempLoginModal({ visible, onClose, onLogin }) {
 
       {/* Buttons */}
       <ConfirmButtonRow
-        onCancel={onClose}
         onConfirm={handleTempLogin}
         confirmText={t("auth.login_temporarily")}
         confirmDisabled={seed.trim() === "" || error !== null}
+        showCancel={false}
       />
     </ModalShell>
   );
