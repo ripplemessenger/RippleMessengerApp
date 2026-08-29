@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,18 @@ export default function GenerateAccountScreen({ navigation }) {
   const dispatch = useDispatch();
   const [seed, setSeed] = useState("");
   const [address, setAddress] = useState("");
+
+  // Auto-generate on mount
+  useEffect(() => {
+    try {
+      const gen = generateWallet();
+      setSeed(gen.seed);
+      const wallet = getWallet(gen.seed);
+      setAddress(wallet.classicAddress);
+    } catch (e) {
+      // Silently fail — user can tap Generate button to retry
+    }
+  }, []);
 
   const handleGenerate = () => {
     try {

@@ -154,7 +154,6 @@
     "sound_blip": "Blip",
     "sound_none": "None",
     "contact": "Contact",
-    "group": "Groupe",
     "server_network": "Réseau de serveurs",
     "storage": "Gestion du stockage",
     "general": "Paramètres généraux",
@@ -234,7 +233,6 @@
     "bookmarked_posts": "Bulletins marqués",
     "followed_posts": "Bulletins suivis",
     "random_posts": "Bulletins aléatoires",
-    "my_groups": "Mes groupes",
     "servers": "Serveurs",
     "connected_servers": "Serveurs connectés",
     "not_connected": "Non connecté",
@@ -473,13 +471,15 @@
     "sum_chat": "Fichiers de chat :",
     "sum_avatars": "Avatars :",
     "sum_orphaned": "Orphelins :",
-    "clear_orphaned_count": "Nettoyer les orphelins ({{count}})"
+    "clear_orphaned_count": "Nettoyer les orphelins ({{count}})",
+    "cat_private_chat": "Chat",
+    "cat_group_chat": "Groupe"
   },
   "group": {
     "group_name": "Nom du groupe :",
     "deleted": "Ce groupe a été supprimé, l’envoi est désactivé",
     "name_required": "Veuillez saisir un nom de groupe.",
-    "delete_title": "Supprimer le groupe",
+    "delete_title": "Dissoudre le groupe",
     "unnamed": "Groupe sans nom",
     "member_count": "{{count}} membres",
     "created_on": "Créé le {{date}}",
@@ -487,7 +487,7 @@
     "select_members": "Sélectionner des membres",
     "decline_title": "Refuser l'invitation",
     "decline_confirm": "Refuser l'invitation à « {{name}} » ?",
-    "delete_confirm": "Supprimer ce groupe ? Seul le créateur peut le faire.",
+    "delete_confirm": "Après dissolution, le groupe sera fermé et plus aucun message ne pourra être envoyé. L'historique est conservé. Seul le créateur peut le faire.",
     "name": "Nom du groupe",
     "name_placeholder": "Saisir le nom du groupe",
     "create": "Créer",
@@ -495,7 +495,10 @@
     "accept": "Accepter",
     "decline": "Refuser",
     "invited_by": "Invité par {{name}}",
-    "members_suffix": " membres"
+    "members_suffix": " membres",
+    "disbanded": "Groupe dissous",
+    "clear_data_title": "Effacer les données du groupe",
+    "clear_data_confirm": "Cela supprimera tous les messages de ce groupe et l'enlèvera de votre liste de sessions. Cette action est irréversible et n'affecte pas les autres membres. Continuer ?"
   },
   "network": {
     "url": "URL :"

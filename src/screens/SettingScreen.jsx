@@ -482,19 +482,6 @@ export default function SettingScreen({ navigation }) {
           />
         </View>
 
-        {/* Groups */}
-        <SectionHeader
-          icon="people-circle-outline"
-          label={t("setting.group")}
-        />
-        <View className="bg-surface-card rounded-2xl mx-4 border border-secondary-light overflow-hidden">
-          <NavRow
-            icon="people-outline"
-            label={t("setting.my_groups")}
-            onPress={() => navigation.navigate("GroupManagement")}
-          />
-        </View>
-
         {/* Servers */}
         <SectionHeader icon="earth-outline" label={t("setting.servers")} />
         <View className="bg-surface-card rounded-2xl mx-4 border border-secondary-light overflow-hidden">

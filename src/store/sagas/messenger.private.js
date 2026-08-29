@@ -55,6 +55,9 @@ export function* SyncPrivateMessage({ payload }) {
       pair_sequence = current_pair_msg.sequence;
     }
 
+    Logger.info(
+      `[DIAG-PRIV] SyncPrivateMessage remote=${payload.remote} self_seq=${self_sequence} pair_seq=${pair_sequence}`,
+    );
     const private_sync_request = yield call(() =>
       mgAPI.genPrivateMessageSync(
         seed,
@@ -64,6 +67,7 @@ export function* SyncPrivateMessage({ payload }) {
       ),
     );
     yield call(SendMessage, { key: payload.key, msg: private_sync_request });
+    Logger.info(`[DIAG-PRIV] SyncPrivateMessage SENT to server`);
   } catch (e) {
     Logger.error("[SyncPrivateMessage] failed:", e.message);
   }
@@ -187,7 +191,32 @@ export function* LoadPrivateSession({ payload }) {
         ecdh_sequence,
       ),
     );
+    let ecdh_detail = "null";
+    if (ecdh !== null) {
+      let sj = {};
+      try {
+        sj = JSON.parse(ecdh.self_json);
+      } catch (e) {
+        sj = { parse_error: e.message };
+      }
+      ecdh_detail = `seq=${ecdh.sequence} aes_key=${ecdh.aes_key === null ? "null" : "ready"} self_json.Seq=${sj.Sequence} self_json.Pair=${JSON.stringify(sj.Pair)} self_json.To=${sj.To}`;
+    }
+    Logger.info(
+      `[DIAG-PRIV] LoadPrivateSession remote=${pair_address} cur_ecdh_seq=${ecdh_sequence} local=[${ecdh_detail}]`,
+    );
+    if (ecdh !== null) {
+      let sj_str = "?";
+      try {
+        sj_str = JSON.stringify(ecdh.self_json);
+      } catch (e) {
+        sj_str = "stringify_error:" + e.message;
+      }
+      Logger.info(
+        `[DIAG-PRIV] self_json OBJ (first 400): ${sj_str.substring(0, 400)}`,
+      );
+    }
     if (ecdh === null) {
+      Logger.info(`[DIAG-PRIV] -> InitHandshake (no local handshake)`);
       yield call(InitHandshake, {
         ecdh_sequence: ecdh_sequence,
         pair_address: pair_address,
@@ -195,21 +224,25 @@ export function* LoadPrivateSession({ payload }) {
     } else {
       if (ecdh.aes_key !== null) {
         session.aes_key = ecdh.aes_key;
+        Logger.info(`[DIAG-PRIV] -> SyncPrivateMessage (aes_key ready)`);
         yield call(SyncPrivateMessage, {
           payload: { local: self_address, remote: pair_address },
         });
       } else {
+        Logger.info(`[DIAG-PRIV] -> resend handshake self_json`);
         yield fork(SendMessage, { msg: JSON.stringify(ecdh.self_json) });
       }
     }
 
-    let current_msg = yield call(() =>
+    let all_msgs = yield call(() =>
       dbAPI.getPrivateSession(self_address, pair_address),
     );
-    current_msg =
-      current_msg && current_msg.length > 0
-        ? current_msg[current_msg.length - 1]
-        : null;
+    // Only use the user's own messages for sequence/hash (per-sender sequence)
+    let my_msgs =
+      all_msgs && all_msgs.length > 0
+        ? all_msgs.filter((m) => m.sour === self_address)
+        : [];
+    let current_msg = my_msgs.length > 0 ? my_msgs[my_msgs.length - 1] : null;
     if (current_msg !== null) {
       session.current_sequence = current_msg.sequence;
       session.current_hash = current_msg.hash;
@@ -338,8 +371,21 @@ export function* RefreshPrivateMessageList() {
       return;
     }
     const self_address = yield select((state) => state.User.Address);
-    const current_msg_list = yield call(() =>
+    const raw_list = yield call(() =>
       dbAPI.getPrivateSession(self_address, CurrentSession.remote),
+    );
+    const current_msg_list = raw_list.map((m) => {
+      if (m.is_object && typeof m.content === "string") {
+        try {
+          m.content = JSON.parse(m.content);
+        } catch {
+          /* ignore */
+        }
+      }
+      return m;
+    });
+    Logger.info(
+      `[DIAG-PRIV] RefreshPrivateMessageList remote=${CurrentSession.remote} count=${current_msg_list.length}`,
     );
     yield put(setCurrentSessionMessageList(current_msg_list));
   } catch (e) {

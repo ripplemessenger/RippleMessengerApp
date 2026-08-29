@@ -86,11 +86,8 @@ export default function LoginScreen({ navigation }) {
     <ScrollView className="flex-1 bg-surface">
       <View className="px-6 py-20 items-center">
         {/* App Title */}
-        <Text className="text-4xl font-bold text-text-primary mb-2">
+        <Text className="text-4xl font-bold text-text-primary mb-8">
           {t("auth.app_name")}
-        </Text>
-        <Text className="text-base text-text-secondary mb-8">
-          {t("auth.tagline")}
         </Text>
 
         {/* Divider */}

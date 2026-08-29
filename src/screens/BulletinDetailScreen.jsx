@@ -587,11 +587,6 @@ export default function BulletinDetailScreen({ route, navigation }) {
                       activeOpacity={0.6}
                       className="flex-row items-center gap-1 px-3 py-1 rounded-full bg-primary/10"
                     >
-                      <Ionicons
-                        name={isQuoteObj ? "link" : "quote"}
-                        size={14}
-                        color={ACCENT}
-                      />
                       <Text className="text-sm text-primary-dark">
                         {typeof q === "string"
                           ? q

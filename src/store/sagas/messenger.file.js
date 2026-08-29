@@ -7,6 +7,34 @@
  */
 
 import RNFS from "react-native-fs";
+import { NativeModules } from "react-native";
+
+const RMMediaStore = NativeModules.RMMediaStore;
+
+const MIME_MAP = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  bmp: "image/bmp",
+  pdf: "application/pdf",
+  txt: "text/plain",
+  html: "text/html",
+  zip: "application/zip",
+  mp4: "video/mp4",
+  mp3: "audio/mpeg",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+};
+function guessMimeType(ext) {
+  return (
+    MIME_MAP[(ext || "").replace(".", "").toLowerCase()] ||
+    "application/octet-stream"
+  );
+}
 
 import { call, put, select } from "redux-saga/effects";
 
@@ -119,14 +147,15 @@ export function* SaveBulletinFile({ payload }) {
   try {
     const file = yield call(() => dbAPI.getFileByHash(payload.hash));
     if (file && file.is_saved) {
-      // File is fully downloaded — copy to shared location
       const sourcePath = fileService.getFileFullPath(payload.hash);
-      const content = yield call(() => fileService.readFile(sourcePath));
-      const destPath = `${RNFS.DocumentDirectoryPath}/ripplemessenger/files/${payload.name}${payload.ext}`;
-      yield call(() => fileService.writeFile(destPath, content));
+      const displayName = `${payload.name}${payload.ext}`;
+      const mimeType = guessMimeType(payload.ext);
+      yield call(() =>
+        RMMediaStore.saveToGallery(sourcePath, displayName, mimeType),
+      );
       yield put(
         setFlashNoticeMessage({
-          message: "File saved to documents",
+          message: "File saved to gallery",
           duration: 2000,
         }),
       );
@@ -161,8 +190,14 @@ export function* SaveBulletinFile({ payload }) {
  */
 export function* FetchPrivateChatFile({ payload }) {
   try {
+    Logger.info(
+      `[FetchPrivateChatFile] START hash=${payload.hash} size=${payload.size} remote=${payload.remote}`,
+    );
     const seed = yield select((state) => state.User.Seed);
-    if (!seed) return;
+    if (!seed) {
+      Logger.info("[FetchPrivateChatFile] ABORT: no seed");
+      return;
+    }
 
     const self_address = yield select((state) => state.User.Address);
     const ehash = PrivateFileEHash(self_address, payload.remote, payload.hash);
@@ -198,6 +233,9 @@ export function* FetchPrivateChatFile({ payload }) {
     }
 
     file = yield call(() => dbAPI.getFileByHash(payload.hash));
+    Logger.info(
+      `[FetchPrivateChatFile] file=${file ? `is_saved=${file.is_saved} cursor=${file.chunk_cursor}/${file.chunk_length}` : "null"}`,
+    );
     if (file && !file.is_saved) {
       const timestamp = Date.now();
       const ecdh_sequence = DHSequence(
@@ -213,6 +251,9 @@ export function* FetchPrivateChatFile({ payload }) {
           DefaultPartition,
           ecdh_sequence,
         ),
+      );
+      Logger.info(
+        `[FetchPrivateChatFile] ecdh=${ecdh ? `aes_key=${ecdh.aes_key ? "ready" : "null"}` : "null"}`,
       );
 
       if (ecdh?.aes_key) {
@@ -246,8 +287,15 @@ export function* FetchPrivateChatFile({ payload }) {
             payload.remote,
           ),
         );
+        Logger.info(
+          `[FetchPrivateChatFile] SENDING FileRequest nonce=${nonce} chunk=${file.chunk_cursor + 1}`,
+        );
         yield call(SendMessage, { key: payload.key, msg: file_request });
+      } else {
+        Logger.info("[FetchPrivateChatFile] ABORT: no aes_key");
       }
+    } else {
+      Logger.info("[FetchPrivateChatFile] ABORT: file is_saved or null");
     }
   } catch (e) {
     Logger.error("[FetchPrivateChatFile] failed:", e.message);
@@ -376,12 +424,14 @@ export function* SaveChatFile({ payload }) {
     const file = yield call(() => dbAPI.getFileByHash(payload.hash));
     if (file && file.is_saved) {
       const sourcePath = fileService.getFileFullPath(payload.hash);
-      const content = yield call(() => fileService.readFile(sourcePath));
-      const destPath = `${RNFS.DocumentDirectoryPath}/ripplemessenger/files/${payload.name}${payload.ext}`;
-      yield call(() => fileService.writeFile(destPath, content));
+      const displayName = `${payload.name}${payload.ext}`;
+      const mimeType = yield call(() => guessMimeType(payload.ext));
+      yield call(() =>
+        RMMediaStore.saveToGallery(sourcePath, displayName, mimeType),
+      );
       yield put(
         setFlashNoticeMessage({
-          message: "File saved to documents",
+          message: "File saved to gallery",
           duration: 2000,
         }),
       );

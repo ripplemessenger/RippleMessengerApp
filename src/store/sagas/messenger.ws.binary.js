@@ -23,6 +23,7 @@ import {
 } from "./messenger.file";
 import {
   setFileSavedToken,
+  setFileProgress,
   setAvatarSavedToken,
 } from "../slices/MessengerSlice";
 import { FILE_REQUEST_TTL_MS } from "../../lib/AppConst";
@@ -191,6 +192,15 @@ function* receiveFileChunk({
       ),
     );
 
+    // Report download progress to the UI (mirrors Client FileStatusMap)
+    yield put(
+      setFileProgress({
+        hash: request.Hash,
+        cursor: current_chunk_cursor,
+        length: file.chunk_length,
+      }),
+    );
+
     if (current_chunk_cursor < file.chunk_length) {
       // More chunks needed — request next one
       yield call(fetchNext, { payload: fetchNextPayload });
@@ -214,6 +224,14 @@ function* receiveFileChunk({
         yield call(() => fileService.deleteFile(filePath));
         yield call(() =>
           dbAPI.updateFileChunkCursor(request.Hash, 0, Date.now()),
+        );
+        // Progress reset — download restarts from chunk 1
+        yield put(
+          setFileProgress({
+            hash: request.Hash,
+            cursor: 0,
+            length: file.chunk_length,
+          }),
         );
         // Re-request from start
         yield call(fetchNext, { payload: fetchNextPayload });

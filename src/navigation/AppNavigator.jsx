@@ -26,7 +26,6 @@ import SettingScreen from "../screens/SettingScreen";
 import AboutScreen from "../screens/AboutScreen";
 import BulletinManagementTab from "../components/BulletinManagementTab";
 import StorageManagementTab from "../components/StorageManagementTab";
-import GroupManagementTab from "../components/GroupManagementTab";
 import ServerManagementTab from "../components/ServerManagementTab";
 import ServerAddressScreen from "../screens/ServerAddressScreen";
 import FollowedBulletinsScreen from "../screens/FollowedBulletinsScreen";
@@ -83,7 +82,6 @@ function SettingTab() {
         component={BulletinManagementTab}
       />
       <Stack.Screen name="StorageManagement" component={StorageManagementTab} />
-      <Stack.Screen name="GroupManagement" component={GroupManagementTab} />
       <Stack.Screen name="ServerManagement" component={ServerManagementTab} />
       <Stack.Screen name="ServerAddress" component={ServerAddressScreen} />
       <Stack.Screen name="About" component={AboutScreen} />

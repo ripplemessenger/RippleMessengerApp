@@ -154,7 +154,6 @@
     "sound_blip": "Blip",
     "sound_none": "None",
     "contact": "Kontakt",
-    "group": "Gruppe",
     "server_network": "Servernetzwerk",
     "storage": "Speicherverwaltung",
     "general": "Allgemeine Einstellungen",
@@ -234,7 +233,6 @@
     "bookmarked_posts": "Merklisten-Einträge",
     "followed_posts": "Gefolgte Bulletins",
     "random_posts": "Zufällige Bulletins",
-    "my_groups": "Meine Gruppen",
     "servers": "Server",
     "connected_servers": "Verbundene Server",
     "not_connected": "Nicht verbunden",
@@ -473,13 +471,15 @@
     "sum_chat": "Chat-Dateien:",
     "sum_avatars": "Avatare:",
     "sum_orphaned": "Verwaiste:",
-    "clear_orphaned_count": "Verwaiste löschen ({{count}})"
+    "clear_orphaned_count": "Verwaiste löschen ({{count}})",
+    "cat_private_chat": "Chat",
+    "cat_group_chat": "Gruppe"
   },
   "group": {
     "group_name": "Gruppenname:",
     "deleted": "Diese Gruppe wurde gelöscht, das Senden ist deaktiviert",
     "name_required": "Bitte gib einen Gruppennamen ein.",
-    "delete_title": "Gruppe löschen",
+    "delete_title": "Gruppe auflösen",
     "unnamed": "Unbenannte Gruppe",
     "member_count": "{{count}} Mitglieder",
     "created_on": "Erstellt am {{date}}",
@@ -487,7 +487,7 @@
     "select_members": "Mitglieder auswählen",
     "decline_title": "Einladung ablehnen",
     "decline_confirm": "Einladung zu „{{name}}“ ablehnen?",
-    "delete_confirm": "Diese Gruppe löschen? Nur der Ersteller kann dies tun.",
+    "delete_confirm": "Nach der Auflösung wird die Gruppe geschlossen und keine Nachrichten mehr gesendet. Der Verlauf bleibt erhalten. Nur der Ersteller kann dies tun.",
     "name": "Gruppenname",
     "name_placeholder": "Gruppenname eingeben",
     "create": "Erstellen",
@@ -495,7 +495,10 @@
     "accept": "Akzeptieren",
     "decline": "Ablehnen",
     "invited_by": "Eingeladen von {{name}}",
-    "members_suffix": " Mitglieder"
+    "members_suffix": " Mitglieder",
+    "disbanded": "Gruppe aufgelöst",
+    "clear_data_title": "Gruppendaten löschen",
+    "clear_data_confirm": "Dies löscht alle Nachrichten in dieser Gruppe und entfernt sie aus Ihrer Sitzungsliste. Dieser Vorgang kann nicht rückgängig gemacht werden und betrifft andere Mitglieder nicht. Fortfahren?"
   },
   "network": {
     "url": "URL:"

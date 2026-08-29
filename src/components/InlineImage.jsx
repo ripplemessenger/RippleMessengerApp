@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Image, View } from "react-native";
+import { Image, TouchableOpacity, View } from "react-native";
 import { useSelector } from "react-redux";
 
 import { dbAPI } from "../db";
@@ -20,8 +20,15 @@ import { FileImageExtRegex } from "../lib/AppConst";
  *   ext   - file extension (e.g. ".png"); must match FileImageExtRegex
  *   style - optional RN style for the <Image>
  *   containerStyle - optional RN style for the wrapper
+ *   onPress - optional callback(uri) when the image is tapped
  */
-export default function InlineImage({ hash, ext, style, containerStyle }) {
+export default function InlineImage({
+  hash,
+  ext,
+  style,
+  containerStyle,
+  onPress,
+}) {
   // Re-render trigger: bumped when this hash finishes downloading.
   const savedToken = useSelector(
     (state) => state.Messenger.FileSavedMap?.[hash] ?? null,
@@ -60,21 +67,33 @@ export default function InlineImage({ hash, ext, style, containerStyle }) {
 
   if (!localUri) return null;
 
+  const imageEl = (
+    <Image
+      source={{ uri: localUri }}
+      style={[
+        {
+          width: "100%",
+          height: 200,
+          borderRadius: 12,
+          backgroundColor: "#00000010",
+        },
+        style,
+      ]}
+      resizeMode="contain"
+    />
+  );
+
+  if (!onPress) {
+    return <View style={containerStyle}>{imageEl}</View>;
+  }
+
   return (
-    <View style={containerStyle}>
-      <Image
-        source={{ uri: localUri }}
-        style={[
-          {
-            width: "100%",
-            height: 200,
-            borderRadius: 12,
-            backgroundColor: "#00000010",
-          },
-          style,
-        ]}
-        resizeMode="contain"
-      />
-    </View>
+    <TouchableOpacity
+      style={containerStyle}
+      onPress={() => onPress(localUri)}
+      activeOpacity={0.7}
+    >
+      {imageEl}
+    </TouchableOpacity>
   );
 }

@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   View,
   Text,
@@ -166,6 +172,13 @@ export default function ContactScreen({ navigation }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+
+  // Auto-close invite modal when list becomes empty
+  useEffect(() => {
+    if (showInviteModal && GroupRequestList.length === 0) {
+      setShowInviteModal(false);
+    }
+  }, [showInviteModal, GroupRequestList.length]);
   const [groupName, setGroupName] = useState("");
   const [selectedMembers, setSelectedMembers] = useState([]);
 
@@ -224,11 +237,12 @@ export default function ContactScreen({ navigation }) {
   // --- Group functions ---
   const handleCreateGroup = useCallback(() => {
     if (!groupName.trim()) return;
+    if (selectedMembers.length < 2) return;
     dispatch(CreateGroupAction({ name: groupName.trim() }));
     setGroupName("");
     setShowCreateGroupModal(false);
     setSelectedMembers([]);
-  }, [dispatch, groupName]);
+  }, [dispatch, groupName, selectedMembers]);
 
   const onToggleMember = useCallback(
     (address) => {
@@ -417,10 +431,7 @@ export default function ContactScreen({ navigation }) {
                       )}
                     </View>
                     <Text className="text-sm text-text-primary flex-1">
-                      {contact.nickname || t("common.unknown")}
-                    </Text>
-                    <Text className="text-xs font-mono text-text-secondary/50">
-                      {shortenAddress(contact.address)}
+                      {contact.nickname || shortenAddress(contact.address)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -443,6 +454,7 @@ export default function ContactScreen({ navigation }) {
         <ConfirmButtonRow
           onConfirm={handleCreateGroup}
           confirmText={t("group.create")}
+          confirmDisabled={selectedMembers.length < 2}
           showCancel={false}
         />
       </ModalShell>

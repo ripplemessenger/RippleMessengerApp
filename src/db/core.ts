@@ -146,7 +146,7 @@ const SCHEMAS: string[] = [
     hash TEXT PRIMARY KEY, name TEXT NOT NULL, created_by TEXT NOT NULL,
     member TEXT NOT NULL, created_at INTEGER NOT NULL,
     create_json TEXT NOT NULL, deleted_at INTEGER,
-    delete_json TEXT, is_accepted INTEGER DEFAULT 0);`,
+    delete_json TEXT, is_accepted INTEGER DEFAULT 0, cleared_at INTEGER);`,
 
   `CREATE TABLE IF NOT EXISTS group_messages (
     hash TEXT PRIMARY KEY, group_hash TEXT NOT NULL,
@@ -189,6 +189,22 @@ function initDB(): void {
     NitroSQLite.execute(
       DB_NAME,
       "ALTER TABLE avatar_files ADD COLUMN image_base64 TEXT",
+    );
+  }
+
+  // Migration: add cleared_at column to groups if missing.
+  const groupInfo = NitroSQLite.execute(
+    DB_NAME,
+    'SELECT COUNT(*) AS cnt FROM pragma_table_info("groups") WHERE name = "cleared_at"',
+  );
+  const groupCount =
+    groupInfo.rows && groupInfo.rows._array && groupInfo.rows._array.length > 0
+      ? groupInfo.rows._array[0].cnt
+      : 0;
+  if (groupCount === 0) {
+    NitroSQLite.execute(
+      DB_NAME,
+      "ALTER TABLE groups ADD COLUMN cleared_at INTEGER",
     );
   }
   Logger.info("[DB-DEBUG] initDB done");

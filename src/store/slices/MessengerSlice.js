@@ -53,6 +53,9 @@ const MessengerSlice = createSlice({
     // image previews re-render (mirrors Client FileSavedMap).
     FileSavedMap: {},
 
+    // hash -> { cursor, length }; download progress per file (mirrors Client FileStatusMap).
+    FileProgressMap: {},
+
     // address -> timestamp; bumped when an avatar image finishes saving so
     // AvatarImage/useAvatarData re-render and pick up the new image.
     AvatarSavedMap: {},
@@ -165,6 +168,12 @@ const MessengerSlice = createSlice({
     setFileSavedToken: (state, action) => {
       state.FileSavedMap[action.payload.hash] = action.payload.timestamp;
     },
+    setFileProgress: (state, action) => {
+      state.FileProgressMap[action.payload.hash] = {
+        cursor: action.payload.cursor,
+        length: action.payload.length,
+      };
+    },
     setAvatarSavedToken: (state, action) => {
       state.AvatarSavedMap[action.payload.address] = action.payload.timestamp;
     },
@@ -249,6 +258,7 @@ export const {
   setBookmarkBulletinList,
   setServerAddressList,
   setFileSavedToken,
+  setFileProgress,
   setAvatarSavedToken,
   setTagBulletinList,
   setSearchTagList,

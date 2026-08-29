@@ -1,62 +1,74 @@
-import { all, call, put, select } from 'redux-saga/effects'
-import Logger from '../../lib/Logger'
-import { SessionType } from '../../lib/AppConst'
-import { setSessionList } from '../slices/MessengerSlice'
-import { dbAPI } from '../../db'
+import { all, call, put, select } from "redux-saga/effects";
+import Logger from "../../lib/Logger";
+import { SessionType } from "../../lib/AppConst";
+import { setSessionList } from "../slices/MessengerSlice";
+import { dbAPI } from "../../db";
 
 export function* LoadSessionList() {
   try {
-    const address = yield select(state => state.User.Address)
+    const address = yield select((state) => state.User.Address);
     if (!address) {
-      return
+      return;
     }
-    let session_list = []
+    let session_list = [];
 
     // Private sessions: batch all friend queries in parallel
-    const friend_list = yield call(() => dbAPI.getMyFriends(address))
+    const friend_list = yield call(() => dbAPI.getMyFriends(address));
     if (friend_list.length > 0) {
-      const friendResults = yield all(friend_list.map(friend =>
-        all([
-          call(() => dbAPI.getPrivateNewMessageCount(address, friend.remote)),
-          call(() => dbAPI.getLastPrivateMessageSignedAt(address, friend.remote)),
-          call(() => dbAPI.getLastPrivateMessageBothDir(address, friend.remote)),
-        ])
-      ))
+      const friendResults = yield all(
+        friend_list.map((friend) =>
+          all([
+            call(() => dbAPI.getPrivateNewMessageCount(address, friend.remote)),
+            call(() =>
+              dbAPI.getLastPrivateMessageSignedAt(address, friend.remote),
+            ),
+            call(() =>
+              dbAPI.getLastPrivateMessageBothDir(address, friend.remote),
+            ),
+          ]),
+        ),
+      );
       for (let i = 0; i < friend_list.length; i++) {
-        const [new_msg_count, last_msg_signed_at, last_message] = friendResults[i]
+        const [new_msg_count, last_msg_signed_at, last_message] =
+          friendResults[i];
         session_list.push({
           type: SessionType.Private,
           address: friend_list[i].remote,
           new_msg_count,
           updated_at: last_msg_signed_at,
           last_message,
-        })
+        });
       }
     }
 
     // Group sessions: batch all group queries in parallel
-    const group_list = yield select(state => state.Messenger.GroupList)
+    const group_list = yield select((state) => state.Messenger.GroupList);
     if (group_list.length > 0) {
-      const groupResults = yield all(group_list.map(group => {
-        let member = [...group.member]
-        member.push(group.created_by)
-        member = [...new Set(member)]
-        if (!member.includes(address)) {
-          return null
-        }
-        return all([
-          call(() => dbAPI.getGroupNewMessageCount(group.hash)),
-          call(() => dbAPI.getLastGroupMessageSignedAt(group.hash)),
-          call(() => dbAPI.getLastGroupMessage(group.hash)),
-        ])
-      }))
+      const groupResults = yield all(
+        group_list.map((group) => {
+          if (group.cleared_at !== null && group.cleared_at !== undefined) {
+            return null;
+          }
+          let member = [...group.member];
+          member.push(group.created_by);
+          member = [...new Set(member)];
+          if (!member.includes(address)) {
+            return null;
+          }
+          return all([
+            call(() => dbAPI.getGroupNewMessageCount(group.hash)),
+            call(() => dbAPI.getLastGroupMessageSignedAt(group.hash)),
+            call(() => dbAPI.getLastGroupMessage(group.hash)),
+          ]);
+        }),
+      );
       for (let i = 0; i < group_list.length; i++) {
-        const result = groupResults[i]
-        if (result === null) continue
-        const [new_msg_count, last_msg_signed_at, last_message] = result
-        let member = [...group_list[i].member]
-        member.push(group_list[i].created_by)
-        member = [...new Set(member)]
+        const result = groupResults[i];
+        if (result === null) continue;
+        const [new_msg_count, last_msg_signed_at, last_message] = result;
+        let member = [...group_list[i].member];
+        member.push(group_list[i].created_by);
+        member = [...new Set(member)];
         session_list.push({
           type: SessionType.Group,
           hash: group_list[i].hash,
@@ -65,13 +77,16 @@ export function* LoadSessionList() {
           new_msg_count,
           updated_at: last_msg_signed_at,
           last_message,
-        })
+          delete_json: group_list[i].delete_json || null,
+        });
       }
     }
 
-    session_list = [...session_list].sort((a, b) => b.updated_at - a.updated_at)
-    yield put(setSessionList(session_list))
+    session_list = [...session_list].sort(
+      (a, b) => b.updated_at - a.updated_at,
+    );
+    yield put(setSessionList(session_list));
   } catch (e) {
-    Logger.error('[LoadSessionList] failed:', e.message)
+    Logger.error("[LoadSessionList] failed:", e.message);
   }
 }

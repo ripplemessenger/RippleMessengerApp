@@ -154,7 +154,6 @@
     "sound_blip": "Blip",
     "sound_none": "None",
     "contact": "連絡先",
-    "group": "グループ",
     "server_network": "サーバーネットワーク",
     "storage": "ストレージ管理",
     "general": "一般設定",
@@ -234,7 +233,6 @@
     "bookmarked_posts": "ブックマークした公告",
     "followed_posts": "フォロー中の公告",
     "random_posts": "ランダム公告",
-    "my_groups": "マイグループ",
     "servers": "サーバー",
     "connected_servers": "接続中のサーバー",
     "not_connected": "未接続",
@@ -473,13 +471,15 @@
     "sum_chat": "チャットファイル：",
     "sum_avatars": "アバター：",
     "sum_orphaned": "孤立ファイル：",
-    "clear_orphaned_count": "孤立ファイルを削除 ({{count}})"
+    "clear_orphaned_count": "孤立ファイルを削除 ({{count}})",
+    "cat_private_chat": "チャット",
+    "cat_group_chat": "グループ"
   },
   "group": {
     "group_name": "グループ名:",
     "deleted": "このグループは削除されたため、メッセージを送信できません",
     "name_required": "グループ名を入力してください。",
-    "delete_title": "グループを削除",
+    "delete_title": "グループを解散",
     "unnamed": "無名グループ",
     "member_count": "{{count}}名のメンバー",
     "created_on": "{{date}} に作成",
@@ -487,7 +487,7 @@
     "select_members": "メンバーを選択",
     "decline_title": "招待を断る",
     "decline_confirm": "「{{name}}」への招待を断りますか？",
-    "delete_confirm": "このグループを削除しますか？作成者のみ操作可能です。",
+    "delete_confirm": "解散後、グループは閉鎖され、メッセージを送信できなくなります。履歴は保持されます。作成者のみ操作可能です。",
     "name": "グループ名",
     "name_placeholder": "グループ名を入力",
     "create": "作成",
@@ -495,7 +495,10 @@
     "accept": "受ける",
     "decline": "断る",
     "invited_by": "招待者：{{name}}",
-    "members_suffix": " 人"
+    "members_suffix": " 人",
+    "disbanded": "グループは解散しました",
+    "clear_data_title": "グループデータを削除",
+    "clear_data_confirm": "このグループのすべてのメッセージを削除し、セッションリストから削除します。この操作は元に戻せません。他のメンバーには影響しません。続行しますか？"
   },
   "network": {
     "url": "URL:"

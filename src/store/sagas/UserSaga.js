@@ -198,6 +198,11 @@ function* delAccount({ payload }) {
     let account = yield call(() => dbAPI.getAccountByAddress(payload.address));
     if (account !== null) {
       yield call(() => dbAPI.deleteAccountByAddress(payload.address));
+      // If the deleted account is the current logged-in account, force logout
+      const currentAddress = yield select((state) => state.User.Address);
+      if (currentAddress === payload.address) {
+        yield put(logoutStart());
+      }
       yield put(loadAccountListStart());
     }
   } catch (e) {

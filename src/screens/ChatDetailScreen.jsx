@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  Alert,
   Clipboard,
   ScrollView,
 } from "react-native";
@@ -18,6 +19,9 @@ import { useTranslation } from "react-i18next";
 
 import AvatarImage from "../components/AvatarImage";
 import InlineImage from "../components/InlineImage";
+import InlineVideo from "../components/InlineVideo";
+import ImageViewer from "../components/ImageViewer";
+import VideoPlayer from "../components/VideoPlayer";
 import ModalShell from "../components/common/ModalShell";
 import useDarkMode from "../hooks/useDarkMode";
 import {
@@ -34,6 +38,8 @@ import {
   SendFile,
   FetchChatFile,
   SaveChatFile,
+  DeleteGroup,
+  ClearGroupData,
 } from "../store/sagas/messenger.actions";
 import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
 import { pickFile } from "../services/mediaPicker";
@@ -76,10 +82,10 @@ function extractContent(msg) {
         // Name has trailing dot but no ext — strip it
         name = name.slice(0, -1);
       }
-      return `📎 ${name}`;
+      return name;
     }
     if (obj.Name) {
-      return `📎 ${obj.Name}`;
+      return obj.Name;
     }
     // Bulletin reference — return null, handled specially in MessageBubble
     if (obj.ObjectType === MessageObjectType.Bulletin) {
@@ -126,6 +132,8 @@ const MessageBubble = React.memo(function MessageBubble({
   contactMap,
   fileDownloadStatus,
   onFileTap,
+  onImageTap,
+  onVideoTap,
   onSequenceTap,
   navigation,
 }) {
@@ -135,7 +143,33 @@ const MessageBubble = React.memo(function MessageBubble({
   const isSelf = senderAddress === selfAddress;
 
   const content = extractContent(message);
-  const fileStatus = fileDownloadStatus?.[getMessageKey(message)];
+  const fileHash = message.content?.Hash;
+  // Check Redux FileSavedMap — updated when download completes
+  const savedToken = useSelector((state) =>
+    fileHash ? (state.Messenger.FileSavedMap?.[fileHash] ?? null) : null,
+  );
+  // Check DB for files saved in previous sessions
+  const [dbFileSaved, setDbFileSaved] = useState(false);
+  useEffect(() => {
+    if (!fileHash) return;
+    let cancelled = false;
+    (async () => {
+      const file = await dbAPI.getFileByHash(fileHash);
+      if (!cancelled && file?.is_saved) setDbFileSaved(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fileHash, savedToken]);
+  // Download progress (cursor/length) — updated per chunk in messenger.ws.binary.js
+  const fileProgress = useSelector((state) =>
+    fileHash ? (state.Messenger.FileProgressMap?.[fileHash] ?? null) : null,
+  );
+  const fileStatus =
+    savedToken || dbFileSaved
+      ? "saved"
+      : fileDownloadStatus?.[getMessageKey(message)] ||
+        (fileProgress ? "downloading" : undefined);
 
   return (
     <View className={`flex-row ${isSelf ? "flex-row-reverse" : ""} mb-3`}>
@@ -154,7 +188,9 @@ const MessageBubble = React.memo(function MessageBubble({
         }}
       />
 
-      <View className={`max-w-[75%] ${isSelf ? "items-end" : "items-start"}`}>
+      <View
+        className={isSelf ? "max-w-[75%] items-end" : "max-w-[75%] items-start"}
+      >
         {/* Sender name (group mode, or when not self) */}
         {!isSelf && mode === "group" && (
           <Text className="text-xs text-text-secondary/70 mb-1 ml-1">
@@ -164,27 +200,58 @@ const MessageBubble = React.memo(function MessageBubble({
 
         {/* Bubble */}
         <View
-          className={`px-3 py-2 rounded-2xl ${
+          className={`px-1 py-1 rounded-2xl ${
             isSelf
-              ? "bg-primary/30 rounded-tr-sm"
+              ? "bg-primary/30 rounded-tr-sm items-end"
               : "bg-surface-alt rounded-tl-sm border border-secondary-light/20"
           }`}
         >
-          {/* File message — tappable with download status */}
+          {/* Sequence + Timestamp (above content) */}
+          <View
+            className={`flex-row items-center gap-0 mb-1 ${isSelf ? "self-end" : "self-start"}`}
+          >
+            {message.sequence ? (
+              <TouchableOpacity
+                onPress={() => onSequenceTap?.(message)}
+                hitSlop={6}
+                activeOpacity={0.6}
+              >
+                <View className="px-1 py-0.5 rounded border border-secondary-light/30">
+                  <Text className="text-[10px] text-text-secondary/70">
+                    #{message.sequence}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ) : null}
+            <Text className="text-[10px] text-text-secondary/50">
+              {formatTime(message.signed_at)}
+            </Text>
+          </View>
+
+          {/* File message — inline image (tap to view) + file row (tap to save/download) */}
           {isFileMessage(message) ? (
             <View>
-              {/* Inline preview for image files */}
+              {/* Inline preview for image files — tap to open full-screen viewer */}
               <InlineImage
                 hash={message.content?.Hash}
                 ext={message.content?.Ext || ""}
                 containerStyle={{ marginBottom: 6 }}
+                onPress={onImageTap}
               />
+              {/* Inline preview for video files — tap to open full-screen player */}
+              <InlineVideo
+                hash={message.content?.Hash}
+                ext={message.content?.Ext || ""}
+                containerStyle={{ marginBottom: 6 }}
+                onPress={onVideoTap}
+              />
+              {/* File row — tap to save/download (all file types) */}
               <TouchableOpacity
                 onPress={() => onFileTap?.(message)}
                 activeOpacity={0.6}
                 disabled={fileStatus === "downloading"}
               >
-                <View className="flex-row items-center gap-2">
+                <View className="flex-row items-start gap-2">
                   <Ionicons
                     name={
                       fileStatus === "saved"
@@ -199,38 +266,27 @@ const MessageBubble = React.memo(function MessageBubble({
                           ? "#f59e0b"
                           : "#a89f85"
                     }
+                    style={{ marginTop: 2 }}
                   />
-                  <Text className="text-base text-text-primary">{content}</Text>
-                  {message.content?.Size > 0 && (
-                    <Text className="text-xs text-text-secondary/60">
-                      ({formatFileSize(message.content.Size)})
+                  <View>
+                    <Text className="text-base text-text-primary break-words">
+                      {content}
                     </Text>
-                  )}
-                  {fileStatus === "downloading" && (
-                    <Text className="text-xs text-primary">
-                      {t("common.loading")}
-                    </Text>
-                  )}
-                </View>
-
-                {/* Sequence + Timestamp */}
-                <View className="flex-row items-center gap-1 mt-1">
-                  {message.sequence ? (
-                    <TouchableOpacity
-                      onPress={() => onSequenceTap?.(message)}
-                      hitSlop={6}
-                      activeOpacity={0.6}
-                    >
-                      <View className="px-1.5 py-0.5 rounded border border-secondary-light/30">
-                        <Text className="text-[10px] text-text-secondary/70">
-                          #{message.sequence}
+                    <View className="flex-row items-center gap-2 mt-0.5">
+                      {message.content?.Size > 0 && (
+                        <Text className="text-xs text-text-secondary/60">
+                          ({formatFileSize(message.content.Size)})
                         </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ) : null}
-                  <Text className="text-[10px] text-text-secondary/50">
-                    {formatTime(message.signed_at)}
-                  </Text>
+                      )}
+                      {fileStatus === "downloading" && (
+                        <Text className="text-xs text-primary">
+                          {fileProgress && fileProgress.length > 0
+                            ? `(${fileProgress.cursor}/${fileProgress.length})`
+                            : t("common.loading")}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
                 </View>
               </TouchableOpacity>
             </View>
@@ -245,23 +301,22 @@ const MessageBubble = React.memo(function MessageBubble({
                     navigation.navigate("Bulletin", {
                       screen: "BulletinDetail",
                       params: {
-                        hash: obj.hash,
-                        address: obj.address,
-                        sequence: obj.sequence,
+                        hash: obj.Hash,
+                        address: obj.Address,
+                        sequence: obj.Sequence,
                       },
                     });
                   }}
                   activeOpacity={0.6}
-                  className="flex-row items-center gap-1 px-3 py-1 rounded-full bg-primary/10"
+                  className="px-3 py-1 rounded-full border border-primary/30 bg-primary/5"
                 >
-                  <Ionicons name="link" size={14} color={ACCENT} />
                   <Text className="text-sm text-primary-dark">
                     {resolveName(
-                      message.content.address,
+                      message.content.Address,
                       contactMap,
                       selfAddress,
                     )}
-                    #{message.content.sequence}
+                    #{message.content.Sequence}
                   </Text>
                 </TouchableOpacity>
               ) : content ? (
@@ -273,26 +328,6 @@ const MessageBubble = React.memo(function MessageBubble({
                   [Empty message]
                 </Text>
               )}
-
-              {/* Sequence + Timestamp */}
-              <View className="flex-row items-center gap-1 mt-1">
-                {message.sequence ? (
-                  <TouchableOpacity
-                    onPress={() => onSequenceTap?.(message)}
-                    hitSlop={6}
-                    activeOpacity={0.6}
-                  >
-                    <View className="px-1.5 py-0.5 rounded border border-secondary-light/30">
-                      <Text className="text-[10px] text-text-secondary/70">
-                        #{message.sequence}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ) : null}
-                <Text className="text-[10px] text-text-secondary/50">
-                  {formatTime(message.signed_at)}
-                </Text>
-              </View>
             </>
           )}
         </View>
@@ -306,7 +341,7 @@ const MessageBubble = React.memo(function MessageBubble({
  * Private chat: contact info, follow/friend status, ECDH handshake status.
  * Group chat: group name, member list, group hash.
  */
-function ChatInfoModal({ visible, session, mode, onClose }) {
+function ChatInfoModal({ visible, session, mode, onClose, onGroupDeleted }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const selfAddress = useSelector(selectUserAddress);
@@ -338,8 +373,16 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
           const filtered = Array.isArray(members)
             ? members.filter((m) => m !== selfAddress)
             : [];
+          // Check if current user is the group creator (only creator can delete)
+          let isCreator = false;
+          try {
+            const group = await dbAPI.getGroupByHash(session.hash);
+            isCreator = !!group && group.created_by === selfAddress;
+          } catch {
+            // silent — button just won't show
+          }
           if (!isMounted) return;
-          setInfo({ members: filtered });
+          setInfo({ members: filtered, isCreator });
         }
       } catch (e) {
         console.error("[ChatInfoModal] failed to load info:", e.message);
@@ -352,6 +395,35 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
       isMounted = false;
     };
   }, [visible, session, mode, selfAddress, groupMembers]);
+
+  const handleDeleteGroup = useCallback(() => {
+    Alert.alert(t("group.delete_title"), t("group.delete_confirm"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("group.delete_title"),
+        style: "destructive",
+        onPress: () => {
+          dispatch(DeleteGroup({ hash: session.hash }));
+          if (onGroupDeleted) onGroupDeleted();
+          onClose();
+        },
+      },
+    ]);
+  }, [t, session, dispatch, onClose, onGroupDeleted]);
+
+  const handleClearGroupData = useCallback(() => {
+    Alert.alert(t("group.clear_data_title"), t("group.clear_data_confirm"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("group.clear_data_title"),
+        style: "destructive",
+        onPress: () => {
+          dispatch(ClearGroupData({ hash: session.hash }));
+          onClose();
+        },
+      },
+    ]);
+  }, [t, session, dispatch, onClose]);
 
   return (
     <Modal
@@ -504,6 +576,32 @@ function ChatInfoModal({ visible, session, mode, onClose }) {
                   </View>
                 ))}
               </ScrollView>
+
+              {/* Delete group (creator only) */}
+              {info?.isCreator && (
+                <TouchableOpacity
+                  onPress={handleDeleteGroup}
+                  activeOpacity={0.7}
+                  className="flex-row items-center justify-center gap-2 mt-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30"
+                >
+                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  <Text className="text-sm font-medium text-red-500">
+                    {t("group.delete_title")}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Clear group data (all members) */}
+              <TouchableOpacity
+                onPress={handleClearGroupData}
+                activeOpacity={0.7}
+                className="flex-row items-center justify-center gap-2 mt-2 py-3 rounded-xl bg-orange-500/10 border border-orange-500/30"
+              >
+                <Ionicons name="archive-outline" size={18} color="#f97316" />
+                <Text className="text-sm font-medium text-orange-500">
+                  {t("group.clear_data_title")}
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
         </TouchableOpacity>
@@ -541,6 +639,12 @@ export default function ChatDetailScreen({ route, navigation }) {
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [jsonContent, setJsonContent] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [viewerUri, setViewerUri] = useState(null);
+  const [videoUri, setVideoUri] = useState(null);
+  // Group closed (disbanded) — input disabled, history preserved
+  const [groupClosed, setGroupClosed] = useState(
+    session.type === SessionType.Group && session.delete_json !== null,
+  );
   const flatListRef = useRef(null);
 
   // Determine if this is private or group
@@ -617,18 +721,18 @@ export default function ChatDetailScreen({ route, navigation }) {
       const fileHash = message.content?.Hash;
       if (!fileHash) return;
 
-      // Check current file status in DB
+      const ext = message.content?.Ext || "";
       const existingFile = await dbAPI.getFileByHash(fileHash);
       const msgKey = getMessageKey(message);
 
       if (existingFile?.is_saved) {
-        // File already saved locally, trigger SaveChatFile to copy to shared location
+        // File already saved, trigger SaveChatFile to copy to shared location
         setFileDownloadStatus((prev) => ({ ...prev, [msgKey]: "saved" }));
         dispatch(
           SaveChatFile({
             hash: fileHash,
             name: message.content.Name || "file",
-            ext: message.content.Ext || "",
+            ext,
           }),
         );
       } else {
@@ -654,6 +758,8 @@ export default function ChatDetailScreen({ route, navigation }) {
         contactMap={contactMap}
         fileDownloadStatus={fileDownloadStatus}
         onFileTap={handleFileTap}
+        onImageTap={(uri) => setViewerUri(uri)}
+        onVideoTap={(uri) => setVideoUri(uri)}
         onSequenceTap={handleSequenceTap}
         navigation={navigation}
       />
@@ -673,7 +779,9 @@ export default function ChatDetailScreen({ route, navigation }) {
   }, []);
 
   // Determine if AES key is ready (can send messages)
-  const canSend = currentSession?.aes_key !== undefined || mode === "group";
+  // Group closed (disbanded) → cannot send
+  const canSend =
+    (currentSession?.aes_key !== undefined || mode === "group") && !groupClosed;
 
   return (
     <KeyboardAvoidingView
@@ -758,41 +866,55 @@ export default function ChatDetailScreen({ route, navigation }) {
       />
 
       {/* Input bar */}
-      <View className="flex-row items-center px-3 py-2 bg-surface-alt border-t border-secondary-light/30">
-        {/* Attach file button → pickFile() → SendFile saga */}
-        <TouchableOpacity onPress={handleAttach} activeOpacity={0.6}>
-          <Ionicons name="attach" size={24} color="#a89f85" />
-        </TouchableOpacity>
+      {groupClosed ? (
+        /* Group disbanded — read-only */
+        <View className="items-center justify-center py-3 bg-surface-alt border-t border-secondary-light/30">
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="lock-closed" size={16} color="#a89f85" />
+            <Text className="text-sm text-text-secondary italic">
+              {t("group.disbanded")}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <View className="flex-row items-center px-3 py-2 bg-surface-alt border-t border-secondary-light/30">
+          {/* Attach file button → pickFile() → SendFile saga */}
+          <TouchableOpacity onPress={handleAttach} activeOpacity={0.6}>
+            <Ionicons name="attach" size={24} color="#a89f85" />
+          </TouchableOpacity>
 
-        {/* Text input */}
-        <TextInput
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder={t("ui.type_message")}
-          placeholderTextColor="#a89f85"
-          className="flex-1 ml-2 mr-2 bg-surface rounded-full px-4 py-2 text-base text-text-primary border border-secondary-light/30"
-          multiline
-          maxLength={4096}
-          onSubmitEditing={handleSend}
-          editable={canSend}
-        />
-
-        {/* Send button */}
-        <TouchableOpacity
-          onPress={handleSend}
-          activeOpacity={0.6}
-          disabled={!inputText.trim() || !canSend}
-          className={`w-10 h-10 rounded-full items-center justify-center ${
-            inputText.trim() && canSend ? "bg-primary" : "bg-secondary-light/40"
-          }`}
-        >
-          <Ionicons
-            name="send"
-            size={20}
-            color={inputText.trim() && canSend ? "#ffffff" : "#a89f85"}
+          {/* Text input */}
+          <TextInput
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder={t("ui.type_message")}
+            placeholderTextColor="#a89f85"
+            className="flex-1 ml-2 mr-2 bg-surface rounded-full px-4 py-2 text-base text-text-primary border border-secondary-light/30"
+            multiline
+            maxLength={4096}
+            onSubmitEditing={handleSend}
+            editable={canSend}
           />
-        </TouchableOpacity>
-      </View>
+
+          {/* Send button */}
+          <TouchableOpacity
+            onPress={handleSend}
+            activeOpacity={0.6}
+            disabled={!inputText.trim() || !canSend}
+            className={`w-10 h-10 rounded-full items-center justify-center ${
+              inputText.trim() && canSend
+                ? "bg-primary"
+                : "bg-secondary-light/40"
+            }`}
+          >
+            <Ionicons
+              name="send"
+              size={20}
+              color={inputText.trim() && canSend ? "#ffffff" : "#a89f85"}
+            />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Chat Info Modal */}
       <ChatInfoModal
@@ -800,6 +922,7 @@ export default function ChatDetailScreen({ route, navigation }) {
         session={activeSession}
         mode={mode}
         onClose={() => setShowInfoModal(false)}
+        onGroupDeleted={() => setGroupClosed(true)}
       />
 
       {/* JSON Viewer Modal */}
@@ -820,6 +943,20 @@ export default function ChatDetailScreen({ route, navigation }) {
           </Text>
         </ScrollView>
       </ModalShell>
+
+      {/* Full-screen image viewer */}
+      <ImageViewer
+        uri={viewerUri}
+        visible={viewerUri !== null}
+        onClose={() => setViewerUri(null)}
+      />
+
+      {/* Full-screen video player */}
+      <VideoPlayer
+        uri={videoUri}
+        visible={videoUri !== null}
+        onClose={() => setVideoUri(null)}
+      />
     </KeyboardAvoidingView>
   );
 }

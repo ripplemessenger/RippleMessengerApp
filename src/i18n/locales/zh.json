@@ -166,7 +166,6 @@
     "sound_blip": "Blip",
     "sound_none": "None",
     "contact": "联系人",
-    "group": "群组",
     "server_network": "服务器网络",
     "storage": "存储管理",
     "general": "常规设置",
@@ -246,7 +245,6 @@
     "bookmarked_posts": "已收藏公告",
     "followed_posts": "已关注公告",
     "random_posts": "随机公告",
-    "my_groups": "我的群组",
     "servers": "服务器",
     "connected_servers": "已连接服务器",
     "not_connected": "未连接",
@@ -491,13 +489,15 @@
     "selected_count": "已选 {{count}} 项",
     "delete_count": "删除 ({{count}})",
     "page_indicator": "第 {{count}} 页",
-    "chip_all": "全部"
+    "chip_all": "全部",
+    "cat_private_chat": "聊天",
+    "cat_group_chat": "群组"
   },
   "group": {
     "group_name": "群组名称:",
     "deleted": "该群已被删除，无法发送消息",
     "name_required": "请输入群组名称。",
-    "delete_title": "删除群组",
+    "delete_title": "解散群组",
     "unnamed": "未命名群组",
     "member_count": "{{count}} 名成员",
     "created_on": "创建于 {{date}}",
@@ -505,7 +505,7 @@
     "select_members": "选择成员",
     "decline_title": "拒绝邀请",
     "decline_confirm": "确定拒绝加入「{{name}}」的邀请？",
-    "delete_confirm": "确定删除此群？仅创建者可操作。",
+    "delete_confirm": "解散后群将关闭，不能再发送消息，历史消息保留。仅创建者可操作。",
     "name": "群名称",
     "name_placeholder": "输入群名称",
     "create": "创建",
@@ -513,7 +513,10 @@
     "accept": "接受",
     "decline": "拒绝",
     "invited_by": "邀请人：{{name}}",
-    "members_suffix": " 人"
+    "members_suffix": " 人",
+    "disbanded": "群已解散",
+    "clear_data_title": "清除群聊数据",
+    "clear_data_confirm": "将删除本群所有消息记录，群将从会话列表移除。此操作不可恢复，且不影响其他成员。确定继续？"
   },
   "network": {
     "url": "URL:"

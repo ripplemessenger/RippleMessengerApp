@@ -79,8 +79,13 @@ export default function ImportAccountScreen({ navigation }) {
       const salt = genSalt();
       const cipherData = encryptWithPassword(seed, password, salt);
 
-      // Save to database
-      await dbAPI.addAccount(addr, salt, cipherData, Date.now());
+      // Save to database (update if the address was imported before)
+      const existing = await dbAPI.getAccountByAddress(addr);
+      if (existing) {
+        await dbAPI.updateAccount(addr, salt, cipherData, Date.now());
+      } else {
+        await dbAPI.addAccount(addr, salt, cipherData, Date.now());
+      }
 
       // Navigate back to LoginScreen
       navigation.goBack();

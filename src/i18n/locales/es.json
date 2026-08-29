@@ -154,7 +154,6 @@
     "sound_blip": "Blip",
     "sound_none": "None",
     "contact": "Contacto",
-    "group": "Grupo",
     "server_network": "Red de servidores",
     "storage": "Gestión de almacenamiento",
     "general": "Configuración general",
@@ -234,7 +233,6 @@
     "bookmarked_posts": "Boletines marcados",
     "followed_posts": "Boletines seguidos",
     "random_posts": "Boletines aleatorios",
-    "my_groups": "Mis grupos",
     "servers": "Servidores",
     "connected_servers": "Servidores conectados",
     "not_connected": "No conectado",
@@ -473,13 +471,15 @@
     "sum_chat": "Archivos de chat:",
     "sum_avatars": "Avatares:",
     "sum_orphaned": "Huérfanos:",
-    "clear_orphaned_count": "Limpiar huérfanos ({{count}})"
+    "clear_orphaned_count": "Limpiar huérfanos ({{count}})",
+    "cat_private_chat": "Chat",
+    "cat_group_chat": "Grupo"
   },
   "group": {
     "group_name": "Nombre del grupo:",
     "deleted": "Este grupo ha sido eliminado, el envío está deshabilitado",
     "name_required": "Ingresa un nombre de grupo.",
-    "delete_title": "Eliminar grupo",
+    "delete_title": "Disolver grupo",
     "unnamed": "Grupo sin nombre",
     "member_count": "{{count}} miembros",
     "created_on": "Creado el {{date}}",
@@ -487,7 +487,7 @@
     "select_members": "Seleccionar miembros",
     "decline_title": "Rechazar invitación",
     "decline_confirm": "¿Rechazar la invitación a «{{name}}»?",
-    "delete_confirm": "¿Eliminar este grupo? Solo el creador puede hacerlo.",
+    "delete_confirm": "Tras la disolución, el grupo se cerrará y no se podrán enviar más mensajes. El historial se conserva. Solo el creador puede hacerlo.",
     "name": "Nombre del grupo",
     "name_placeholder": "Ingresa el nombre del grupo",
     "create": "Crear",
@@ -495,7 +495,10 @@
     "accept": "Aceptar",
     "decline": "Rechazar",
     "invited_by": "Invitado por {{name}}",
-    "members_suffix": " miembros"
+    "members_suffix": " miembros",
+    "disbanded": "Grupo disuelto",
+    "clear_data_title": "Borrar datos del grupo",
+    "clear_data_confirm": "Esto eliminará todos los mensajes de este grupo y lo quitará de tu lista de sesiones. Esta acción no se puede deshacer y no afecta a otros miembros. ¿Continuar?"
   },
   "network": {
     "url": "URL:"

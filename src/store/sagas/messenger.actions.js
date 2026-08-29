@@ -69,6 +69,7 @@ export const ComposeMemberDel = createAction('ComposeMemberDel')
 // ==================== Group Management ====================
 export const CreateGroup = createAction('CreateGroup')
 export const DeleteGroup = createAction('DeleteGroup')
+export const ClearGroupData = createAction('ClearGroupData')
 export const AcceptGroupRequest = createAction('AcceptGroupRequest')
 export const RejectGroupRequest = createAction('RejectGroupRequest')
 

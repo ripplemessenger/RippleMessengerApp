@@ -36,6 +36,7 @@ export {
   ComposeMemberDel,
   CreateGroup,
   DeleteGroup,
+  ClearGroupData,
   GroupSync,
 } from "./messenger.group";
 

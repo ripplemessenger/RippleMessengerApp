@@ -265,12 +265,18 @@ function* handleAvatarListObject(json) {
 
 function* handleECDHHandshakeObject(json, address, seed) {
   try {
-    if (
-      !checkECDHHandshakeSchema(json) ||
-      json.To !== address ||
-      !VerifyJsonSignature(json)
-    )
+    const schema_ok = checkECDHHandshakeSchema(json);
+    const to_ok = json.To === address;
+    const sig_ok = VerifyJsonSignature(json);
+    Logger.info(
+      `[DIAG-PRIV] handleECDHHandshakeObject IN from=${json.PublicKey ? "ok" : "?"} To=${json.To} self_addr=${address} schema=${schema_ok} to_ok=${to_ok} sig_ok=${sig_ok} Seq=${json.Sequence} Pair=${JSON.stringify(json.Pair)}`,
+    );
+    if (!schema_ok || !to_ok || !sig_ok) {
+      Logger.warn(
+        `[DIAG-PRIV] handleECDHHandshakeObject REJECTED schema=${schema_ok} to_ok=${to_ok} sig_ok=${sig_ok}`,
+      );
       return;
+    }
     const ob_address = rippleKeyPairs.deriveAddress(json.PublicKey);
     const friend = yield call(() => dbAPI.getFriend(address, ob_address));
     const total_member_list = yield select(
@@ -387,12 +393,18 @@ function* handleECDHHandshakeObject(json, address, seed) {
 function* handlePrivateMessageObject(json, address) {
   try {
     if (!checkPrivateMessageSchema(json) || !VerifyJsonSignature(json)) {
+      Logger.warn(
+        `[DIAG-PRIV] handlePrivateMessageObject REJECTED (schema=${checkPrivateMessageSchema(json)}, sig=${VerifyJsonSignature(json)}) seq=${json.Sequence}`,
+      );
       return;
     }
     let ob_address = rippleKeyPairs.deriveAddress(json.PublicKey);
     if (json.To !== address && ob_address !== address) {
       return;
     }
+    Logger.info(
+      `[DIAG-PRIV] handlePrivateMessageObject RECEIVED from=${ob_address} seq=${json.Sequence} preHash=${(json.PreHash || "").slice(0, 8)}.. to=${json.To}`,
+    );
     yield call(processPrivateMessage, json, address, ob_address);
   } catch (e) {
     Logger.error("[handlePrivateMessageObject] failed:", e.message);
@@ -406,6 +418,9 @@ function* processPrivateMessage(json, address, ob_address) {
 
     const friend = yield call(() => dbAPI.getFriend(address, remote));
     if (friend === null) {
+      Logger.warn(
+        `[DIAG-PRIV] processPrivateMessage SKIP: no friend record for ${remote}`,
+      );
       return;
     }
 
@@ -419,6 +434,9 @@ function* processPrivateMessage(json, address, ob_address) {
       dbAPI.getHandshake(address, remote, DefaultPartition, ecdh_sequence),
     );
     if (ecdh === null || ecdh.aes_key === null) {
+      Logger.info(
+        `[DIAG-PRIV] processPrivateMessage: no aes_key yet -> InitHandshake seq=${json.Sequence}`,
+      );
       yield call(InitHandshake, {
         key: null,
         ecdh_sequence: ecdh_sequence,
@@ -435,6 +453,9 @@ function* processPrivateMessage(json, address, ob_address) {
     if (content_json && checkMessageObjectSchema(content_json)) {
       content = content_json;
     }
+    Logger.info(
+      `[DIAG-PRIV] processPrivateMessage decrypted content type=${typeof content} ObjectType=${content?.ObjectType} keys=${typeof content === "object" ? Object.keys(content).join(",") : "N/A"}`,
+    );
 
     if (
       typeof content === "object" &&
@@ -468,6 +489,9 @@ function* processPrivateMessage(json, address, ob_address) {
     const msg_hash = QuarterSHA512Message(json);
     const existing = yield call(() => dbAPI.getPrivateMessageByHash(msg_hash));
     if (existing !== null) {
+      Logger.info(
+        `[DIAG-PRIV] processPrivateMessage: duplicate seq=${json.Sequence} (already in DB)`,
+      );
       return;
     }
 
@@ -476,6 +500,9 @@ function* processPrivateMessage(json, address, ob_address) {
     // independent hash-chains (A->B and B->A), each numbered from 1.
     let last_msg = yield call(() =>
       dbAPI.getLastPrivateMessage(ob_address, json.To),
+    );
+    Logger.info(
+      `[DIAG-PRIV] processPrivateMessage chain check: incoming seq=${json.Sequence} preHash=${(json.PreHash || "").slice(0, 8)}.. last_msg=${last_msg === null ? "null" : `seq=${last_msg.sequence} hash=${last_msg.hash.slice(0, 8)}..`}`,
     );
     let add_result = false;
     if (last_msg === null || json.Sequence === 1) {
@@ -540,6 +567,9 @@ function* processPrivateMessage(json, address, ob_address) {
     }
 
     if (add_result) {
+      Logger.info(
+        `[DIAG-PRIV] processPrivateMessage SAVED seq=${json.Sequence} from=${ob_address}`,
+      );
       if (
         CurrentSession &&
         CurrentSession.type === SessionType.Private &&
@@ -575,6 +605,13 @@ function* handleGroupListObject(json, address) {
         group_json.ObjectType === ObjectType.GroupCreate &&
         VerifyJsonSignature(group_json)
       ) {
+        if (
+          db_g !== null &&
+          db_g.cleared_at !== null &&
+          db_g.cleared_at !== undefined
+        ) {
+          continue;
+        }
         if (db_g === null) {
           const created_by = rippleKeyPairs.deriveAddress(group_json.PublicKey);
           if (created_by === address) {
@@ -610,6 +647,13 @@ function* handleGroupListObject(json, address) {
         group_json.ObjectType === ObjectType.GroupDelete &&
         VerifyJsonSignature(group_json)
       ) {
+        if (
+          db_g !== null &&
+          db_g.cleared_at !== null &&
+          db_g.cleared_at !== undefined
+        ) {
+          continue;
+        }
         if (db_g !== null) {
           yield call(() =>
             dbAPI.updateGroupDelete(group_json.Hash, group_json),
@@ -631,6 +675,7 @@ function* handleGroupMessageListObject(json, address, seed) {
       yield call(GroupSync, { key: null });
       return;
     }
+    if (group.cleared_at !== null && group.cleared_at !== undefined) return;
     if (group.is_accepted !== true) return;
 
     const ecdh_sequence = DHSequence(

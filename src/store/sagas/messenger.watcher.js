@@ -29,6 +29,7 @@ import {
   LoadBookmarkBulletin as LoadBookmarkBulletinAction,
   CreateGroup as CreateGroupAction,
   DeleteGroup as DeleteGroupAction,
+  ClearGroupData as ClearGroupDataAction,
   AcceptGroupRequest as AcceptGroupRequestAction,
   RejectGroupRequest as RejectGroupRequestAction,
   ComposeMemberAdd as ComposeMemberAddAction,
@@ -116,6 +117,7 @@ import {
 import {
   CreateGroup as CreateGroupHandler,
   DeleteGroup as DeleteGroupHandler,
+  ClearGroupData as ClearGroupDataHandler,
   AcceptGroupRequest as AcceptGroupRequestHandler,
   RejectGroupRequest as RejectGroupRequestHandler,
 } from "./MessengerSaga";
@@ -202,6 +204,7 @@ export function* watchMessenger() {
   // Group management
   yield takeLatest(CreateGroupAction.type, CreateGroupHandler);
   yield takeLatest(DeleteGroupAction.type, DeleteGroupHandler);
+  yield takeLatest(ClearGroupDataAction.type, ClearGroupDataHandler);
   yield takeLatest(AcceptGroupRequestAction.type, AcceptGroupRequestHandler);
   yield takeLatest(RejectGroupRequestAction.type, RejectGroupRequestHandler);
 

@@ -166,7 +166,6 @@
     "bookmarked_posts": "Bookmarked Bulletins",
     "followed_posts": "Followed Bulletins",
     "random_posts": "Random Bulletins",
-    "my_groups": "My Groups",
     "servers": "Servers",
     "connected_servers": "Connected Servers",
     "not_connected": "Not connected",
@@ -193,7 +192,6 @@
     "sound_blip": "Blip",
     "sound_none": "None",
     "contact": "Contact",
-    "group": "Group",
     "server_network": "Server Network",
     "storage": "Storage Management",
     "general": "General Settings",
@@ -493,13 +491,15 @@
     "selected_count": "{{count}} selected",
     "delete_count": "Delete ({{count}})",
     "page_indicator": "Page {{count}}",
-    "chip_all": "All"
+    "chip_all": "All",
+    "cat_private_chat": "Chat",
+    "cat_group_chat": "Group"
   },
   "group": {
     "group_name": "Group Name:",
     "deleted": "This group has been deleted, sending is disabled",
     "name_required": "Please enter a group name.",
-    "delete_title": "Delete Group",
+    "delete_title": "Disband Group",
     "unnamed": "Unnamed Group",
     "member_count": "{{count}} members",
     "created_on": "Created {{date}}",
@@ -507,7 +507,7 @@
     "select_members": "Select Members",
     "decline_title": "Decline Invitation",
     "decline_confirm": "Decline the invitation to \"{{name}}\"?",
-    "delete_confirm": "Delete this group? This can only be done by the creator.",
+    "delete_confirm": "After disbanding, the group will be closed and no more messages can be sent. Message history is preserved. Only the creator can do this.",
     "name": "Group Name",
     "name_placeholder": "Enter group name",
     "create": "Create",
@@ -515,7 +515,10 @@
     "accept": "Accept",
     "decline": "Decline",
     "invited_by": "Invited by {{name}}",
-    "members_suffix": " members"
+    "members_suffix": " members",
+    "disbanded": "Group disbanded",
+    "clear_data_title": "Clear Group Data",
+    "clear_data_confirm": "This will delete all messages in this group and remove it from your session list. This action cannot be undone and does not affect other members. Continue?"
   },
   "network": {
     "url": "URL:"

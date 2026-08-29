@@ -154,7 +154,6 @@
     "sound_blip": "Blip",
     "sound_none": "None",
     "contact": "Contato",
-    "group": "Grupo",
     "server_network": "Rede de servidores",
     "storage": "Gerenciamento de armazenamento",
     "general": "Configurações gerais",
@@ -234,7 +233,6 @@
     "bookmarked_posts": "Boletins marcados",
     "followed_posts": "Boletins seguidos",
     "random_posts": "Boletins aleatórios",
-    "my_groups": "Meus grupos",
     "servers": "Servidores",
     "connected_servers": "Servidores conectados",
     "not_connected": "Não conectado",
@@ -473,13 +471,15 @@
     "sum_chat": "Arquivos de chat:",
     "sum_avatars": "Avatares:",
     "sum_orphaned": "Órfãos:",
-    "clear_orphaned_count": "Limpar órfãos ({{count}})"
+    "clear_orphaned_count": "Limpar órfãos ({{count}})",
+    "cat_private_chat": "Chat",
+    "cat_group_chat": "Grupo"
   },
   "group": {
     "group_name": "Nome do grupo:",
     "deleted": "Este grupo foi excluído, o envio está desabilitado",
     "name_required": "Insira um nome de grupo.",
-    "delete_title": "Excluir grupo",
+    "delete_title": "Dissolver grupo",
     "unnamed": "Grupo sem nome",
     "member_count": "{{count}} membros",
     "created_on": "Criado em {{date}}",
@@ -487,7 +487,7 @@
     "select_members": "Selecionar membros",
     "decline_title": "Recusar convite",
     "decline_confirm": "Recusar o convite para «{{name}}»?",
-    "delete_confirm": "Excluir este grupo? Apenas o criador pode fazer isso.",
+    "delete_confirm": "Após a dissolução, o grupo será fechado e não será possível enviar mais mensagens. O histórico é preservado. Apenas o criador pode fazer isso.",
     "name": "Nome do grupo",
     "name_placeholder": "Digite o nome do grupo",
     "create": "Criar",
@@ -495,7 +495,10 @@
     "accept": "Aceitar",
     "decline": "Recusar",
     "invited_by": "Convidado por {{name}}",
-    "members_suffix": " membros"
+    "members_suffix": " membros",
+    "disbanded": "Grupo dissolvido",
+    "clear_data_title": "Limpar dados do grupo",
+    "clear_data_confirm": "Isso apagará todas as mensagens deste grupo e o removerá da sua lista de sessões. Esta ação não pode ser desfeita e não afeta outros membros. Continuar?"
   },
   "network": {
     "url": "URL:"

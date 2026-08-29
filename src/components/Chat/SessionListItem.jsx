@@ -10,7 +10,7 @@ import AvatarImage from "../AvatarImage";
  * Extract a text preview from a message that may be plain text or an object.
  * Truncates to 40 chars for display in session list.
  */
-function getMessagePreview(msg, t) {
+function getMessagePreview(msg, t, selfAddress, contactMap) {
   if (!msg) return "";
   if (msg.is_object && msg.content) {
     const obj = msg.content;
@@ -19,7 +19,15 @@ function getMessagePreview(msg, t) {
     }
     if (obj.ObjectType !== undefined) {
       if (obj.ObjectType === 101) {
-        return t("chat.shared_bulletin");
+        const addr = obj.Address || obj.address || "";
+        const seq = obj.Sequence || obj.sequence || 0;
+        let name = "";
+        if (addr) {
+          if (selfAddress && addr === selfAddress) name = t("common.me");
+          else if (contactMap && contactMap[addr]) name = contactMap[addr];
+          else name = shortenAddress(addr);
+        }
+        return name ? `${name}#${seq}` : t("chat.shared_bulletin");
       }
       return t("chat.shared_file");
     }
@@ -33,12 +41,12 @@ function getMessagePreview(msg, t) {
  * Shows "Sender: message" for groups, "message" for private chats.
  * Falls back to member count for empty group sessions only.
  */
-function buildSessionPreview(session, t) {
+function buildSessionPreview(session, t, selfAddress, contactMap) {
   const lastMsg = session.last_message;
 
   // When there are messages, always show content preview
   if (lastMsg) {
-    const preview = getMessagePreview(lastMsg, t);
+    const preview = getMessagePreview(lastMsg, t, selfAddress, contactMap);
 
     // For group chats, prefix with sender address
     if (session.type === 1) {
@@ -79,6 +87,7 @@ export default React.memo(function SessionListItem({
   session,
   onPress,
   contactMap = {},
+  selfAddress = "",
 }) {
   const { t } = useTranslation();
   const isPrivate = session.type === SessionType.Private;
@@ -93,8 +102,26 @@ export default React.memo(function SessionListItem({
     displayName = session.name || t("group.unnamed");
   }
 
-  // Get last message preview text from the actual last message content
-  const previewText = buildSessionPreview(session, t);
+  // Get last message preview - check if it's a bulletin link
+  const lastMsg = session.last_message;
+  const isBulletinLink =
+    lastMsg?.is_object && lastMsg?.content?.ObjectType === 101;
+  let bulletinLinkText = "";
+  if (isBulletinLink) {
+    const obj = lastMsg.content;
+    const addr = obj.Address || obj.address || "";
+    const seq = obj.Sequence || obj.sequence || 0;
+    let name = "";
+    if (addr) {
+      if (selfAddress && addr === selfAddress) name = t("common.me");
+      else if (contactMap && contactMap[addr]) name = contactMap[addr];
+      else name = shortenAddress(addr);
+    }
+    bulletinLinkText = name ? `${name}#${seq}` : t("chat.shared_bulletin");
+  }
+  const previewText = isBulletinLink
+    ? ""
+    : buildSessionPreview(session, t, selfAddress, contactMap);
 
   return (
     <TouchableOpacity
@@ -143,25 +170,24 @@ export default React.memo(function SessionListItem({
             {formatTime(session.updated_at)}
           </Text>
         </View>
-        <Text
-          className="text-sm text-text-secondary mt-0.5"
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
-          {previewText ||
-            (isPrivate
-              ? ""
-              : `${session.member?.length || 0} ${t("chat.group_members")}`)}
-        </Text>
-      </View>
-
-      {/* Type indicator */}
-      <View className="ml-2">
-        <Ionicons
-          name={isPrivate ? "lock-closed" : "people"}
-          size={16}
-          color="#a89f85"
-        />
+        {isBulletinLink ? (
+          <View className="mt-0.5 px-2 py-0.5 rounded-full border border-primary/30 bg-primary/5 self-start">
+            <Text className="text-sm text-primary-dark">
+              {bulletinLinkText}
+            </Text>
+          </View>
+        ) : (
+          <Text
+            className="text-sm text-text-secondary mt-0.5"
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {previewText ||
+              (isPrivate
+                ? ""
+                : `${session.member?.length || 0} ${t("chat.group_members")}`)}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );

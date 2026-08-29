@@ -100,14 +100,23 @@ export default React.memo(function BulletinCard({
 
         {/* Nickname / address + timestamp */}
         <View className="flex-1 min-w-0">
-          <Text
-            numberOfLines={1}
-            className="text-sm font-semibold text-text-primary truncate"
-          >
-            {displayName} #{bulletin.sequence}
-            {bulletin.quote?.length > 0 && ` · 📎${bulletin.quote.length}`}
-            {bulletin.file?.length > 0 && ` · 📁${bulletin.file.length}`}
-          </Text>
+          <View className="flex-row items-center gap-1">
+            <View className="px-2 py-0.5 rounded-full border border-primary/30 bg-primary/5">
+              <Text className="text-sm font-semibold text-primary-dark">
+                {displayName}#{bulletin.sequence}
+              </Text>
+            </View>
+            {bulletin.quote?.length > 0 && (
+              <Text className="text-xs text-text-secondary/70">
+                📎{bulletin.quote.length}
+              </Text>
+            )}
+            {bulletin.file?.length > 0 && (
+              <Text className="text-xs text-text-secondary/70">
+                📁{bulletin.file.length}
+              </Text>
+            )}
+          </View>
           <Text className="text-xs text-text-secondary/80">
             {formatTime(bulletin.signed_at)}
           </Text>
