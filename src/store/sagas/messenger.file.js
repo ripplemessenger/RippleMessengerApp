@@ -36,7 +36,7 @@ function guessMimeType(ext) {
   );
 }
 
-import { call, put, select } from "redux-saga/effects";
+import { call, put, select, fork } from "redux-saga/effects";
 
 import { dbAPI } from "../../db";
 import * as fileService from "../../services/fileService";
@@ -68,7 +68,9 @@ import {
   setFileRequestList,
   pushFileRequest,
   genFileNonce,
+  safeFork,
 } from "./messenger.core";
+import { getSettingBool } from "../../lib/SettingsUtil";
 
 // MessengerSaga — SendContent dispatcher and saveLocalFile re-export
 import { SendContent } from "./MessengerSaga";
@@ -600,5 +602,119 @@ export function* saveLocalFile(hash, content) {
     yield call(() => fileService.writeFile(filePath, content));
   } catch (e) {
     Logger.error("[saveLocalFile] failed for", hash, e.message);
+  }
+}
+
+// ==================== Incomplete file resume (auto-download) ====================
+
+/**
+ * Startup: scan all incomplete files (is_saved=0) and resume downloading them.
+ * Respects the autoDownload* settings. Orphan files (no source) are skipped.
+ * Private/group files abort gracefully if ECDH handshake is not ready yet.
+ */
+export function* ResumeIncompleteFiles({ payload } = {}) {
+  try {
+    const self_address =
+      payload?.address || (yield select((state) => state.User.Address));
+    if (!self_address) return;
+
+    const files = yield call(() => dbAPI.getIncompleteFiles(self_address));
+    for (const f of files) {
+      if (f.type === "bulletin") {
+        const auto = yield call(
+          getSettingBool,
+          "autoDownloadFollowFiles",
+          true,
+        );
+        if (auto) {
+          yield fork(safeFork, FetchBulletinFile, {
+            payload: { hash: f.hash, size: f.size },
+          });
+        }
+      } else if (f.type === "private" && f.private_remote) {
+        const auto = yield call(
+          getSettingBool,
+          "autoDownloadPrivateFiles",
+          true,
+        );
+        if (auto) {
+          yield fork(safeFork, FetchPrivateChatFile, {
+            payload: { remote: f.private_remote, hash: f.hash, size: f.size },
+          });
+        }
+      } else if (f.type === "group" && f.group_hash) {
+        const auto = yield call(getSettingBool, "autoDownloadGroupFiles", true);
+        if (auto) {
+          yield fork(safeFork, FetchGroupChatFile, {
+            payload: { group_hash: f.group_hash, hash: f.hash, size: f.size },
+          });
+        }
+      }
+      // orphan: no source, skip
+    }
+  } catch (e) {
+    Logger.error("[ResumeIncompleteFiles] failed:", e.message);
+  }
+}
+
+/**
+ * Page-entry (bulletin detail): resume incomplete files for this bulletin.
+ * payload: { hash: bulletin_hash }
+ */
+export function* ResumeBulletinFiles({ payload }) {
+  try {
+    const auto = yield call(getSettingBool, "autoDownloadFollowFiles", true);
+    if (!auto) return;
+    const files = yield call(() =>
+      dbAPI.getIncompleteBulletinFiles(payload.hash),
+    );
+    for (const f of files) {
+      yield fork(safeFork, FetchBulletinFile, {
+        payload: { hash: f.hash, size: f.size },
+      });
+    }
+  } catch (e) {
+    Logger.error("[ResumeBulletinFiles] failed:", e.message);
+  }
+}
+
+/**
+ * Page-entry (private/group chat): resume incomplete files for this session.
+ * payload: { type: 'private'|'group', remote?, group_hash? }
+ */
+export function* ResumeChatFiles({ payload }) {
+  try {
+    const self_address = yield select((state) => state.User.Address);
+    if (!self_address) return;
+
+    if (payload.type === "private" && payload.remote) {
+      const auto = yield call(getSettingBool, "autoDownloadPrivateFiles", true);
+      if (!auto) return;
+      const files = yield call(() =>
+        dbAPI.getIncompletePrivateFiles(self_address, payload.remote),
+      );
+      for (const f of files) {
+        yield fork(safeFork, FetchPrivateChatFile, {
+          payload: { remote: payload.remote, hash: f.hash, size: f.size },
+        });
+      }
+    } else if (payload.type === "group" && payload.group_hash) {
+      const auto = yield call(getSettingBool, "autoDownloadGroupFiles", true);
+      if (!auto) return;
+      const files = yield call(() =>
+        dbAPI.getIncompleteGroupFiles(payload.group_hash),
+      );
+      for (const f of files) {
+        yield fork(safeFork, FetchGroupChatFile, {
+          payload: {
+            group_hash: payload.group_hash,
+            hash: f.hash,
+            size: f.size,
+          },
+        });
+      }
+    }
+  } catch (e) {
+    Logger.error("[ResumeChatFiles] failed:", e.message);
   }
 }

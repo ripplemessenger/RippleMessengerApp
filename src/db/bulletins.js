@@ -304,8 +304,26 @@ export const api = {
   },
 
   // Management: delete all bulletins (CASCADE handles replies/tags/linking tables)
-  async clearAllBulletins() {
+  async clearAllBulletins(excludeAddress) {
     const db = await getDB();
+    if (excludeAddress) {
+      const [result] = await db.select(
+        `SELECT COUNT(hash) AS count FROM bulletins 
+         WHERE address != $1 
+         AND (is_marked IS NULL OR is_marked = 0)
+         AND address NOT IN (SELECT remote FROM follows WHERE local = $1)`,
+        [excludeAddress, excludeAddress],
+      );
+      const count = result ? result.count : 0;
+      await db.execute(
+        `DELETE FROM bulletins 
+         WHERE address != $1 
+         AND (is_marked IS NULL OR is_marked = 0)
+         AND address NOT IN (SELECT remote FROM follows WHERE local = $1)`,
+        [excludeAddress, excludeAddress],
+      );
+      return count;
+    }
     const [result] = await db.select(
       "SELECT COUNT(hash) AS count FROM bulletins",
     );
@@ -397,7 +415,7 @@ export const api = {
         params = [address, pageSize, offset];
         break;
       case "followed":
-        query = `SELECT b.hash, b.address, b.sequence, c.nickname, SUBSTR(b.content, 1, 100) AS content_preview, b.signed_at, b.is_marked FROM bulletins b INNER JOIN follows f ON b.address = f.remote LEFT JOIN contacts c ON b.address = c.address WHERE f.local = $1 ORDER BY b.signed_at ${sortDir} LIMIT $2 OFFSET $3`;
+        query = `SELECT b.hash, b.address, b.sequence, c.nickname, SUBSTR(b.content, 1, 100) AS content_preview, b.signed_at, b.is_marked, 1 AS is_followed FROM bulletins b INNER JOIN follows f ON b.address = f.remote LEFT JOIN contacts c ON b.address = c.address WHERE f.local = $1 ORDER BY b.signed_at ${sortDir} LIMIT $2 OFFSET $3`;
         params = [address, pageSize, offset];
         break;
       case "bookmarked":
@@ -481,10 +499,10 @@ export const api = {
         break;
       case "followed":
         if (hasSearch) {
-          querySql = `SELECT b.hash, b.address, b.sequence, c.nickname, SUBSTR(b.content, 1, 100) AS content_preview, b.signed_at, b.is_marked FROM bulletins b INNER JOIN follows f ON b.address = f.remote LEFT JOIN contacts c ON b.address = c.address WHERE f.local = $1 AND b.content LIKE $2 ORDER BY b.signed_at DESC LIMIT $3 OFFSET $4`;
+          querySql = `SELECT b.hash, b.address, b.sequence, c.nickname, SUBSTR(b.content, 1, 100) AS content_preview, b.signed_at, b.is_marked, 1 AS is_followed FROM bulletins b INNER JOIN follows f ON b.address = f.remote LEFT JOIN contacts c ON b.address = c.address WHERE f.local = $1 AND b.content LIKE $2 ORDER BY b.signed_at DESC LIMIT $3 OFFSET $4`;
           params = [address, likePattern, pageSize, offset];
         } else {
-          querySql = `SELECT b.hash, b.address, b.sequence, c.nickname, SUBSTR(b.content, 1, 100) AS content_preview, b.signed_at, b.is_marked FROM bulletins b INNER JOIN follows f ON b.address = f.remote LEFT JOIN contacts c ON b.address = c.address WHERE f.local = $1 ORDER BY b.signed_at DESC LIMIT $2 OFFSET $3`;
+          querySql = `SELECT b.hash, b.address, b.sequence, c.nickname, SUBSTR(b.content, 1, 100) AS content_preview, b.signed_at, b.is_marked, 1 AS is_followed FROM bulletins b INNER JOIN follows f ON b.address = f.remote LEFT JOIN contacts c ON b.address = c.address WHERE f.local = $1 ORDER BY b.signed_at DESC LIMIT $2 OFFSET $3`;
           params = [address, pageSize, offset];
         }
         break;

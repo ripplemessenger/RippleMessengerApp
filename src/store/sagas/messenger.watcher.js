@@ -42,6 +42,9 @@ import {
   FetchBulletinFile as FetchBulletinFileAction,
   SaveChatFile as SaveChatFileAction,
   FetchChatFile as FetchChatFileAction,
+  ResumeIncompleteFiles as ResumeIncompleteFilesAction,
+  ResumeBulletinFiles as ResumeBulletinFilesAction,
+  ResumeChatFiles as ResumeChatFilesAction,
   BulletinFileAdd as BulletinFileAddAction,
   BulletinFileDel as BulletinFileDelAction,
   BulletinTagAdd as BulletinTagAddAction,
@@ -87,6 +90,9 @@ import {
   FetchBulletinFile as FetchBulletinFileHandler,
   SaveChatFile as SaveChatFileHandler,
   FetchChatFile as FetchChatFileHandler,
+  ResumeIncompleteFiles as ResumeIncompleteFilesHandler,
+  ResumeBulletinFiles as ResumeBulletinFilesHandler,
+  ResumeChatFiles as ResumeChatFilesHandler,
 } from "./messenger.file";
 
 // Session + chat saga handlers
@@ -240,6 +246,14 @@ export function* watchMessenger() {
   // Chat file download & save — triggered from chat detail UI
   yield takeLatest(SaveChatFileAction.type, SaveChatFileHandler);
   yield takeLatest(FetchChatFileAction.type, FetchChatFileHandler);
+
+  // File resume (auto-download) — startup + page-entry
+  yield takeLatest(
+    ResumeIncompleteFilesAction.type,
+    ResumeIncompleteFilesHandler,
+  );
+  yield takeLatest(ResumeBulletinFilesAction.type, ResumeBulletinFilesHandler);
+  yield takeLatest(ResumeChatFilesAction.type, ResumeChatFilesHandler);
 
   // Upload bulletin — cache a bulletin from external source
   yield takeEvery(UploadBulletinAction.type, UploadBulletinHandler);

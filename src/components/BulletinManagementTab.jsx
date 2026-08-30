@@ -5,14 +5,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  FlatList,
-  Alert,
-  ScrollView,
-} from "react-native";
+import { View, Text, TouchableOpacity, FlatList, Alert } from "react-native";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
@@ -20,12 +13,12 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { dbAPI } from "../db";
 
-import { selectUserAddress } from "../selectors";
+import { selectUserAddress, selectContactMap } from "../selectors";
 import { ACCENT, ICON_MUTED } from "../lib/theme";
 import { formatTime, shortenAddress } from "../lib/format";
-import SearchBar from "./common/SearchBar";
 import EmptyState from "./common/EmptyState";
 import BottomSheet from "./common/BottomSheet";
+import AvatarImage from "./AvatarImage";
 
 const BULLETIN_PAGE_SIZE = 20;
 
@@ -44,11 +37,11 @@ export default function BulletinManagementTab() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const myAddress = useSelector(selectUserAddress);
+  const contactMap = useSelector(selectContactMap);
 
   const [filter, setFilter] = useState("all");
   const [bulletins, setBulletins] = useState([]);
   const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
   // Search state
@@ -60,16 +53,8 @@ export default function BulletinManagementTab() {
   const [selectedTag, setSelectedTag] = useState(null);
   const [tagModalVisible, setTagModalVisible] = useState(false);
 
-  // Multi-select mode
-  const [selectMode, setSelectMode] = useState(false);
+  // Multi-select
   const [selectedHashes, setSelectedHashes] = useState([]);
-
-  // Sort order
-  const [sortOrder, setSortOrder] = useState("desc");
-
-  // JSON preview modal
-  const [jsonModalVisible, setJsonModalVisible] = useState(false);
-  const [previewBulletin, setPreviewBulletin] = useState(null);
 
   // Load bulletins for the current filter, page, search, tag, and sort
   const loadBulletins = useCallback(
@@ -111,7 +96,7 @@ export default function BulletinManagementTab() {
         const sorted = (rows || []).sort((a, b) => {
           const ta = a.signed_at || 0;
           const tb = b.signed_at || 0;
-          return sortOrder === "desc" ? tb - ta : ta - tb;
+          return tb - ta;
         });
 
         setBulletins(sorted);
@@ -121,27 +106,12 @@ export default function BulletinManagementTab() {
         setLoading(false);
       }
     },
-    [filter, myAddress, page, searchQuery, selectedTag, sortOrder],
+    [filter, myAddress, page, searchQuery, selectedTag],
   );
-
-  // Load count summary for current filter
-  const loadSummary = useCallback(async () => {
-    try {
-      const count =
-        (await dbAPI.getBulletinCountForManagement?.({
-          filter,
-          address: myAddress,
-        })) || 0;
-      setTotalCount(count);
-    } catch {
-      // silent — non-critical
-    }
-  }, [filter, myAddress]);
 
   useEffect(() => {
     setPage(1);
     loadBulletins(1);
-    loadSummary();
   }, [filter]);
 
   // Load tags on mount
@@ -158,7 +128,6 @@ export default function BulletinManagementTab() {
     debouncedSearchRef.current = setTimeout(() => {
       setPage(1);
       loadBulletins(1);
-      loadSummary();
     }, 300);
     return () => {
       if (debouncedSearchRef.current) clearTimeout(debouncedSearchRef.current);
@@ -170,7 +139,6 @@ export default function BulletinManagementTab() {
     if (selectedTag !== null) {
       setPage(1);
       loadBulletins(1);
-      loadSummary();
     }
   }, [selectedTag]);
 
@@ -191,23 +159,21 @@ export default function BulletinManagementTab() {
     });
   }, []);
 
-  // Enter select mode with an optional pre-selected hash
-  const enterSelectMode = useCallback((hash) => {
-    setSelectMode(true);
-    if (hash) setSelectedHashes([hash]);
-  }, []);
-
-  // Exit select mode
-  const exitSelectMode = useCallback(() => {
-    setSelectMode(false);
-    setSelectedHashes([]);
-  }, []);
-
-  // Delete selected bulletins
+  // Delete selected bulletins (safety: filter out protected bulletins)
   const handleDeleteSelected = useCallback(() => {
+    // Filter out protected bulletins (own, bookmarked, followed) as safety net
+    const deletableHashes = selectedHashes.filter((hash) => {
+      const b = bulletins.find((item) => (item.Hash || item.hash) === hash);
+      if (!b) return false;
+      const addr = b.Address || b.address;
+      const marked = b.is_marked === true || b.is_marked === 1;
+      const followed = b.is_followed === true || b.is_followed === 1;
+      return addr !== myAddress && !marked && !followed;
+    });
+    if (deletableHashes.length === 0) return;
     Alert.alert(
       t("bulletin.delete_selected_title"),
-      t("bulletin.delete_selected_confirm", { count: selectedHashes.length }),
+      t("bulletin.delete_selected_confirm", { count: deletableHashes.length }),
       [
         { text: t("common.cancel"), style: "cancel" },
         {
@@ -215,10 +181,9 @@ export default function BulletinManagementTab() {
           style: "destructive",
           onPress: async () => {
             try {
-              await dbAPI.deleteBulletinsByHashes(selectedHashes);
-              exitSelectMode();
+              await dbAPI.deleteBulletinsByHashes(deletableHashes);
+              setSelectedHashes([]);
               loadBulletins(page);
-              loadSummary();
             } catch (e) {
               Alert.alert(t("common.error"), t("bulletin.delete_failed"));
             }
@@ -226,52 +191,15 @@ export default function BulletinManagementTab() {
         },
       ],
     );
-  }, [selectedHashes, exitSelectMode, loadBulletins, loadSummary, page]);
+  }, [selectedHashes, bulletins, myAddress, loadBulletins, page]);
 
   // Open JSON preview modal
-  const handlePreviewBulletin = useCallback(async (hash) => {
-    try {
-      const bulletin = await dbAPI.getBulletinByHash(hash);
-      setPreviewBulletin(bulletin);
-      setJsonModalVisible(true);
-    } catch (e) {
-      console.error("[BulletinManagementTab] preview error:", e);
-    }
-  }, []);
-
   // Tag picker handler
   const handleSelectTag = useCallback((tagName) => {
     setSelectedTag(tagName);
     setSearchQuery("");
     setTagModalVisible(false);
   }, []);
-
-  const handleClearTag = useCallback(() => {
-    setSelectedTag(null);
-  }, []);
-
-  const handleClearAll = useCallback(() => {
-    Alert.alert(
-      t("bulletin.clear_all_title"),
-      t("bulletin.clear_all_confirm", { count: totalCount }),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("bulletin.clear_all"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await dbAPI.clearAllBulletins();
-              setBulletins([]);
-              setTotalCount(0);
-            } catch (e) {
-              Alert.alert(t("common.error"), t("bulletin.clear_failed"));
-            }
-          },
-        },
-      ],
-    );
-  }, [totalCount]);
 
   const truncateContent = useCallback((content) => {
     if (!content) return "";
@@ -286,85 +214,98 @@ export default function BulletinManagementTab() {
       const tagsList = b.tag || [];
       const isSelected = selectedHashes.includes(hash);
 
+      // Resolve display name: contact nickname > DB nickname > "Me" > shortened address
+      const displayName =
+        address === myAddress
+          ? t("common.me")
+          : (contactMap && contactMap[address]) ||
+            b.nickname ||
+            shortenAddress(address);
+
+      const isOwn = address === myAddress;
+      const isMarked = b.is_marked === true || b.is_marked === 1;
+      const isFollowed = b.is_followed === true || b.is_followed === 1;
+      const isProtected = isOwn || isMarked || isFollowed;
+
       return (
-        <TouchableOpacity
-          onPress={() => {
-            if (selectMode) {
-              toggleSelectHash(hash);
-            } else {
-              handlePreviewBulletin(hash);
-            }
-          }}
-          onLongPress={() => {
-            if (!selectMode) {
-              enterSelectMode(hash);
-            }
-          }}
-          delayLongPress={500}
-          activeOpacity={0.7}
-          className={`bg-surface-card rounded-xl p-4 border ${
+        <View
+          className={`bg-surface-card rounded-xl p-3 border mb-1.5 ${
             isSelected ? "border-primary shadow-sm" : "border-secondary-light"
           }`}
         >
-          {/* Header row: checkbox + date + author */}
-          <View className="flex-row items-center justify-between mb-2">
-            <View className="flex-row items-center gap-2">
-              {selectMode && (
+          {/* Header row: checkbox/lock + avatar + bulletin link + time */}
+          <View className="flex-row items-center gap-2 mb-1">
+            {isProtected ? (
+              <TouchableOpacity className="p-1" activeOpacity={0.6}>
+                <Ionicons name="lock-closed" size={18} color={ICON_MUTED} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={() => toggleSelectHash(hash)}
+                className="p-1"
+                activeOpacity={0.6}
+              >
                 <View
-                  className={`w-4 h-4 rounded border ${
+                  className={`w-5 h-5 rounded border ${
                     isSelected
                       ? "bg-primary border-primary"
                       : "border-text-secondary/40"
                   } items-center justify-center`}
                 >
                   {isSelected && (
-                    <Ionicons name="checkmark" size={10} color="#fff" />
+                    <Ionicons name="checkmark" size={12} color="#fff" />
                   )}
                 </View>
-              )}
-              <Text className="text-xs text-text-secondary/60">
-                {formatTime(b.SignedAt || b.signed_at)}
-              </Text>
+              </TouchableOpacity>
+            )}
+            <View className="flex-row items-center gap-2 flex-1 min-w-0">
+              <AvatarImage address={address} nickname={displayName} size={32} />
+              <View className="flex-1 min-w-0">
+                <View className="flex-row items-center gap-1">
+                  <View className="px-2 py-0.5 rounded-full border border-primary/30 bg-primary/5">
+                    <Text className="text-xs font-semibold text-primary-dark">
+                      {displayName}#{b.sequence}
+                    </Text>
+                  </View>
+                </View>
+                <Text className="text-[10px] text-text-secondary/70">
+                  {formatTime(b.SignedAt || b.signed_at)}
+                </Text>
+              </View>
             </View>
-            <Text className="text-xs font-mono text-text-secondary/50 truncate max-w-[120px]">
-              {shortenAddress(address)}
-            </Text>
           </View>
 
           {/* Content preview */}
-          <Text className="text-sm text-text-primary mb-2" numberOfLines={3}>
-            {truncateContent(content)}
-          </Text>
+          <View className="flex-1">
+            <Text className="text-sm text-text-primary mb-2" numberOfLines={3}>
+              {truncateContent(content)}
+            </Text>
 
-          {/* Tags as pills */}
-          {tagsList.length > 0 && (
-            <View className="flex-row flex-wrap gap-1.5">
-              {tagsList.map((tag, idx) => (
-                <View
-                  key={String(idx)}
-                  className="bg-primary/15 px-2 py-0.5 rounded-full"
-                >
-                  <Text className="text-xs text-primary">{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Hash indicator */}
-          <Text className="text-[10px] font-mono text-text-secondary/30 mt-2">
-            {hash.slice(0, 20)}...
-          </Text>
-        </TouchableOpacity>
+            {/* Tags as pills */}
+            {tagsList.length > 0 && (
+              <View className="flex-row flex-wrap gap-1.5">
+                {tagsList.map((tag, idx) => (
+                  <View
+                    key={String(idx)}
+                    className="bg-primary/15 px-2 py-0.5 rounded-full"
+                  >
+                    <Text className="text-xs text-primary">{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
       );
     },
     [
       shortenAddress,
       truncateContent,
-      selectMode,
       selectedHashes,
       toggleSelectHash,
-      enterSelectMode,
-      handlePreviewBulletin,
+      myAddress,
+      contactMap,
+      t,
     ],
   );
 
@@ -397,44 +338,66 @@ export default function BulletinManagementTab() {
           className="text-lg font-semibold text-text-primary flex-1 ml-2"
           numberOfLines={1}
         >
-          {t("setting.bulletin_cache")}
+          {selectedHashes.length > 0
+            ? `${selectedHashes.length} selected`
+            : t("setting.bulletin_cache")}
         </Text>
+        {/* Select All / Deselect All */}
+        <TouchableOpacity
+          onPress={() => {
+            const nonProtected = bulletins
+              .filter((b) => {
+                const addr = b.Address || b.address;
+                const marked = b.is_marked === true || b.is_marked === 1;
+                const followed = b.is_followed === true || b.is_followed === 1;
+                return addr !== myAddress && !marked && !followed;
+              })
+              .map((b) => b.Hash || b.hash);
+            if (
+              nonProtected.length > 0 &&
+              nonProtected.every((h) => selectedHashes.includes(h))
+            ) {
+              setSelectedHashes([]);
+            } else {
+              setSelectedHashes(nonProtected);
+            }
+          }}
+          activeOpacity={0.6}
+          className="p-1"
+        >
+          <Ionicons
+            name={
+              bulletins.length > 0 &&
+              bulletins
+                .filter((b) => {
+                  const addr = b.Address || b.address;
+                  const marked = b.is_marked === true || b.is_marked === 1;
+                  const followed =
+                    b.is_followed === true || b.is_followed === 1;
+                  return addr !== myAddress && !marked && !followed;
+                })
+                .every((b) => selectedHashes.includes(b.Hash || b.hash))
+                ? "close-circle-outline"
+                : "checkmark-done-outline"
+            }
+            size={22}
+            color={ICON_MUTED}
+          />
+        </TouchableOpacity>
+        {/* Delete */}
+        <TouchableOpacity
+          onPress={handleDeleteSelected}
+          disabled={selectedHashes.length === 0}
+          activeOpacity={0.6}
+          className="p-1 ml-1"
+        >
+          <Ionicons
+            name="trash-outline"
+            size={22}
+            color={selectedHashes.length > 0 ? "#ef4444" : ICON_MUTED}
+          />
+        </TouchableOpacity>
       </View>
-
-      {/* Select mode header */}
-      {selectMode && (
-        <View className="flex-row items-center justify-between bg-primary/10 rounded-xl px-4 py-2 border border-primary/30">
-          <TouchableOpacity onPress={exitSelectMode}>
-            <Text className="text-sm font-medium text-primary">
-              {t("common.done")}
-            </Text>
-          </TouchableOpacity>
-          <Text className="text-xs text-text-secondary">
-            {t("bulletin.selected_count", { count: selectedHashes.length })}
-          </Text>
-          <TouchableOpacity
-            onPress={handleDeleteSelected}
-            disabled={selectedHashes.length === 0}
-          >
-            <Text
-              className={`text-sm font-semibold ${
-                selectedHashes.length > 0
-                  ? "text-status-error"
-                  : "text-text-secondary/30"
-              }`}
-            >
-              {t("bulletin.delete_count", { count: selectedHashes.length })}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Search bar */}
-      <SearchBar
-        value={searchQuery}
-        onChange={setSearchQuery}
-        placeholder={t("bulletin.search_placeholder")}
-      />
 
       {/* Filter chips */}
       <View className="flex-row bg-surface-card rounded-xl p-1 border border-secondary-light">
@@ -465,63 +428,8 @@ export default function BulletinManagementTab() {
         })}
       </View>
 
-      {/* Summary bar with tag filter and sort toggle */}
-      <View className="flex-row items-center justify-between px-1">
-        <Text className="text-xs text-text-secondary/70">
-          {t("bulletin.total_count", { count: totalCount.toLocaleString() })}
-        </Text>
-        <View className="flex-row items-center gap-2">
-          {/* Tag filter button */}
-          {tags.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setTagModalVisible(true)}
-              className="flex-row items-center gap-1 bg-surface-card px-2 py-1 rounded border border-secondary-light"
-            >
-              <Ionicons name="pricetags-outline" size={14} color={ICON_MUTED} />
-              {selectedTag && (
-                <>
-                  <Text className="text-[10px] text-primary">
-                    {selectedTag}
-                  </Text>
-                  <TouchableOpacity onPress={handleClearTag}>
-                    <Ionicons name="close-circle" size={12} color="#ef4444" />
-                  </TouchableOpacity>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
-
-          {/* Select toggle */}
-          <TouchableOpacity
-            onPress={() => {
-              if (selectMode) exitSelectMode();
-              else enterSelectMode();
-            }}
-            className="flex-row items-center gap-1 bg-surface-card px-2 py-1 rounded border border-secondary-light"
-          >
-            <Ionicons
-              name={selectMode ? "checkmark-done" : "checkmark-circle-outline"}
-              size={14}
-              color={selectMode ? ACCENT : ICON_MUTED}
-            />
-          </TouchableOpacity>
-
-          {/* Sort toggle */}
-          <TouchableOpacity
-            onPress={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
-            className="flex-row items-center gap-1 bg-surface-card px-2 py-1 rounded border border-secondary-light"
-          >
-            <Ionicons
-              name={sortOrder === "desc" ? "arrow-down" : "arrow-up"}
-              size={14}
-              color={ICON_MUTED}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* Bulletin list */}
-      {!selectMode && bulletins.length > 0 ? (
+      {bulletins.length > 0 ? (
         <FlatList
           data={bulletins}
           keyExtractor={(item) => item.Hash || item.hash}
@@ -529,22 +437,12 @@ export default function BulletinManagementTab() {
           contentContainerClassName="gap-2 pb-4"
           showsVerticalScrollIndicator={false}
         />
-      ) : selectMode ? (
-        bulletins.length > 0 ? (
-          <FlatList
-            data={bulletins}
-            keyExtractor={(item) => item.Hash || item.hash}
-            renderItem={renderBulletinItem}
-            contentContainerClassName="gap-2 pb-4"
-            showsVerticalScrollIndicator={false}
-          />
-        ) : null
       ) : (
         emptyState
       )}
 
       {/* Page indicator */}
-      {!selectMode && (
+      {
         <View className="flex-row items-center justify-between px-2">
           <TouchableOpacity
             onPress={() => handlePageChange(page - 1)}
@@ -578,39 +476,7 @@ export default function BulletinManagementTab() {
             </View>
           </TouchableOpacity>
         </View>
-      )}
-
-      {/* Clear All button (hidden in select mode) */}
-      {!selectMode && totalCount > 0 && (
-        <TouchableOpacity
-          onPress={handleClearAll}
-          className="border-2 border-status-error/50 py-3 rounded-xl items-center"
-        >
-          <View className="flex-row items-center gap-2">
-            <Ionicons name="trash-outline" size={16} color="#ef4444" />
-            <Text className="text-base font-semibold text-status-error">
-              Clear All ({totalCount})
-            </Text>
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {/* JSON Preview Modal */}
-      <BottomSheet
-        visible={jsonModalVisible}
-        onClose={() => setJsonModalVisible(false)}
-        title={t("bulletin.json_title")}
-      >
-        <ScrollView className="max-h-[70vh]">
-          {previewBulletin && (
-            <View className="bg-black/10 rounded-xl p-3">
-              <Text className="text-xs font-mono text-text-primary whitespace-pre-wrap">
-                {JSON.stringify(previewBulletin, null, 2)}
-              </Text>
-            </View>
-          )}
-        </ScrollView>
-      </BottomSheet>
+      }
 
       {/* Tag Picker Modal */}
       <BottomSheet

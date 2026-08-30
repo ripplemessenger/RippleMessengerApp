@@ -35,9 +35,21 @@ export default function BottomSheet({
                     onPress={() => {}}
                 >
                     <View className="w-10 h-1 bg-secondary-light rounded-full mx-auto mb-4" />
-                    <Text className="text-lg font-semibold text-text-primary text-center mb-1">
-                        {title}
-                    </Text>
+                    <View className="flex-row items-center justify-center mb-1">
+                        <Text className="text-lg font-semibold text-text-primary flex-1 text-center">
+                            {title}
+                        </Text>
+                        <TouchableOpacity
+                            onPress={onClose}
+                            className="p-1 -mr-1"
+                        >
+                            <View className="w-8 h-8 rounded-full bg-secondary-light/50 items-center justify-center">
+                                <Text className="text-base text-text-secondary">
+                                    ✕
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
                     {subtitle ? (
                         <Text className="text-sm text-text-secondary text-center mb-4">
                             {subtitle}

@@ -58,6 +58,7 @@ import {
   SubscribeFollow,
 } from "./MessengerSaga";
 import { LoadSessionList } from "./messenger.session";
+import { ResumeIncompleteFiles } from "./messenger.actions";
 
 function* handleLogin({ payload }) {
   try {
@@ -97,6 +98,9 @@ function* handleLogin({ payload }) {
       });
     }
     yield call(LoadServerList);
+
+    // Resume incomplete file downloads (auto-download) — non-blocking
+    yield put(ResumeIncompleteFiles({ address: payload.address }));
 
     // Save session for auto-login on next launch (skip for temp login)
     if (!payload.isTemp) {

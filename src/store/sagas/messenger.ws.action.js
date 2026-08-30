@@ -46,7 +46,11 @@ function* handleAvatarRequestAction(json, action) {
         const db_avatar = yield call(() =>
           dbAPI.getAvatarByAddress(avatar.Address),
         );
-        if (db_avatar !== null && db_avatar.signed_at > avatar.SignedAt) {
+        if (
+          db_avatar !== null &&
+          db_avatar.signed_at > avatar.SignedAt &&
+          db_avatar.json !== null
+        ) {
           new_list.push(db_avatar.json);
         }
       }

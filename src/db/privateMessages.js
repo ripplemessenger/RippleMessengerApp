@@ -131,11 +131,11 @@ export const api = {
     return true;
   },
 
-  async confirmPrivateMessage(hash) {
+  async confirmPrivateMessage(sour, dest, sequence) {
     const db = await getDB();
     await db.execute(
-      "UPDATE private_messages SET is_confirmed = $1 WHERE hash = $2",
-      [Bool2Int(true), hash],
+      "UPDATE private_messages SET is_confirmed = $1 WHERE sour = $2 AND dest = $3 AND sequence <= $4",
+      [Bool2Int(true), sour, dest, sequence],
     );
   },
 };

@@ -1,10 +1,11 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   View,
   Text,
   FlatList,
   RefreshControl,
   TouchableOpacity,
+  Clipboard,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
@@ -13,6 +14,9 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import { RequestServerAddress } from "../store/sagas/messenger.actions";
 import { ACCENT, ICON_MUTED } from "../lib/theme";
+import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
+import { selectContactMap } from "../selectors";
+import AvatarImage from "../components/AvatarImage";
 
 /**
  * ServerAddressScreen — shows the addresses (accounts) discovered on a server,
@@ -34,6 +38,17 @@ export default function ServerAddressScreen({ route, navigation }) {
     }));
 
   const [refreshing, setRefreshing] = useState(false);
+
+  const contactMap = useSelector(selectContactMap);
+
+  // 有昵称显示昵称，没昵称显示完整长地址
+  const getDisplayName = useCallback(
+    (address) => {
+      if (contactMap && contactMap[address]) return contactMap[address];
+      return address;
+    },
+    [contactMap],
+  );
 
   const loadPage = useCallback(
     (page) => {
@@ -65,6 +80,18 @@ export default function ServerAddressScreen({ route, navigation }) {
     [navigation],
   );
 
+  const handleCopy = useCallback(
+    (address) => {
+      Clipboard.setString(address);
+      dispatch(
+        setFlashNoticeMessage({
+          message: t("common.copied_to_clipboard"),
+        }),
+      );
+    },
+    [t, dispatch],
+  );
+
   const renderItem = useCallback(
     ({ item }) => (
       <TouchableOpacity
@@ -72,14 +99,23 @@ export default function ServerAddressScreen({ route, navigation }) {
         onPress={() => handleAddressPress(item.Address)}
         className="flex-row items-center gap-3 py-3 border-b border-secondary-light/30"
       >
-        <View className="w-10 h-10 rounded-full bg-primary/20 items-center justify-center">
-          <Ionicons name="person" size={18} color={ACCENT} />
-        </View>
+        <AvatarImage
+          address={item.Address}
+          nickname={getDisplayName(item.Address)}
+          size={40}
+        />
         <View className="flex-1 min-w-0">
-          <Text className="text-sm font-mono text-text-primary truncate">
-            {item.Address}
+          <Text className="text-sm font-mono text-text-primary">
+            {getDisplayName(item.Address)}
           </Text>
         </View>
+        <TouchableOpacity
+          onPress={() => handleCopy(item.Address)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          className="p-1"
+        >
+          <Ionicons name="copy-outline" size={18} color={ICON_MUTED} />
+        </TouchableOpacity>
         <View className="px-3 py-1 rounded-full bg-secondary-light/20">
           <Text className="text-xs text-text-secondary">
             {t("ui.address_posts_count", { count: item.Count ?? 0 })}
@@ -87,7 +123,7 @@ export default function ServerAddressScreen({ route, navigation }) {
         </View>
       </TouchableOpacity>
     ),
-    [handleAddressPress],
+    [handleAddressPress, handleCopy, getDisplayName],
   );
 
   const keyExtractor = useCallback((item) => item.Address, []);

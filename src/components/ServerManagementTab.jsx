@@ -14,6 +14,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { ACCENT, ICON_MUTED } from "../lib/theme";
 import ModalShell from "./common/ModalShell";
 import ConfirmButtonRow from "./common/ConfirmButtonRow";
+import EmptyState from "./common/EmptyState";
 
 import { selectServerNetworkData } from "../selectors";
 import {
@@ -83,7 +84,7 @@ export default function ServerManagementTab({ navigation }) {
   );
 
   return (
-    <View className="flex-1 gap-4 bg-surface">
+    <View className="flex-1 gap-3 bg-surface">
       {/* Header */}
       <View className="flex-row items-center px-3 py-2 bg-primary/5 border-b border-secondary-light/30">
         <TouchableOpacity
@@ -98,19 +99,12 @@ export default function ServerManagementTab({ navigation }) {
         >
           {t("setting.servers")}
         </Text>
-      </View>
-
-      {/* Add button */}
-      <View className="bg-surface-card rounded-2xl p-5 border border-secondary-light items-center">
         <TouchableOpacity
           onPress={() => setShowAddModal(true)}
           activeOpacity={0.7}
-          className="flex-row items-center gap-1.5 bg-primary/10 border border-primary/30 px-4 py-2 rounded-lg"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="add" size={16} color={ACCENT} />
-          <Text className="text-sm font-medium text-primary">
-            {t("common.add_server")}
-          </Text>
+          <Ionicons name="add-circle-outline" size={24} color={ACCENT} />
         </TouchableOpacity>
       </View>
 
@@ -210,20 +204,11 @@ export default function ServerManagementTab({ navigation }) {
           </View>
         </ScrollView>
       ) : (
-        <View className="flex-1 items-center justify-center gap-3">
-          <Ionicons
-            name="earth-outline"
-            size={48}
-            color={ACCENT}
-            opacity={0.4}
-          />
-          <Text className="text-lg text-text-secondary">
-            {t("ui.no_servers")}
-          </Text>
-          <Text className="text-sm text-text-secondary/60 text-center px-8">
-            {t("ui.add_server_hint")}
-          </Text>
-        </View>
+        <EmptyState
+          icon="earth-outline"
+          title={t("ui.no_servers")}
+          hint={t("ui.add_server_hint")}
+        />
       )}
 
       {/* Add Server Modal */}

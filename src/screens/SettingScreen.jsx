@@ -515,7 +515,11 @@ export default function SettingScreen({ navigation }) {
             value={languageLabel}
             onPress={() => setShowLanguageSheet(true)}
           />
-          <Divider />
+        </View>
+
+        {/* Behavior */}
+        <SectionHeader icon="options-outline" label={t("setting.behavior")} />
+        <View className="bg-surface-card rounded-2xl mx-4 border border-secondary-light overflow-hidden">
           <SwitchRow
             icon="cloud-download-outline"
             label={t("setting.auto_download_follow_files")}

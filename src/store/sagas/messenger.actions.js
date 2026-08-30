@@ -35,6 +35,11 @@ export const FetchGroupChatFile = createAction('FetchGroupChatFile')
 export const FetchChatFile = createAction('FetchChatFile')
 export const SaveChatFile = createAction('SaveChatFile')
 
+// ==================== File Resume (auto-download) ====================
+export const ResumeIncompleteFiles = createAction('ResumeIncompleteFiles')
+export const ResumeBulletinFiles = createAction('ResumeBulletinFiles')
+export const ResumeChatFiles = createAction('ResumeChatFiles')
+
 // ==================== Bulletin Publish ====================
 export const PublishBulletin = createAction('PublishBulletin')
 export const BulletinTagAdd = createAction('BulletinTagAdd')

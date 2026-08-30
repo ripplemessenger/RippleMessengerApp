@@ -32,6 +32,7 @@ import {
   RequestReplyBulletin,
   ShowForwardBulletin,
   SaveBulletinFile,
+  ResumeBulletinFiles,
 } from "../store/sagas/messenger.actions";
 import {
   ContactAdd as ContactAddAction,
@@ -139,6 +140,13 @@ export default function BulletinDetailScreen({ route, navigation }) {
   useEffect(() => {
     if (bulletin?.hash) {
       dispatch(RequestReplyBulletin({ hash: bulletin.hash, page: 1 }));
+    }
+  }, [dispatch, bulletin?.hash]);
+
+  // Resume incomplete file downloads once the bulletin is loaded
+  useEffect(() => {
+    if (bulletin?.hash) {
+      dispatch(ResumeBulletinFiles({ hash: bulletin.hash }));
     }
   }, [dispatch, bulletin?.hash]);
 

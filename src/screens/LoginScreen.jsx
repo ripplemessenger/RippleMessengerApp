@@ -14,17 +14,30 @@ import { selectOpenPageData } from "../selectors";
 import { loadAccountListStart, loginStart } from "../store/slices/UserSlice";
 import Logger from "../lib/Logger";
 import { decryptWithPassword } from "../lib/AppUtil";
+import { shortenAddress } from "../lib/format";
+import AvatarImage from "../components/AvatarImage";
+import BottomSheet from "../components/common/BottomSheet";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import TempLoginModal from "./TempLoginModal";
 
 export default function LoginScreen({ navigation }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { AccountList } = useSelector(selectOpenPageData);
+  const ContactMap = useSelector((state) => state.User.ContactMap) || {};
   const [password, setPassword] = useState("");
   const [selectedAddress, setSelectedAddress] = useState("");
   const [loginError, setLoginError] = useState(null);
   const [loginLoading, setLoginLoading] = useState(false);
   const [showTempLogin, setShowTempLogin] = useState(false);
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+
+  // Display name: contact nickname if set, else abbreviated address
+  const getDisplayName = (address) => {
+    const nickname = ContactMap?.[address];
+    if (nickname) return nickname;
+    return shortenAddress(address);
+  };
 
   // Load saved accounts on focus (mount + return from Generate/Import screens)
   useFocusEffect(
@@ -100,24 +113,21 @@ export default function LoginScreen({ navigation }) {
               {t("auth.saved_accounts")}
             </Text>
 
-            {/* Account Picker Buttons */}
-            <View className="gap-2 mb-4">
-              {AccountList.map((account) => (
-                <TouchableOpacity
-                  key={account.address}
-                  onPress={() => setSelectedAddress(account.address)}
-                  className={`p-3 rounded-xl border ${
-                    selectedAddress === account.address
-                      ? "border-primary bg-primary-light/50"
-                      : "border-secondary-light bg-surface-card"
-                  }`}
-                >
-                  <Text className="text-sm text-text-primary font-mono text-center truncate">
-                    {account.address}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {/* Account Selector (tap to open picker) */}
+            <TouchableOpacity
+              onPress={() => setShowAccountPicker(true)}
+              className="flex-row items-center p-3 rounded-xl border border-secondary-light bg-surface-card mb-4"
+            >
+              <AvatarImage
+                address={selectedAddress}
+                nickname={getDisplayName(selectedAddress)}
+                size={36}
+              />
+              <Text className="flex-1 ml-3 text-sm text-text-primary truncate">
+                {getDisplayName(selectedAddress)}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color="#c4bda8" />
+            </TouchableOpacity>
 
             {/* Password Input */}
             <View className="mb-4">
@@ -241,6 +251,44 @@ export default function LoginScreen({ navigation }) {
           onClose={() => setShowTempLogin(false)}
           onLogin={handleTempLogin}
         />
+
+        {/* Account Picker */}
+        <BottomSheet
+          visible={showAccountPicker}
+          onClose={() => setShowAccountPicker(false)}
+          title={t("auth.saved_accounts")}
+        >
+          <ScrollView style={{ maxHeight: 360 }}>
+            <View className="gap-1">
+              {AccountList.map((account) => (
+                <TouchableOpacity
+                  key={account.address}
+                  onPress={() => {
+                    setSelectedAddress(account.address);
+                    setShowAccountPicker(false);
+                  }}
+                  className={`flex-row items-center p-3 rounded-xl border ${
+                    selectedAddress === account.address
+                      ? "border-primary bg-primary-light/50"
+                      : "border-transparent"
+                  }`}
+                >
+                  <AvatarImage
+                    address={account.address}
+                    nickname={getDisplayName(account.address)}
+                    size={36}
+                  />
+                  <Text className="flex-1 ml-3 text-sm text-text-primary truncate">
+                    {getDisplayName(account.address)}
+                  </Text>
+                  {selectedAddress === account.address && (
+                    <Ionicons name="checkmark" size={18} color="#e6b420" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </BottomSheet>
 
         {/* Footer */}
         <Text className="mt-12 text-xs text-text-secondary">

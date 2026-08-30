@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   View,
   Text,
@@ -40,6 +46,7 @@ import {
   SaveChatFile,
   DeleteGroup,
   ClearGroupData,
+  ResumeChatFiles,
 } from "../store/sagas/messenger.actions";
 import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
 import { pickFile } from "../services/mediaPicker";
@@ -131,6 +138,7 @@ const MessageBubble = React.memo(function MessageBubble({
   selfAddress,
   contactMap,
   fileDownloadStatus,
+  isLastConfirmed = false,
   onFileTap,
   onImageTap,
   onVideoTap,
@@ -216,8 +224,20 @@ const MessageBubble = React.memo(function MessageBubble({
                 hitSlop={6}
                 activeOpacity={0.6}
               >
-                <View className="px-1 py-0.5 rounded border border-secondary-light/30">
-                  <Text className="text-[10px] text-text-secondary/70">
+                <View
+                  className={
+                    isLastConfirmed
+                      ? "px-1 py-0.5 rounded bg-green-500 border border-green-500"
+                      : "px-1 py-0.5 rounded border border-secondary-light/30"
+                  }
+                >
+                  <Text
+                    className={
+                      isLastConfirmed
+                        ? "text-[10px] text-white"
+                        : "text-[10px] text-text-secondary/70"
+                    }
+                  >
                     #{message.sequence}
                   </Text>
                 </View>
@@ -550,7 +570,11 @@ function ChatInfoModal({ visible, session, mode, onClose, onGroupDeleted }) {
                     key={member || `member-${idx}`}
                     className="flex-row items-center gap-2 py-1.5"
                   >
-                    <Ionicons name="person" size={16} color="#a89f85" />
+                    <AvatarImage
+                      address={member}
+                      nickname={resolveName(member, contactMap)}
+                      size={28}
+                    />
                     <Text
                       className="text-sm text-text-primary flex-1"
                       numberOfLines={1}
@@ -650,6 +674,23 @@ export default function ChatDetailScreen({ route, navigation }) {
   // Determine if this is private or group
   const mode = session.type === SessionType.Group ? "group" : "private";
 
+  // Last confirmed sequence (per side) for private chat read-receipt highlight.
+  // Derived from stored message JSON (no extra DB field needed):
+  //   - self   = highest seq of MY messages the other party confirmed (their json.Confirm.Sequence)
+  //   - remote = highest seq of their messages I confirmed (their is_confirmed)
+  const lastConfirmedSeqs = useMemo(() => {
+    if (mode !== "private") return { self: 0, remote: 0 };
+    let self = 0;
+    let remote = 0;
+    for (const m of messages || []) {
+      if (m.sour === selfAddress) continue; // only their messages carry the confirmation info
+      if (m.is_confirmed && m.sequence > remote) remote = m.sequence;
+      const cseq = m.json && m.json.Confirm ? m.json.Confirm.Sequence : 0;
+      if (cseq && cseq > self) self = cseq;
+    }
+    return { self, remote };
+  }, [messages, selfAddress, mode]);
+
   // Session display name
   let sessionName = "";
   if (session.type === SessionType.Private) {
@@ -664,6 +705,20 @@ export default function ChatDetailScreen({ route, navigation }) {
   // Load session when screen mounts
   useEffect(() => {
     dispatch(LoadCurrentSession(session));
+  }, [dispatch, session]);
+
+  // Resume incomplete file downloads when session is loaded
+  useEffect(() => {
+    if (session.type === SessionType.Private) {
+      dispatch(
+        ResumeChatFiles({
+          type: "private",
+          remote: session.remote || session.address,
+        }),
+      );
+    } else if (session.type === SessionType.Group) {
+      dispatch(ResumeChatFiles({ type: "group", group_hash: session.hash }));
+    }
   }, [dispatch, session]);
 
   // Scroll to bottom when messages update
@@ -750,25 +805,39 @@ export default function ChatDetailScreen({ route, navigation }) {
   );
 
   const renderMessage = useCallback(
-    ({ item }) => (
-      <MessageBubble
-        message={item}
-        mode={mode}
-        selfAddress={selfAddress}
-        contactMap={contactMap}
-        fileDownloadStatus={fileDownloadStatus}
-        onFileTap={handleFileTap}
-        onImageTap={(uri) => setViewerUri(uri)}
-        onVideoTap={(uri) => setVideoUri(uri)}
-        onSequenceTap={handleSequenceTap}
-        navigation={navigation}
-      />
-    ),
+    ({ item }) => {
+      const isSelf = item.sour === selfAddress;
+      // Read-receipt highlight (private chat only): a message is "confirmed"
+      // when the confirmation boundary for its side has reached its sequence.
+      let isLastConfirmed = false;
+      if (mode === "private") {
+        const boundary = isSelf
+          ? lastConfirmedSeqs.self
+          : lastConfirmedSeqs.remote;
+        isLastConfirmed = item.sequence <= boundary && boundary > 0;
+      }
+      return (
+        <MessageBubble
+          message={item}
+          mode={mode}
+          selfAddress={selfAddress}
+          contactMap={contactMap}
+          fileDownloadStatus={fileDownloadStatus}
+          isLastConfirmed={isLastConfirmed}
+          onFileTap={handleFileTap}
+          onImageTap={(uri) => setViewerUri(uri)}
+          onVideoTap={(uri) => setVideoUri(uri)}
+          onSequenceTap={handleSequenceTap}
+          navigation={navigation}
+        />
+      );
+    },
     [
       mode,
       selfAddress,
       contactMap,
       fileDownloadStatus,
+      lastConfirmedSeqs,
       handleFileTap,
       handleSequenceTap,
     ],

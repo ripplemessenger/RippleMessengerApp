@@ -1,94 +1,157 @@
-import { Bool2Int, Int2Bool } from '../lib/AppUtil'
-import { getDB } from './core'
+import { Bool2Int, Int2Bool } from "../lib/AppUtil";
+import { getDB } from "./core";
 
 export const api = {
   async getFileByHash(hash) {
-    const dbInstance = await getDB()
+    const dbInstance = await getDB();
     const files = await dbInstance.select(
-      'SELECT * FROM files WHERE hash = $1 LIMIT 1',
-      [hash]
-    )
+      "SELECT * FROM files WHERE hash = $1 LIMIT 1",
+      [hash],
+    );
     if (files.length > 0) {
-      let file = files[0]
-      file.is_saved = Int2Bool(file.is_saved)
-      return file
+      let file = files[0];
+      file.is_saved = Int2Bool(file.is_saved);
+      return file;
     }
-    return null
+    return null;
   },
 
   async addFile(hash, size, updated_at, chunk_length, chunk_cursor, is_saved) {
-    const db = await getDB()
+    const db = await getDB();
     await db.execute(
-      'INSERT INTO files (hash, size, updated_at, chunk_length, chunk_cursor, is_saved) VALUES ($1, $2, $3, $4, $5, $6)',
-      [hash, size, updated_at, chunk_length, chunk_cursor, Bool2Int(is_saved)]
-    )
+      "INSERT INTO files (hash, size, updated_at, chunk_length, chunk_cursor, is_saved) VALUES ($1, $2, $3, $4, $5, $6)",
+      [hash, size, updated_at, chunk_length, chunk_cursor, Bool2Int(is_saved)],
+    );
   },
 
   async updateFileChunkCursor(hash, chunk_cursor, updated_at) {
-    const db = await getDB()
+    const db = await getDB();
     await db.execute(
-      'UPDATE files SET chunk_cursor = $1, updated_at = $2 WHERE hash = $3',
-      [chunk_cursor, updated_at, hash]
-    )
+      "UPDATE files SET chunk_cursor = $1, updated_at = $2 WHERE hash = $3",
+      [chunk_cursor, updated_at, hash],
+    );
   },
 
   async localFileSaved(hash, chunk_cursor, updated_at) {
-    const db = await getDB()
+    const db = await getDB();
     await db.execute(
-      'UPDATE files SET chunk_cursor = $1, updated_at = $2, is_saved = $3 WHERE hash = $4',
-      [chunk_cursor, updated_at, 1, hash]
-    )
+      "UPDATE files SET chunk_cursor = $1, updated_at = $2, is_saved = $3 WHERE hash = $4",
+      [chunk_cursor, updated_at, 1, hash],
+    );
   },
 
   async remoteFileSaved(hash, updated_at) {
-    const db = await getDB()
+    const db = await getDB();
     await db.execute(
-      'UPDATE files SET updated_at = $1, is_saved = $2 WHERE hash = $3',
-      [updated_at, 1, hash]
-    )
+      "UPDATE files SET updated_at = $1, is_saved = $2 WHERE hash = $3",
+      [updated_at, 1, hash],
+    );
+  },
+
+  // ---------- Incomplete file resume (auto-download) ----------
+
+  // All incomplete files (is_saved=0) with type + context, for startup resume.
+  // Type priority: bulletin > private > group > orphan (a file may be in multiple tables).
+  async getIncompleteFiles(self_address) {
+    const dbInstance = await getDB();
+    const rows = await dbInstance.select(
+      `SELECT f.hash, f.size, f.chunk_cursor, f.chunk_length,
+        CASE
+          WHEN bf.bulletin_hash IS NOT NULL THEN 'bulletin'
+          WHEN pf.hash IS NOT NULL THEN 'private'
+          WHEN gf.hash IS NOT NULL THEN 'group'
+          ELSE 'orphan'
+        END AS type,
+        CASE WHEN pf.address1 = $1 THEN pf.address2 ELSE pf.address1 END AS private_remote,
+        gf.group_hash
+      FROM files f
+      LEFT JOIN bulletin_files bf ON f.hash = bf.file_hash
+      LEFT JOIN private_chat_files pf ON f.hash = pf.hash
+      LEFT JOIN group_chat_files gf ON f.hash = gf.hash
+      WHERE f.is_saved = 0`,
+      [self_address],
+    );
+    return rows;
+  },
+
+  // Incomplete bulletin files for a specific bulletin (page-entry resume)
+  async getIncompleteBulletinFiles(bulletin_hash) {
+    const dbInstance = await getDB();
+    const rows = await dbInstance.select(
+      `SELECT f.hash, f.size FROM files f
+       INNER JOIN bulletin_files bf ON f.hash = bf.file_hash
+       WHERE bf.bulletin_hash = $1 AND f.is_saved = 0`,
+      [bulletin_hash],
+    );
+    return rows;
+  },
+
+  // Incomplete private chat files for a specific peer (page-entry resume)
+  async getIncompletePrivateFiles(self_address, remote) {
+    const dbInstance = await getDB();
+    const rows = await dbInstance.select(
+      `SELECT f.hash, f.size FROM files f
+       INNER JOIN private_chat_files pf ON f.hash = pf.hash
+       WHERE (pf.address1 = $1 AND pf.address2 = $2 OR pf.address1 = $2 AND pf.address2 = $1)
+         AND f.is_saved = 0`,
+      [self_address, remote],
+    );
+    return rows;
+  },
+
+  // Incomplete group chat files for a specific group (page-entry resume)
+  async getIncompleteGroupFiles(group_hash) {
+    const dbInstance = await getDB();
+    const rows = await dbInstance.select(
+      `SELECT f.hash, f.size FROM files f
+       INNER JOIN group_chat_files gf ON f.hash = gf.hash
+       WHERE gf.group_hash = $1 AND f.is_saved = 0`,
+      [group_hash],
+    );
+    return rows;
   },
 
   // private_chat_file
   async addPrivateFile(ehash, tmp1, tmp2, hash, size) {
-    const address1 = tmp1 > tmp2 ? tmp1 : tmp2
-    const address2 = tmp1 > tmp2 ? tmp2 : tmp1
-    const db = await getDB()
+    const address1 = tmp1 > tmp2 ? tmp1 : tmp2;
+    const address2 = tmp1 > tmp2 ? tmp2 : tmp1;
+    const db = await getDB();
     await db.execute(
-      'INSERT INTO private_chat_files (ehash, address1, address2, hash, size) VALUES ($1, $2, $3, $4, $5)',
-      [ehash, address1, address2, hash, size]
-    )
+      "INSERT INTO private_chat_files (ehash, address1, address2, hash, size) VALUES ($1, $2, $3, $4, $5)",
+      [ehash, address1, address2, hash, size],
+    );
   },
 
   async getPrivateFileByEHash(ehash) {
-    const dbInstance = await getDB()
+    const dbInstance = await getDB();
     const private_chat_files = await dbInstance.select(
-      'SELECT * FROM private_chat_files WHERE ehash = $1 LIMIT 1',
-      [ehash]
-    )
-    return private_chat_files.length > 0 ? private_chat_files[0] : null
+      "SELECT * FROM private_chat_files WHERE ehash = $1 LIMIT 1",
+      [ehash],
+    );
+    return private_chat_files.length > 0 ? private_chat_files[0] : null;
   },
 
   // group_chat_file
   async addGroupFile(ehash, group_hash, hash, size) {
-    const db = await getDB()
+    const db = await getDB();
     await db.execute(
-      'INSERT INTO group_chat_files (ehash, group_hash, hash, size) VALUES ($1, $2, $3, $4)',
-      [ehash, group_hash, hash, size]
-    )
+      "INSERT INTO group_chat_files (ehash, group_hash, hash, size) VALUES ($1, $2, $3, $4)",
+      [ehash, group_hash, hash, size],
+    );
   },
 
   async getGroupFileByEHash(ehash) {
-    const dbInstance = await getDB()
+    const dbInstance = await getDB();
     const group_chat_files = await dbInstance.select(
-      'SELECT * FROM group_chat_files WHERE ehash = $1 LIMIT 1',
-      [ehash]
-    )
-    return group_chat_files.length > 0 ? group_chat_files[0] : null
+      "SELECT * FROM group_chat_files WHERE ehash = $1 LIMIT 1",
+      [ehash],
+    );
+    return group_chat_files.length > 0 ? group_chat_files[0] : null;
   },
 
   async getCachedFiles(page, pageSize) {
-    const dbInstance = await getDB()
-    const offset = (page - 1) * pageSize
+    const dbInstance = await getDB();
+    const offset = (page - 1) * pageSize;
     return dbInstance.select(
       `SELECT f.hash, f.size, f.updated_at,
         COALESCE(bf.bulletin_hash, pf.hash, gf.hash) IS NOT NULL AS is_linked,
@@ -106,31 +169,31 @@ export const api = {
       LEFT JOIN group_chat_files gf ON f.hash = gf.hash
       ORDER BY f.updated_at DESC
       LIMIT $1 OFFSET $2`,
-      [pageSize, offset]
-    )
+      [pageSize, offset],
+    );
   },
 
   // ---------- Management APIs (synced from Client) ----------
 
   async getAvatarStats() {
-    const dbInstance = await getDB()
+    const dbInstance = await getDB();
     const rows = await dbInstance.select(
-      'SELECT COUNT(*) AS cnt, COALESCE(SUM(size), 0) AS total_size FROM avatar_files'
-    )
+      "SELECT COUNT(*) AS cnt, COALESCE(SUM(size), 0) AS total_size FROM avatar_files",
+    );
     return {
       count: rows[0]?.cnt || 0,
-      totalSize: rows[0]?.total_size || 0
-    }
+      totalSize: rows[0]?.total_size || 0,
+    };
   },
 
   // App-specific: count files by a single category (used by StorageManagementTab)
   async getFileCountByCategory(category) {
-    const dbInstance = await getDB()
-    if (category === 'all') {
-      const rows = await dbInstance.select('SELECT COUNT(*) AS cnt FROM files')
-      return rows[0]?.cnt || 0
+    const dbInstance = await getDB();
+    if (category === "all") {
+      const rows = await dbInstance.select("SELECT COUNT(*) AS cnt FROM files");
+      return rows[0]?.cnt || 0;
     }
-    if (category === 'orphaned') {
+    if (category === "orphaned") {
       const rows = await dbInstance.select(
         `SELECT COUNT(*) AS cnt FROM files WHERE hash NOT IN (
           SELECT file_hash FROM bulletin_files
@@ -138,27 +201,27 @@ export const api = {
           SELECT hash FROM private_chat_files
           UNION ALL
           SELECT hash FROM group_chat_files
-        )`
-      )
-      return rows[0]?.cnt || 0
+        )`,
+      );
+      return rows[0]?.cnt || 0;
     }
     const tableMap = {
-      bulletin: { table: 'bulletin_files', col: 'file_hash' },
-      private_chat: { table: 'private_chat_files', col: 'hash' },
-      group_chat: { table: 'group_chat_files', col: 'hash' }
-    }
-    const { table, col } = tableMap[category]
-    if (!table) return 0
+      bulletin: { table: "bulletin_files", col: "file_hash" },
+      private_chat: { table: "private_chat_files", col: "hash" },
+      group_chat: { table: "group_chat_files", col: "hash" },
+    };
+    const { table, col } = tableMap[category];
+    if (!table) return 0;
     const rows = await dbInstance.select(
       `SELECT COUNT(DISTINCT f.hash) AS cnt FROM files f
-        INNER JOIN ${table} t ON f.hash = t.${col}`
-    )
-    return rows[0]?.cnt || 0
+        INNER JOIN ${table} t ON f.hash = t.${col}`,
+    );
+    return rows[0]?.cnt || 0;
   },
 
   // Management: get all files with usage info and category
   async getAllFilesWithUsage() {
-    const dbInstance = await getDB()
+    const dbInstance = await getDB();
     const rows = await dbInstance.select(`
       SELECT
         f.hash,
@@ -185,283 +248,308 @@ export const api = {
       LEFT JOIN group_chat_files ON group_chat_files.hash = f.hash
       GROUP BY f.hash
       ORDER BY f.updated_at DESC
-    `)
-    return rows.map(r => ({
+    `);
+    return rows.map((r) => ({
       ...r,
       is_saved: Int2Bool(r.is_saved),
-    }))
+    }));
   },
 
   // Management: count files by category (returns all categories at once)
   async getFileCountByCategoryAll() {
-    const dbInstance = await getDB()
+    const dbInstance = await getDB();
     const rows = await dbInstance.select(`
       SELECT
         (SELECT COUNT(*) FROM files f WHERE EXISTS (SELECT 1 FROM bulletin_files bf WHERE bf.file_hash = f.hash)) AS bulletin,
         (SELECT COUNT(*) FROM files f WHERE EXISTS (SELECT 1 FROM private_chat_files pf WHERE pf.hash = f.hash) AND NOT EXISTS (SELECT 1 FROM bulletin_files bf WHERE bf.file_hash = f.hash)) AS private,
         (SELECT COUNT(*) FROM files f WHERE EXISTS (SELECT 1 FROM group_chat_files gf WHERE gf.hash = f.hash) AND NOT EXISTS (SELECT 1 FROM bulletin_files bf WHERE bf.file_hash = f.hash) AND NOT EXISTS (SELECT 1 FROM private_chat_files pf WHERE pf.hash = f.hash)) AS group,
         (SELECT COUNT(*) FROM files f WHERE NOT EXISTS (SELECT 1 FROM bulletin_files bf WHERE bf.file_hash = f.hash) AND NOT EXISTS (SELECT 1 FROM private_chat_files pf WHERE pf.hash = f.hash) AND NOT EXISTS (SELECT 1 FROM group_chat_files gf WHERE gf.hash = f.hash)) AS orphan
-    `)
-    const [result] = rows
+    `);
+    const [result] = rows;
     return result
-      ? { bulletin: result.bulletin, private: result.private, group: result.group, orphan: result.orphan }
-      : { bulletin: 0, private: 0, group: 0, orphan: 0 }
+      ? {
+          bulletin: result.bulletin,
+          private: result.private,
+          group: result.group,
+          orphan: result.orphan,
+        }
+      : { bulletin: 0, private: 0, group: 0, orphan: 0 };
   },
 
   // Management: delete a bulletin file safely — if also referenced by chat, only remove bulletin ref
   async deleteBulletinFileSafe(hash) {
-    const db = await getDB()
+    const db = await getDB();
     const chatRefs = await db.select(
       `SELECT COUNT(*) AS c FROM (SELECT hash FROM private_chat_files WHERE hash = $1 UNION SELECT hash FROM group_chat_files WHERE hash = $1)`,
-      [hash]
-    )
-    const hasChatRef = (chatRefs[0]?.c || 0) > 0
+      [hash],
+    );
+    const hasChatRef = (chatRefs[0]?.c || 0) > 0;
 
-    await db.execute('DELETE FROM bulletin_files WHERE file_hash = $1', [hash])
+    await db.execute("DELETE FROM bulletin_files WHERE file_hash = $1", [hash]);
 
     if (!hasChatRef) {
-      await db.execute('DELETE FROM files WHERE hash = $1', [hash])
+      await db.execute("DELETE FROM files WHERE hash = $1", [hash]);
     }
 
-    return { hasChatRef }
+    return { hasChatRef };
   },
 
   // Bulk version of deleteBulletinFileSafe
   async deleteBulletinFilesSafe(hashes) {
-    const results = []
+    const results = [];
     for (const hash of hashes) {
-      results.push(await this.deleteBulletinFileSafe(hash))
+      results.push(await this.deleteBulletinFileSafe(hash));
     }
-    return results
+    return results;
   },
 
   // Management: sum of all file sizes in the files table
   async getFileSizeSum() {
-    const dbInstance = await getDB()
-    const [result] = await dbInstance.select('SELECT SUM(size) AS total FROM files')
-    return result ? (result.total || 0) : 0
+    const dbInstance = await getDB();
+    const [result] = await dbInstance.select(
+      "SELECT SUM(size) AS total FROM files",
+    );
+    return result ? result.total || 0 : 0;
   },
 
   // Management: count private messages
   async getPrivateMessageCount() {
-    const dbInstance = await getDB()
-    const [result] = await dbInstance.select('SELECT COUNT(hash) AS count FROM private_messages')
-    return result ? result.count : 0
+    const dbInstance = await getDB();
+    const [result] = await dbInstance.select(
+      "SELECT COUNT(hash) AS count FROM private_messages",
+    );
+    return result ? result.count : 0;
   },
 
   // Management: count group messages
   async getGroupMessageCount() {
-    const dbInstance = await getDB()
-    const [result] = await dbInstance.select('SELECT COUNT(hash) AS count FROM group_messages')
-    return result ? result.count : 0
+    const dbInstance = await getDB();
+    const [result] = await dbInstance.select(
+      "SELECT COUNT(hash) AS count FROM group_messages",
+    );
+    return result ? result.count : 0;
   },
 
   // Management: count avatars
   async getAvatarCount() {
-    const dbInstance = await getDB()
-    const [result] = await dbInstance.select('SELECT COUNT(address) AS count FROM avatar_files')
-    return result ? result.count : 0
+    const dbInstance = await getDB();
+    const [result] = await dbInstance.select(
+      "SELECT COUNT(address) AS count FROM avatar_files",
+    );
+    return result ? result.count : 0;
   },
 
   // Management: sum of all avatar sizes
   async getAvatarSizeSum() {
-    const dbInstance = await getDB()
-    const [result] = await dbInstance.select('SELECT SUM(size) AS total FROM avatar_files')
-    return result ? (result.total || 0) : 0
+    const dbInstance = await getDB();
+    const [result] = await dbInstance.select(
+      "SELECT SUM(size) AS total FROM avatar_files",
+    );
+    return result ? result.total || 0 : 0;
   },
 
   // Management: count all bulletin records
   async getBulletinCount() {
-    const dbInstance = await getDB()
-    const [result] = await dbInstance.select('SELECT COUNT(hash) AS count FROM bulletins')
-    return result ? result.count : 0
+    const dbInstance = await getDB();
+    const [result] = await dbInstance.select(
+      "SELECT COUNT(hash) AS count FROM bulletins",
+    );
+    return result ? result.count : 0;
   },
 
   // Management: count all file records
   async getFileCount() {
-    const dbInstance = await getDB()
-    const [result] = await dbInstance.select('SELECT COUNT(hash) AS count FROM files')
-    return result ? result.count : 0
+    const dbInstance = await getDB();
+    const [result] = await dbInstance.select(
+      "SELECT COUNT(hash) AS count FROM files",
+    );
+    return result ? result.count : 0;
   },
 
   // Management: get paginated file records with category info and file extension filter
   // category: 'all' | 'bulletin' | 'private' | 'group' | 'orphan'
   // fileExt: optional filter by file extension (e.g. 'pdf', 'jpg')
   async getFilesForManagement({ category, fileExt, page = 1, pageSize = 20 }) {
-    const db = await getDB()
-    const offset = (page - 1) * pageSize
+    const db = await getDB();
+    const offset = (page - 1) * pageSize;
 
     switch (category) {
-      case 'bulletin':
-        {
-          // GROUP BY f.hash because a file may be attached to multiple bulletins
-          const selectCols = `SELECT f.hash, f.size, f.updated_at, f.chunk_length, f.chunk_cursor, f.is_saved, 'bulletin' AS category, MAX(bf.file_name) AS file_name, MAX(bf.file_ext) AS file_ext`
-          const fromClause = `FROM files f INNER JOIN bulletin_files bf ON f.hash = bf.file_hash`
-          const groupBy = ` GROUP BY f.hash`
-          const orderBy = ` ORDER BY MAX(f.updated_at) DESC`
-          if (fileExt) {
-            const rows = await db.select(
-              `${selectCols} ${fromClause} WHERE LOWER(bf.file_ext) = $1${groupBy}${orderBy} LIMIT $2 OFFSET $3`,
-              [fileExt, pageSize, offset]
-            )
-            return rows.map(r => ({ ...r, is_saved: Int2Bool(r.is_saved) }))
-          }
+      case "bulletin": {
+        // GROUP BY f.hash because a file may be attached to multiple bulletins
+        const selectCols = `SELECT f.hash, f.size, f.updated_at, f.chunk_length, f.chunk_cursor, f.is_saved, 'bulletin' AS category, MAX(bf.file_name) AS file_name, MAX(bf.file_ext) AS file_ext`;
+        const fromClause = `FROM files f INNER JOIN bulletin_files bf ON f.hash = bf.file_hash`;
+        const groupBy = ` GROUP BY f.hash`;
+        const orderBy = ` ORDER BY MAX(f.updated_at) DESC`;
+        if (fileExt) {
           const rows = await db.select(
-            `${selectCols} ${fromClause}${groupBy}${orderBy} LIMIT $1 OFFSET $2`,
-            [pageSize, offset]
-          )
-          return rows.map(r => ({ ...r, is_saved: Int2Bool(r.is_saved) }))
+            `${selectCols} ${fromClause} WHERE LOWER(bf.file_ext) = $1${groupBy}${orderBy} LIMIT $2 OFFSET $3`,
+            [fileExt, pageSize, offset],
+          );
+          return rows.map((r) => ({ ...r, is_saved: Int2Bool(r.is_saved) }));
         }
-      case 'private':
-        {
-          const rows = await db.select(
-            `SELECT f.hash, f.size, f.updated_at, f.chunk_length, f.chunk_cursor, f.is_saved, 'private_chat' AS category FROM files f INNER JOIN private_chat_files pcf ON f.hash = pcf.hash ORDER BY f.updated_at DESC LIMIT $1 OFFSET $2`,
-            [pageSize, offset]
-          )
-          return rows.map(r => ({ ...r, is_saved: Int2Bool(r.is_saved) }))
-        }
-      case 'group':
-        {
-          const rows = await db.select(
-            `SELECT f.hash, f.size, f.updated_at, f.chunk_length, f.chunk_cursor, f.is_saved, 'group_chat' AS category FROM files f INNER JOIN group_chat_files gcf ON f.hash = gcf.hash ORDER BY f.updated_at DESC LIMIT $1 OFFSET $2`,
-            [pageSize, offset]
-          )
-          return rows.map(r => ({ ...r, is_saved: Int2Bool(r.is_saved) }))
-        }
-      case 'orphan':
-        {
-          const rows = await db.select(
-            `SELECT f.hash, f.size, f.updated_at, f.chunk_length, f.chunk_cursor, f.is_saved, 'orphan' AS category FROM files f WHERE f.hash NOT IN (SELECT file_hash FROM bulletin_files) AND f.hash NOT IN (SELECT hash FROM private_chat_files) AND f.hash NOT IN (SELECT hash FROM group_chat_files) ORDER BY f.updated_at DESC LIMIT $1 OFFSET $2`,
-            [pageSize, offset]
-          )
-          return rows.map(r => ({ ...r, is_saved: Int2Bool(r.is_saved) }))
-        }
-      default: // 'all'
-        {
-          const extFilter = fileExt ? ' AND LOWER(bf.file_ext) = $3' : ''
-          const extParam = fileExt ? [fileExt] : []
-          const rows = await db.select(
-            `SELECT f.hash, f.size, f.updated_at, f.chunk_length, f.chunk_cursor, f.is_saved, CASE WHEN bf.file_hash IS NOT NULL THEN 'bulletin' WHEN pcf.hash IS NOT NULL THEN 'private_chat' WHEN gcf.hash IS NOT NULL THEN 'group_chat' ELSE 'orphan' END AS category, COALESCE(bf.file_name, f.hash) AS file_name, bf.file_ext AS file_ext FROM files f LEFT JOIN bulletin_files bf ON f.hash = bf.file_hash LEFT JOIN private_chat_files pcf ON f.hash = pcf.hash LEFT JOIN group_chat_files gcf ON f.hash = gcf.hash WHERE 1=1${extFilter} ORDER BY f.updated_at DESC LIMIT $1 OFFSET $2`,
-            [pageSize, offset, ...extParam]
-          )
-          return rows.map(r => ({ ...r, is_saved: Int2Bool(r.is_saved) }))
-        }
+        const rows = await db.select(
+          `${selectCols} ${fromClause}${groupBy}${orderBy} LIMIT $1 OFFSET $2`,
+          [pageSize, offset],
+        );
+        return rows.map((r) => ({ ...r, is_saved: Int2Bool(r.is_saved) }));
+      }
+      case "private": {
+        const rows = await db.select(
+          `SELECT f.hash, f.size, f.updated_at, f.chunk_length, f.chunk_cursor, f.is_saved, 'private_chat' AS category FROM files f INNER JOIN private_chat_files pcf ON f.hash = pcf.hash ORDER BY f.updated_at DESC LIMIT $1 OFFSET $2`,
+          [pageSize, offset],
+        );
+        return rows.map((r) => ({ ...r, is_saved: Int2Bool(r.is_saved) }));
+      }
+      case "group": {
+        const rows = await db.select(
+          `SELECT f.hash, f.size, f.updated_at, f.chunk_length, f.chunk_cursor, f.is_saved, 'group_chat' AS category FROM files f INNER JOIN group_chat_files gcf ON f.hash = gcf.hash ORDER BY f.updated_at DESC LIMIT $1 OFFSET $2`,
+          [pageSize, offset],
+        );
+        return rows.map((r) => ({ ...r, is_saved: Int2Bool(r.is_saved) }));
+      }
+      case "orphan": {
+        const rows = await db.select(
+          `SELECT f.hash, f.size, f.updated_at, f.chunk_length, f.chunk_cursor, f.is_saved, 'orphan' AS category FROM files f WHERE f.hash NOT IN (SELECT file_hash FROM bulletin_files) AND f.hash NOT IN (SELECT hash FROM private_chat_files) AND f.hash NOT IN (SELECT hash FROM group_chat_files) ORDER BY f.updated_at DESC LIMIT $1 OFFSET $2`,
+          [pageSize, offset],
+        );
+        return rows.map((r) => ({ ...r, is_saved: Int2Bool(r.is_saved) }));
+      }
+      default: {
+        // 'all'
+        const extFilter = fileExt ? " AND LOWER(bf.file_ext) = $3" : "";
+        const extParam = fileExt ? [fileExt] : [];
+        const rows = await db.select(
+          `SELECT f.hash, f.size, f.updated_at, f.chunk_length, f.chunk_cursor, f.is_saved, CASE WHEN bf.file_hash IS NOT NULL THEN 'bulletin' WHEN pcf.hash IS NOT NULL THEN 'private_chat' WHEN gcf.hash IS NOT NULL THEN 'group_chat' ELSE 'orphan' END AS category, COALESCE(bf.file_name, f.hash) AS file_name, bf.file_ext AS file_ext FROM files f LEFT JOIN bulletin_files bf ON f.hash = bf.file_hash LEFT JOIN private_chat_files pcf ON f.hash = pcf.hash LEFT JOIN group_chat_files gcf ON f.hash = gcf.hash WHERE 1=1${extFilter} ORDER BY f.updated_at DESC LIMIT $1 OFFSET $2`,
+          [pageSize, offset, ...extParam],
+        );
+        return rows.map((r) => ({ ...r, is_saved: Int2Bool(r.is_saved) }));
+      }
     }
   },
 
   // Management: get all unique file extensions from bulletin_files
   async getAllFileExtensions() {
-    const db = await getDB()
-    const rows = await db.select(`SELECT DISTINCT LOWER(bf.file_ext) AS file_ext FROM bulletin_files bf WHERE bf.file_ext IS NOT NULL AND bf.file_ext != '' ORDER BY file_ext`)
-    return rows.map(r => r.file_ext.toLowerCase())
+    const db = await getDB();
+    const rows = await db.select(
+      `SELECT DISTINCT LOWER(bf.file_ext) AS file_ext FROM bulletin_files bf WHERE bf.file_ext IS NOT NULL AND bf.file_ext != '' ORDER BY file_ext`,
+    );
+    return rows.map((r) => r.file_ext.toLowerCase());
   },
 
   // Management: count files matching category (for pagination)
   async getFileCountForManagement({ category, fileExt }) {
-    const db = await getDB()
-    const extFilter = fileExt ? ' AND LOWER(bf.file_ext) = $1' : ''
-    const extParam = fileExt ? [fileExt] : []
+    const db = await getDB();
+    const extFilter = fileExt ? " AND LOWER(bf.file_ext) = $1" : "";
+    const extParam = fileExt ? [fileExt] : [];
 
     switch (category) {
-      case 'bulletin':
-        {
-          const params = [...extParam]
-          const [result] = await db.select(`SELECT COUNT(DISTINCT f.hash) AS count FROM files f INNER JOIN bulletin_files bf ON f.hash = bf.file_hash WHERE 1=1${extFilter}`, params)
-          return result ? result.count : 0
-        }
-      case 'private':
-        {
-          const [result] = await db.select('SELECT COUNT(DISTINCT f.hash) AS count FROM files f INNER JOIN private_chat_files pcf ON f.hash = pcf.hash')
-          return result ? result.count : 0
-        }
-      case 'group':
-        {
-          const [result] = await db.select('SELECT COUNT(DISTINCT f.hash) AS count FROM files f INNER JOIN group_chat_files gcf ON f.hash = gcf.hash')
-          return result ? result.count : 0
-        }
-      case 'orphan':
-        {
-          const [result] = await db.select(
-            `SELECT COUNT(hash) AS count FROM files WHERE hash NOT IN (SELECT file_hash FROM bulletin_files) AND hash NOT IN (SELECT hash FROM private_chat_files) AND hash NOT IN (SELECT hash FROM group_chat_files)`
-          )
-          return result ? result.count : 0
-        }
-      default: // 'all'
-        {
-          const params = [...extParam]
-          const [result] = await db.select(`SELECT COUNT(DISTINCT f.hash) AS count FROM files f LEFT JOIN bulletin_files bf ON f.hash = bf.file_hash WHERE 1=1${extFilter}`, params)
-          return result ? result.count : 0
-        }
+      case "bulletin": {
+        const params = [...extParam];
+        const [result] = await db.select(
+          `SELECT COUNT(DISTINCT f.hash) AS count FROM files f INNER JOIN bulletin_files bf ON f.hash = bf.file_hash WHERE 1=1${extFilter}`,
+          params,
+        );
+        return result ? result.count : 0;
+      }
+      case "private": {
+        const [result] = await db.select(
+          "SELECT COUNT(DISTINCT f.hash) AS count FROM files f INNER JOIN private_chat_files pcf ON f.hash = pcf.hash",
+        );
+        return result ? result.count : 0;
+      }
+      case "group": {
+        const [result] = await db.select(
+          "SELECT COUNT(DISTINCT f.hash) AS count FROM files f INNER JOIN group_chat_files gcf ON f.hash = gcf.hash",
+        );
+        return result ? result.count : 0;
+      }
+      case "orphan": {
+        const [result] = await db.select(
+          `SELECT COUNT(hash) AS count FROM files WHERE hash NOT IN (SELECT file_hash FROM bulletin_files) AND hash NOT IN (SELECT hash FROM private_chat_files) AND hash NOT IN (SELECT hash FROM group_chat_files)`,
+        );
+        return result ? result.count : 0;
+      }
+      default: {
+        // 'all'
+        const params = [...extParam];
+        const [result] = await db.select(
+          `SELECT COUNT(DISTINCT f.hash) AS count FROM files f LEFT JOIN bulletin_files bf ON f.hash = bf.file_hash WHERE 1=1${extFilter}`,
+          params,
+        );
+        return result ? result.count : 0;
+      }
     }
   },
 
   // Management: clear all orphaned file records (not referenced by any linking table)
   async clearOrphanedFileRecords() {
-    const db = await getDB()
+    const db = await getDB();
     await db.execute(`
       DELETE FROM files
       WHERE hash NOT IN (SELECT file_hash FROM bulletin_files)
       AND hash NOT IN (SELECT hash FROM private_chat_files)
       AND hash NOT IN (SELECT hash FROM group_chat_files)
-    `)
+    `);
   },
 
   // Management: get orphaned file hashes (returns string array, not row objects)
   async getOrphanedFileHashes() {
-    const dbInstance = await getDB()
+    const dbInstance = await getDB();
     const rows = await dbInstance.select(
-      `SELECT hash FROM files WHERE hash NOT IN (SELECT file_hash FROM bulletin_files) AND hash NOT IN (SELECT hash FROM private_chat_files) AND hash NOT IN (SELECT hash FROM group_chat_files)`
-    )
-    return rows.map(r => r.hash)
+      `SELECT hash FROM files WHERE hash NOT IN (SELECT file_hash FROM bulletin_files) AND hash NOT IN (SELECT hash FROM private_chat_files) AND hash NOT IN (SELECT hash FROM group_chat_files)`,
+    );
+    return rows.map((r) => r.hash);
   },
 
   // Management: delete a file record from DB (NOT disk file)
   async deleteFileRecord(hash) {
-    const db = await getDB()
-    await db.execute('DELETE FROM files WHERE hash = $1', [hash])
+    const db = await getDB();
+    await db.execute("DELETE FROM files WHERE hash = $1", [hash]);
   },
 
   // Management: remove all DB references to a file (bulletin_files, private_chat_files, group_chat_files)
   async removeFileReferences(hash) {
-    const db = await getDB()
-    await db.execute('DELETE FROM bulletin_files WHERE file_hash = $1', [hash])
-    await db.execute('DELETE FROM private_chat_files WHERE hash = $1', [hash])
-    await db.execute('DELETE FROM group_chat_files WHERE hash = $1', [hash])
+    const db = await getDB();
+    await db.execute("DELETE FROM bulletin_files WHERE file_hash = $1", [hash]);
+    await db.execute("DELETE FROM private_chat_files WHERE hash = $1", [hash]);
+    await db.execute("DELETE FROM group_chat_files WHERE hash = $1", [hash]);
   },
 
   // Management: bulk delete file records by hash array, removing references first
   async deleteFilesByHashes(hashes) {
-    const db = await getDB()
-    let deleted = 0
+    const db = await getDB();
+    let deleted = 0;
     for (const hash of hashes) {
-      await this.removeFileReferences(hash)
-      await db.execute('DELETE FROM files WHERE hash = $1', [hash])
-      deleted++
+      await this.removeFileReferences(hash);
+      await db.execute("DELETE FROM files WHERE hash = $1", [hash]);
+      deleted++;
     }
-    return deleted
+    return deleted;
   },
 
   // Management: get files older than a given number of days, paginated
   async getFilesOlderThan({ daysAgo, page = 1, pageSize = 20 }) {
-    const db = await getDB()
-    const offset = (page - 1) * pageSize
-    const cutoffTimestamp = Math.floor((Date.now() - daysAgo * 86400000) / 1000)
+    const db = await getDB();
+    const offset = (page - 1) * pageSize;
+    const cutoffTimestamp = Math.floor(
+      (Date.now() - daysAgo * 86400000) / 1000,
+    );
 
     const rows = await db.select(
       `SELECT f.hash, f.size, f.updated_at, f.chunk_length, f.chunk_cursor, f.is_saved, CASE WHEN bf.file_hash IS NOT NULL THEN 'bulletin' WHEN pcf.hash IS NOT NULL THEN 'private_chat' WHEN gcf.hash IS NOT NULL THEN 'group_chat' ELSE 'orphan' END AS category, COALESCE(bf.file_name, f.hash) AS file_name, bf.file_ext AS file_ext FROM files f LEFT JOIN bulletin_files bf ON f.hash = bf.file_hash LEFT JOIN private_chat_files pcf ON f.hash = pcf.hash LEFT JOIN group_chat_files gcf ON f.hash = gcf.hash WHERE f.updated_at <= $1 ORDER BY f.updated_at DESC LIMIT $2 OFFSET $3`,
-      [cutoffTimestamp, pageSize, offset]
-    )
-    return rows.map(r => ({ ...r, is_saved: Int2Bool(r.is_saved) }))
+      [cutoffTimestamp, pageSize, offset],
+    );
+    return rows.map((r) => ({ ...r, is_saved: Int2Bool(r.is_saved) }));
   },
 
   // Management: avatar storage stats (count + total size from avatar_files)
   async getAvatarStorageStats() {
-    const dbInstance = await getDB()
+    const dbInstance = await getDB();
     const [result] = await dbInstance.select(
-      'SELECT COUNT(address) AS count, SUM(size) AS total_size FROM avatar_files'
-    )
+      "SELECT COUNT(address) AS count, SUM(size) AS total_size FROM avatar_files",
+    );
     return result
       ? { count: result.count, totalSize: result.total_size || 0 }
-      : { count: 0, totalSize: 0 }
+      : { count: 0, totalSize: 0 };
   },
-}
+};

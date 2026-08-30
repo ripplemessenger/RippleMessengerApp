@@ -282,22 +282,18 @@ export function* SendPrivateContent({ payload }) {
     if (CurrentSession.aes_key !== undefined) {
       let content = AesEncrypt(payload.content, CurrentSession.aes_key);
 
-      const last_confirmed_msg = yield call(() =>
-        dbAPI.getLastConfirmPrivateMessage(CurrentSession.remote, self_address),
-      );
       const last_unconfirmed_msg = yield call(() =>
         dbAPI.getLastUnconfirmPrivateMessage(
           CurrentSession.remote,
           self_address,
         ),
       );
+      Logger.info(
+        `[DIAG-CONFIRM] remote=${CurrentSession.remote} self=${self_address} last_unconfirmed=${last_unconfirmed_msg === null ? "null" : `seq=${last_unconfirmed_msg.sequence} hash=${last_unconfirmed_msg.hash}`}`,
+      );
       let to_confirm_msg = null;
 
-      if (
-        last_unconfirmed_msg !== null &&
-        (last_confirmed_msg === null ||
-          last_unconfirmed_msg.sequence > last_confirmed_msg.sequence)
-      ) {
+      if (last_unconfirmed_msg !== null) {
         to_confirm_msg = {
           Sequence: last_unconfirmed_msg.sequence,
           Hash: last_unconfirmed_msg.hash,
@@ -305,7 +301,13 @@ export function* SendPrivateContent({ payload }) {
       }
 
       if (to_confirm_msg !== null) {
-        yield call(() => dbAPI.confirmPrivateMessage(to_confirm_msg.Hash));
+        yield call(() =>
+          dbAPI.confirmPrivateMessage(
+            CurrentSession.remote,
+            self_address,
+            to_confirm_msg.Sequence,
+          ),
+        );
       }
 
       const msg_json = yield call(() =>

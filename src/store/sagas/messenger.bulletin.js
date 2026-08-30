@@ -171,6 +171,9 @@ export function* CheckAvatar({ payload }) {
       dbAPI.getAvatarByAddress(payload.address),
     );
     if (db_avatar === null) {
+      // No local record — create placeholder. The AvatarRequest flow
+      // (handleAvatarListObject) will update this with the server's
+      // current hash and request the file with the correct hash.
       yield call(() =>
         dbAPI.addAvatar(
           payload.address,
@@ -182,12 +185,11 @@ export function* CheckAvatar({ payload }) {
           false,
         ),
       );
-    } else if (db_avatar.is_saved === false && db_avatar.json !== null) {
-      yield call(RequestAvatarFile, {
-        address: db_avatar.address,
-        hash: db_avatar.hash,
-      });
     }
+    // If is_saved === false, do NOT request the file here.
+    // The AvatarRequest → handleAvatarListObject flow already uses
+    // the server-provided hash (which may be newer than the DB hash).
+    // Requesting with the stale DB hash causes a hash mismatch.
   } catch (e) {
     Logger.error("[CheckAvatar] failed for", payload.address, e.message);
   }
@@ -271,7 +273,6 @@ export function* AvatarRequest({ payload }) {
         mgAPI.genAvatarRequest(seed, list),
       );
       yield call(SendMessage, { msg: avatar_request });
-      Logger.info("[AvatarRequest] sent to server");
     }
   } catch (e) {
     Logger.error("[AvatarRequest] failed:", e.message);
@@ -279,7 +280,9 @@ export function* AvatarRequest({ payload }) {
 }
 
 export function* RequestAvatarFile(payload) {
-  Logger.info(`[RequestAvatarFile] called: hash=${payload.hash}, address=${payload.address}`);
+  Logger.info(
+    `[RequestAvatarFile] called: hash=${payload.hash}, address=${payload.address}`,
+  );
   if (payload.hash === GenesisHash) {
     Logger.info(`[RequestAvatarFile] hash is GenesisHash, skip`);
     return;
