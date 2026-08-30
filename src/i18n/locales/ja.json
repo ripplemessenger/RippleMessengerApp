@@ -436,7 +436,7 @@
     "seed_label": "シード：",
     "address_label": "アドレス：",
     "login_temporarily": "一時ログイン",
-    "version": "RippleMessenger v1.0",
+    "version": "RippleMessenger v0.1.0",
     "login_saved": "保存済みアカウントでログイン",
     "invalid_seed": "シードの形式が無効です",
     "seed_required": "シードが必要です",

@@ -436,7 +436,7 @@
     "seed_label": "Seed :",
     "address_label": "Adresse :",
     "login_temporarily": "Connexion temporaire",
-    "version": "RippleMessenger v1.0",
+    "version": "RippleMessenger v0.1.0",
     "login_saved": "Se connecter avec un compte enregistré",
     "invalid_seed": "Format de seed invalide",
     "seed_required": "Le seed est requis",

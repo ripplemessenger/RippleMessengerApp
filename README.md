@@ -1,12 +1,23 @@
 # RippleMessenger App
 
-RippleMessenger 的 Android 客户端，基于 **纯 React Native 0.86.0**（无 Expo）。
+RippleMessenger 的 Android 客户端，基于 **React Native 0.75.4**（无 Expo），从 `Client/`（Tauri 桌面端）移植。
+
+## 功能
+
+- **公告（Bulletin）**：Portal 列表、详情、发布、引用/转发、书签、关注、标签、地址公告页（含从服务器逐条拉取整链）
+- **私聊**：ECDH 握手 + AES-CBC 加密，已读回执高亮
+- **群聊**：最多 16 成员，创建/解散/清除群数据
+- **文件传输**：1MB 分块、SHA-512 校验、断点续传（启动 + 进入页面自动恢复）、下载进度显示
+- **视频**：聊天内联缩略图 + 全屏播放器（`react-native-video`）
+- **联系人**：昵称管理、QR 扫码添加（`react-native-vision-camera`）、二维码名片（`地址@服务器`）
+- **多语言**：9 种语言（en/zh/ja/ko/de/es/fr/pt/ru）
+- **设置**：深色模式、自动下载开关、服务器管理、存储管理、Bulletin 缓存管理（删除保护：自己的/bookmarked/followed 不可删）
 
 ## 环境要求
 
 - Node.js（含 npm）
-- Android SDK + Android Studio 命令行工具（gradlew 会自动下载 Gradle）
-- 模拟器或真机（x86_64 模拟器在 Windows x86_64 主机上运行最稳）
+- Android SDK（gradlew 会自动下载 Gradle）
+- 模拟器或真机（Windows x86_64 主机用 x86_64 模拟器）
 
 ## 构建步骤
 
@@ -20,14 +31,18 @@ npx react-native bundle --platform android --dev false \
   --bundle-output android/app/src/main/assets/index.android.bundle
 
 # 3. 编译 APK
-cd android && ./gradlew assembleDebug
+cd android && ./gradlew assembleDebug      # 调试
+cd android && ./gradlew assembleRelease    # 发布
 
 # 4. 安装并启动（可选）
 adb install -r app/build/outputs/apk/debug/app-debug.apk
-adb shell am start -n com.anonymous.RippleMessengerApp/.MainActivity
+adb shell am start -n app.ripplemessenger/.MainActivity
 ```
 
-APK 输出位置：`android/app/build/outputs/apk/debug/app-debug.apk`
+APK 输出位置：
+
+- Debug：`android/app/build/outputs/apk/debug/app-debug.apk`
+- Release：`android/app/build/outputs/apk/release/app-release.apk`
 
 ## 开发循环（重要）
 
@@ -57,18 +72,31 @@ adb logcat -d | grep -i "ReactNativeJS\|Error"
 
 ## 项目结构
 
-```
+```text
 src/
-  components/   # React 组件
+  components/   # React 组件（Bulletin/Chat/common 分类）
   screens/      # 页面
-  store/        # Redux 状态
+  store/        # Redux 状态（slices + sagas，messenger.* 按功能拆分）
   lib/          # 协议、加密、工具库
-  db/           # SQLite 数据层
+  db/           # SQLite 数据层（NitroSQLite）
   services/     # 服务层
   navigation/   # 路由
+  i18n/         # 9 语言包
 android/
-  app/src/main/java/com/anonymous/RippleMessengerApp/  # Kotlin 原生代码
+  app/src/main/java/app/ripplemessenger/  # Kotlin 原生代码
+docs/
+  porting-status.md        # 功能移植进度（每次改动必更新）
+  component-conventions.md # UI 组件规范（开发前必读）
+  pages-features.md        # 页面功能清单
 ```
+
+## 技术栈
+
+- React Native 0.75.4 + nativewind 4（Tailwind 样式）
+- Redux Toolkit + Redux-Saga（状态 + 副作用）
+- NitroSQLite（本地数据库）
+- `ripple-keypairs` / `crypto-js` / `elliptic`（XRPL 签名、AES、ECDH）
+- `react-native-video`（视频播放）、`react-native-vision-camera`（QR 扫码）
 
 ## License
 

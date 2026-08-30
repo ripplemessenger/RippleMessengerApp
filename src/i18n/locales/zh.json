@@ -449,7 +449,7 @@
     "seed_label": "种子：",
     "address_label": "地址：",
     "login_temporarily": "临时登录",
-    "version": "RippleMessenger v1.0",
+    "version": "RippleMessenger v0.1.0",
     "login_saved": "使用已保存账户登录",
     "invalid_seed": "种子格式无效",
     "seed_required": "请输入种子",

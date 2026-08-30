@@ -430,7 +430,7 @@
     "seed_label": "Seed:",
     "address_label": "Endereço:",
     "login_temporarily": "Login temporário",
-    "version": "RippleMessenger v1.0",
+    "version": "RippleMessenger v0.1.0",
     "login_saved": "Entrar com conta salva",
     "invalid_seed": "Formato de seed inválido",
     "seed_required": "A seed é obrigatória",

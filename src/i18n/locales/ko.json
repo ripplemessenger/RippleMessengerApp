@@ -436,7 +436,7 @@
     "seed_label": "시드:",
     "address_label": "주소:",
     "login_temporarily": "임시 로그인",
-    "version": "RippleMessenger v1.0",
+    "version": "RippleMessenger v0.1.0",
     "login_saved": "저장된 계정으로 로그인",
     "invalid_seed": "시드 형식이 잘못되었습니다",
     "seed_required": "시드가 필요합니다",

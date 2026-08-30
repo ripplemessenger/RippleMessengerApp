@@ -436,7 +436,7 @@
     "seed_label": "Сид:",
     "address_label": "Адрес:",
     "login_temporarily": "Временный вход",
-    "version": "RippleMessenger v1.0",
+    "version": "RippleMessenger v0.1.0",
     "login_saved": "Вход с сохранённым аккаунтом",
     "invalid_seed": "Неверный формат сида",
     "seed_required": "Сид обязателен",

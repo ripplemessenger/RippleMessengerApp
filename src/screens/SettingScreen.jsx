@@ -50,7 +50,7 @@ import {
 } from "../lib/theme";
 import i18n from "../i18n";
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "0.1.0";
 
 const LANGUAGE_OPTIONS = [
   { code: "en", label: "English" },
