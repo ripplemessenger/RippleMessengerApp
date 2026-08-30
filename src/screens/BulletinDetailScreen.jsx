@@ -10,14 +10,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Clipboard,
-  Alert,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { parseBulletinMarkdown } from "../lib/markdown";
 import { RenderHTML } from "react-native-render-html";
-import BottomSheet from "../components/common/BottomSheet";
+import JsonViewer from "../components/common/JsonViewer";
 
 import {
   selectDisplayBulletins,
@@ -34,11 +33,6 @@ import {
   SaveBulletinFile,
   ResumeBulletinFiles,
 } from "../store/sagas/messenger.actions";
-import {
-  ContactAdd as ContactAddAction,
-  ContactToggleIsFriend as ContactToggleIsFriendAction,
-  ContactToggleIsFollow as ContactToggleIsFollowAction,
-} from "../store/sagas/messenger.actions";
 import AvatarImage from "../components/AvatarImage";
 import InlineImage from "../components/InlineImage";
 import useDarkMode from "../hooks/useDarkMode";
@@ -49,14 +43,31 @@ import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
 /* Shared HTML config for react-native-render-html — text color must follow
  * the theme (hardcoded #1a1a2e was invisible on the dark surface-card). */
 function bulletinHtmlStyles(isDark) {
+  const color = isDark ? "#f0ead6" : "#1a1a2e";
   return {
     document: {
       style: {
         fontSize: 16,
         lineHeight: 24,
-        color: isDark ? "#f0ead6" : "#1a1a2e",
+        color,
       },
     },
+    p: { style: { color } },
+    li: { style: { color } },
+    ol: { style: { color } },
+    ul: { style: { color } },
+    strong: { style: { color } },
+    em: { style: { color } },
+    code: { style: { color } },
+    pre: { style: { color } },
+    blockquote: { style: { color } },
+    h1: { style: { color } },
+    h2: { style: { color } },
+    h3: { style: { color } },
+    h4: { style: { color } },
+    h5: { style: { color } },
+    h6: { style: { color } },
+    a: { style: { color } },
   };
 }
 
@@ -95,11 +106,13 @@ function ReplyCard({ bulletin, onPress }) {
           size={28}
         />
         <View className="flex-1 min-w-0">
-          <Text className="text-xs font-semibold text-text-primary truncate">
-            {displayName}
-          </Text>
-          <Text className="text-[10px] text-text-secondary/70">
-            {formatTime(bulletin.signed_at)} · #{bulletin.sequence}
+          <View className="px-2 py-0.5 rounded-full border border-primary/30 bg-primary/5 self-start">
+            <Text className="text-xs font-semibold text-primary-dark">
+              {displayName}#{bulletin.sequence}
+            </Text>
+          </View>
+          <Text className="text-[10px] text-text-secondary/70 mt-0.5">
+            {formatTime(bulletin.signed_at)}
           </Text>
         </View>
       </View>
@@ -123,8 +136,12 @@ export default function BulletinDetailScreen({ route, navigation }) {
     useSelector(selectDisplayBulletins);
   const selfAddress = useSelector(selectUserAddress);
   const contactMap = useSelector(selectContactMap);
-  const followList = useSelector((state) => state.User.FollowList || []);
-  const friendList = useSelector((state) => state.User.FriendList || []);
+  const fileProgressMap = useSelector(
+    (state) => state.Messenger.FileProgressMap || {},
+  );
+  const fileSavedMap = useSelector(
+    (state) => state.Messenger.FileSavedMap || {},
+  );
 
   const [replyText, setReplyText] = useState("");
   const [showJsonModal, setShowJsonModal] = useState(false);
@@ -243,47 +260,6 @@ export default function BulletinDetailScreen({ route, navigation }) {
     );
   }, [bulletin?.content, dispatch, t]);
 
-  // Copy the raw bulletin JSON to clipboard
-  const handleCopyJson = useCallback(() => {
-    const jsonStr = JSON.stringify(bulletin?.json ?? bulletin, null, 2);
-    Clipboard.setString(jsonStr);
-    dispatch(
-      setFlashNoticeMessage({
-        message: t("common.copied_to_clipboard"),
-      }),
-    );
-  }, [bulletin, dispatch, t]);
-
-  // Toggle Friend — first ensure contact exists, then toggle friend status
-  const handleToggleFriend = useCallback(() => {
-    if (!bulletin) return;
-    const authorAddr = bulletin.address;
-    const nickname = bulletin.json?.Nickname || authorAddr;
-    // Step 1: Add contact (idempotent — saga checks existence)
-    dispatch(ContactAddAction({ address: authorAddr, nickname }));
-    // Step 2: Toggle friend status
-    dispatch(ContactToggleIsFriendAction({ contact_address: authorAddr }));
-    const nowFriend = !friendList.includes(authorAddr);
-    Alert.alert(nowFriend ? t("common.friend") : t("common.friend"), nickname, [
-      { text: t("common.yes") },
-    ]);
-  }, [dispatch, bulletin, friendList]);
-
-  // Toggle Follow — first ensure contact exists, then toggle follow status
-  const handleToggleFollow = useCallback(() => {
-    if (!bulletin) return;
-    const authorAddr = bulletin.address;
-    const nickname = bulletin.json?.Nickname || authorAddr;
-    dispatch(ContactAddAction({ address: authorAddr, nickname }));
-    dispatch(ContactToggleIsFollowAction({ contact_address: authorAddr }));
-    const nowFollowing = !followList.includes(authorAddr);
-    Alert.alert(
-      nowFollowing ? t("common.following") : t("common.follow"),
-      nickname,
-      [{ text: t("common.yes") }],
-    );
-  }, [dispatch, bulletin, followList]);
-
   // Navigate to the author's bulletins when tapping the author header
   const handleAuthorPress = useCallback(() => {
     navigation.getParent()?.getParent()?.navigate("AddressBulletins", {
@@ -341,29 +317,65 @@ export default function BulletinDetailScreen({ route, navigation }) {
                 size={40}
               />
               <View className="flex-1 min-w-0">
-                <Text className="text-base font-semibold text-text-primary">
-                  {bulletin.address === selfAddress
-                    ? t("common.me")
-                    : contactMap?.[bulletin.address] ||
-                      bulletin.json?.Nickname ||
-                      shortenAddress(bulletin.address)}
-                </Text>
-                <Text className="text-xs text-text-secondary/80">
-                  {shortenAddress(bulletin.address)}
+                <View className="px-2 py-0.5 rounded-full border border-primary/30 bg-primary/5 self-start">
+                  <Text className="text-sm font-semibold text-primary-dark">
+                    {bulletin.address === selfAddress
+                      ? t("common.me")
+                      : contactMap?.[bulletin.address] ||
+                        bulletin.json?.Nickname ||
+                        shortenAddress(bulletin.address)}
+                    #{bulletin.sequence}
+                  </Text>
+                </View>
+                <Text className="text-xs text-text-secondary/80 mt-0.5">
+                  {formatTime(bulletin.signed_at)}
                 </Text>
               </View>
             </TouchableOpacity>
+
+            {/* Action buttons: copy, quote, forward, view json */}
             <TouchableOpacity
-              onPress={handleAuthorPress}
+              onPress={handleCopyContent}
               activeOpacity={0.6}
-              className="items-end shrink-0"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={t("common.copy")}
             >
-              <Text className="text-xs text-text-secondary/70">
-                {formatTime(bulletin.signed_at)}
-              </Text>
-              <Text className="text-xs text-text-secondary/50">
-                #{bulletin.sequence}
-              </Text>
+              <Ionicons name="copy-outline" size={22} color="#a89f85" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleQuote}
+              activeOpacity={0.6}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={t("ui.quote")}
+            >
+              <Ionicons name="link-outline" size={22} color="#a89f85" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleForward}
+              activeOpacity={0.6}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={t("common.forward")}
+            >
+              <Ionicons
+                name="arrow-forward-outline"
+                size={22}
+                color="#a89f85"
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setShowJsonModal(true)}
+              activeOpacity={0.6}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={t("ui.view_details")}
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={22}
+                color="#a89f85"
+              />
             </TouchableOpacity>
 
             {/* Inline bookmark toggle for main bulletin */}
@@ -392,6 +404,7 @@ export default function BulletinDetailScreen({ route, navigation }) {
                 return (
                   <RenderHTML
                     source={{ html }}
+                    baseStyle={{ color: isDark ? "#f0ead6" : "#1a1a2e" }}
                     tagsStyles={bulletinHtmlStyles(isDark)}
                     defaultTextProps={{
                       style: { color: isDark ? "#f0ead6" : "#1a1a2e" },
@@ -406,111 +419,6 @@ export default function BulletinDetailScreen({ route, navigation }) {
                 </Text>
               );
             })()}
-          </View>
-
-          {/* Action toolbar: copy, friend, follow */}
-          <View className="flex-row items-center gap-3 mb-4 pb-2 border-b border-secondary-light/30">
-            <TouchableOpacity
-              onPress={handleCopyContent}
-              activeOpacity={0.6}
-              className="flex-row items-center gap-1"
-            >
-              <Ionicons name="copy-outline" size={16} color="#a89f85" />
-              <Text className="text-xs text-text-secondary/70">
-                {t("common.copy")}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleQuote}
-              activeOpacity={0.6}
-              className="flex-row items-center gap-1"
-            >
-              <Ionicons name="link-outline" size={16} color="#a89f85" />
-              <Text className="text-xs text-text-secondary/70">
-                {t("ui.quote")}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleForward}
-              activeOpacity={0.6}
-              className="flex-row items-center gap-1"
-            >
-              <Ionicons
-                name="arrow-forward-outline"
-                size={16}
-                color="#a89f85"
-              />
-              <Text className="text-xs text-text-secondary/70">
-                {t("common.forward")}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setShowJsonModal(true)}
-              activeOpacity={0.6}
-              className="flex-row items-center gap-1"
-            >
-              <Ionicons
-                name="information-circle-outline"
-                size={16}
-                color="#a89f85"
-              />
-              <Text className="text-xs text-text-secondary/70">
-                {t("ui.view_details")}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Friend button — skip for own bulletins */}
-            {bulletin.address !== selfAddress && (
-              <TouchableOpacity
-                onPress={handleToggleFriend}
-                activeOpacity={0.6}
-                className="flex-row items-center gap-1"
-              >
-                <Ionicons
-                  name={
-                    friendList.includes(bulletin.address)
-                      ? "people"
-                      : "people-outline"
-                  }
-                  size={16}
-                  color={
-                    friendList.includes(bulletin.address) ? ACCENT : "#a89f85"
-                  }
-                />
-                <Text className="text-xs text-text-secondary/70">
-                  {friendList.includes(bulletin.address) ? "Friends" : "Friend"}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Follow button — skip for own bulletins */}
-            {bulletin.address !== selfAddress && (
-              <TouchableOpacity
-                onPress={handleToggleFollow}
-                activeOpacity={0.6}
-                className="flex-row items-center gap-1"
-              >
-                <Ionicons
-                  name={
-                    followList.includes(bulletin.address)
-                      ? "eye"
-                      : "eye-outline"
-                  }
-                  size={16}
-                  color={
-                    followList.includes(bulletin.address) ? ACCENT : "#a89f85"
-                  }
-                />
-                <Text className="text-xs text-text-secondary/70">
-                  {followList.includes(bulletin.address)
-                    ? "Following"
-                    : "Follow"}
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           {/* Tags — tap to filter bulletins by tag */}
@@ -535,38 +443,63 @@ export default function BulletinDetailScreen({ route, navigation }) {
               <Text className="text-sm font-semibold text-text-secondary mb-2">
                 {t("ui.attachments")} ({bulletin.file.length})
               </Text>
-              {bulletin.file.map((f, i) => (
-                <View key={i} className="mb-1">
-                  {/* Inline preview for image attachments */}
-                  <InlineImage
-                    hash={f.Hash}
-                    ext={f.Ext || ""}
-                    containerStyle={{ marginBottom: 6 }}
-                  />
-                  <TouchableOpacity
-                    onPress={() => handleFilePress(f)}
-                    activeOpacity={0.6}
-                    className="flex-row items-center gap-2 py-2 px-2 rounded-lg bg-surface-alt/50"
-                  >
-                    <Ionicons
-                      name="document-outline"
-                      size={18}
-                      color={ACCENT}
+              {bulletin.file.map((f, i) => {
+                const progress = fileProgressMap[f.Hash];
+                const saved = fileSavedMap[f.Hash];
+                const isDownloading = progress && !saved;
+                return (
+                  <View key={i} className="mb-1">
+                    {/* Inline preview for image attachments */}
+                    <InlineImage
+                      hash={f.Hash}
+                      ext={f.Ext || ""}
+                      containerStyle={{ marginBottom: 6 }}
                     />
-                    <Text className="text-sm text-text-primary flex-1 ml-1">
-                      {f.Name}
-                    </Text>
-                    <Text className="text-xs text-text-secondary/60">
-                      {(f.Size / 1024).toFixed(1)} KB
-                    </Text>
-                    <Ionicons
-                      name="download-outline"
-                      size={16}
-                      color="#a89f85"
-                    />
-                  </TouchableOpacity>
-                </View>
-              ))}
+                    <TouchableOpacity
+                      onPress={() => handleFilePress(f)}
+                      activeOpacity={0.6}
+                      className="flex-row items-center gap-2 py-2 px-2 rounded-lg bg-surface-alt/50"
+                    >
+                      <Ionicons
+                        name="document-outline"
+                        size={18}
+                        color={ACCENT}
+                      />
+                      <Text className="text-sm text-text-primary flex-1 ml-1">
+                        {f.Name}
+                      </Text>
+                      <Text className="text-xs text-text-secondary/60">
+                        {(f.Size / 1024).toFixed(1)} KB
+                      </Text>
+                      {(() => {
+                        if (isDownloading) {
+                          return (
+                            <Text className="text-xs text-primary-dark font-medium">
+                              {progress.cursor}/{progress.length}
+                            </Text>
+                          );
+                        }
+                        if (saved) {
+                          return (
+                            <Ionicons
+                              name="checkmark"
+                              size={16}
+                              color="#4caf50"
+                            />
+                          );
+                        }
+                        return (
+                          <Ionicons
+                            name="download-outline"
+                            size={16}
+                            color="#a89f85"
+                          />
+                        );
+                      })()}
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
             </View>
           )}
 
@@ -684,34 +617,12 @@ export default function BulletinDetailScreen({ route, navigation }) {
       </KeyboardAvoidingView>
 
       {/* JSON details modal */}
-      <BottomSheet
+      <JsonViewer
         visible={showJsonModal}
         onClose={() => setShowJsonModal(false)}
         title={t("ui.bulletin_json")}
-      >
-        <View className="flex-row items-center justify-end gap-2">
-          <TouchableOpacity
-            onPress={handleCopyJson}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="copy-outline" size={22} color="#a89f85" />
-          </TouchableOpacity>
-        </View>
-        <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
-          <Text
-            className="text-xs font-mono text-text-primary"
-            selectable
-            style={{
-              padding: 12,
-              backgroundColor: "#1a1a2e",
-              borderRadius: 8,
-              color: "#e0e0e0",
-            }}
-          >
-            {JSON.stringify(bulletin?.json ?? bulletin, null, 2)}
-          </Text>
-        </ScrollView>
-      </BottomSheet>
+        content={JSON.stringify(bulletin?.json ?? bulletin, null, 2)}
+      />
     </>
   );
 }

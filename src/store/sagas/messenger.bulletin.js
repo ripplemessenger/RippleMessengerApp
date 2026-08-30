@@ -42,11 +42,13 @@ import {
   setBookmarkBulletinList,
   setTagBulletinList,
   setAddressBulletinList,
+  setAddressBulletinPulling,
   setFollowBulletinList,
   setRandomBulletinList,
   setFileSavedToken,
 } from "../slices/MessengerSlice";
 
+import { LoadAddressBulletin as LoadAddressBulletinAction } from "./messenger.actions";
 import {
   SendMessage,
   genFileNonce,
@@ -426,6 +428,82 @@ export function* LoadAddressBulletin({ payload }) {
     );
   } catch (e) {
     Logger.error("[LoadAddressBulletin] failed:", e.message);
+  }
+}
+
+/**
+ * Wait (polling local DB) until bulletin (address, seq) is cached, or timeout.
+ * The bulletin arrives via WebSocket → handleBulletinObject → CacheBulletin,
+ * so the DB is the reliable arrival signal.
+ */
+function* waitForBulletin(address, seq, timeoutMs) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const b = yield call(() => dbAPI.getBulletinBySequence(address, seq));
+    if (b !== null) return true;
+    yield delay(300);
+  }
+  return false;
+}
+
+/**
+ * Pull the full bulletin chain for an address from the server, starting at
+ * seq1 (per user request: fill from the beginning).
+ *
+ * Protocol: BulletinRequest(Address, Sequence) returns exactly ONE bulletin
+ * (the one at that sequence), or nothing if the server doesn't have it.
+ * So "load all" = sequential single-sequence requests:
+ *   seq1 → seq2 → ... until the server stops responding (chain end).
+ * Sequences already cached locally are skipped (no network round-trip).
+ *
+ * When the chain ends, refreshes the address bulletin list (page 1) so the
+ * screen shows the newly cached bulletins.
+ */
+export function* FetchAddressBulletinChain({ payload }) {
+  const address = payload.address;
+  if (!address) return;
+  // Concurrency guard: one chain pull at a time
+  const pulling = yield select(
+    (state) => state.Messenger.AddressBulletinPulling,
+  );
+  if (pulling) return;
+
+  const seed = yield select((state) => state.User.Seed);
+  if (!seed) return;
+
+  yield put(setAddressBulletinPulling(true));
+  try {
+    let seq = 1;
+    let fetched = 0;
+    while (true) {
+      // Skip sequences already cached locally
+      const existing = yield call(() =>
+        dbAPI.getBulletinBySequence(address, seq),
+      );
+      if (existing !== null) {
+        seq++;
+        continue;
+      }
+      // Request this sequence from the server
+      const msg = yield call(() =>
+        mgAPI.genBulletinRequest(seed, address, seq, address),
+      );
+      yield call(SendMessage, { msg });
+      // Wait up to 5s for the bulletin to arrive and be cached
+      const got = yield call(waitForBulletin, address, seq, 5000);
+      if (!got) break; // chain end (server has no bulletin at this seq)
+      fetched++;
+      seq++;
+    }
+    Logger.info(
+      `[FetchAddressBulletinChain] ${address}: fetched ${fetched} bulletins, chain ended at seq ${seq}`,
+    );
+    // Refresh the list from local DB so the screen shows new bulletins
+    yield put(LoadAddressBulletinAction({ page: 1, address }));
+  } catch (e) {
+    Logger.error("[FetchAddressBulletinChain] failed:", e.message);
+  } finally {
+    yield put(setAddressBulletinPulling(false));
   }
 }
 

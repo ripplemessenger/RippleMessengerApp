@@ -384,6 +384,7 @@
     "no_contacts": "連絡先はまだありません",
     "posts_loaded": "{{count}} 件の公告を読み込みました",
     "address_no_posts": "このアドレスには公告がないか、まだ同期されていません。",
+    "load_all": "サーバーからすべての公告をロード",
     "no_address": "アドレスが指定されていません。",
     "bookmarked_count": "{{count}} 件の公告をブックマークしました",
     "no_bookmarks": "まだブックマークはありません",

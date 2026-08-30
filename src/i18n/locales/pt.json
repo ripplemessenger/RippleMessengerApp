@@ -378,6 +378,7 @@
     "no_contacts": "Ainda não há contatos",
     "posts_loaded": "{{count}} boletins carregadas",
     "address_no_posts": "Este endereço não tem boletins ou elas ainda não foram sincronizadas.",
+    "load_all": "Carregar todos os boletins do servidor",
     "no_address": "Nenhum endereço especificado.",
     "bookmarked_count": "{{count}} boletins marcadas",
     "no_bookmarks": "Ainda não há marcadores",

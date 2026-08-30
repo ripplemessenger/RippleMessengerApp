@@ -384,6 +384,7 @@
     "no_contacts": "연락처가 없습니다",
     "posts_loaded": "공지 {{count}}개 로드됨",
     "address_no_posts": "이 주소에는 공지이 없거나 아직 동기화되지 않았습니다.",
+    "load_all": "서버에서 모든 공지 불러오기",
     "no_address": "주소가 지정되지 않았습니다.",
     "bookmarked_count": "공지 {{count}}개 북마크됨",
     "no_bookmarks": "아직 북마크가 없습니다",

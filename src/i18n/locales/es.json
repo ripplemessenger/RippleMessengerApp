@@ -384,6 +384,7 @@
     "no_contacts": "Aún no hay contactos",
     "posts_loaded": "{{count}} boletines cargadas",
     "address_no_posts": "Esta dirección no tiene boletines o aún no se han sincronizado.",
+    "load_all": "Cargar todos los boletines del servidor",
     "no_address": "No se especificó una dirección.",
     "bookmarked_count": "{{count}} boletines guardadas",
     "no_bookmarks": "Aún no hay marcadores",

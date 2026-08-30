@@ -5,6 +5,7 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,9 +33,10 @@ import { ACCENT, ICON_MUTED } from "../../lib/theme";
  *   requireConn  - only load when connected (Random)
  *   guardParam   - name of a loadParam that must be truthy before loading (tag/address)
  *   icon         - Ionicons name for the header
+ *   headerIcon   - optional node rendered in place of the header icon (e.g. an avatar)
  *   title        - header title string
- *   navTitle     - navigation bar title (defaults to title)
  *   headerExtra  - optional node rendered under the title (e.g. mono address)
+ *   headerRight  - optional node rendered on the right of the header row
  *   countText    - (count) => string
  *   emptyIcon    - Ionicons name for the empty state
  *   emptyTitle   - empty state title
@@ -49,9 +51,10 @@ export default function BulletinListScreen({
   requireConn = false,
   guardParam = null,
   icon,
+  headerIcon,
   title,
-  navTitle,
   headerExtra,
+  headerRight,
   countText,
   emptyIcon,
   emptyTitle,
@@ -71,6 +74,16 @@ export default function BulletinListScreen({
   const [allBulletins, setAllBulletins] = useState([]);
   const [localPage, setLocalPage] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Distinguish "initial load in flight" from "loaded but empty".
+  // The saga always dispatches a NEW array reference, so a reference change
+  // is a reliable "first response arrived" signal (initial Redux state and
+  // "loaded empty" both have list: [], so we can't tell them apart by length).
+  const initialListRef = useRef(null);
+  if (initialListRef.current === null) {
+    initialListRef.current = bulletins;
+  }
+  const hasLoaded = bulletins !== initialListRef.current;
 
   const guardOk = !guardParam || loadParams[guardParam];
 
@@ -143,15 +156,23 @@ export default function BulletinListScreen({
     [navigation],
   );
 
+  const handleAvatarPress = useCallback(
+    (address) => {
+      navigation.navigate("AddressBulletins", { address });
+    },
+    [navigation],
+  );
+
   const renderItem = useCallback(
     ({ item }) => (
       <BulletinCard
         bulletin={item}
         onPress={() => handlePressBulletin(item)}
         onTagPress={handleTagPress}
+        onAvatarPress={handleAvatarPress}
       />
     ),
-    [handlePressBulletin, handleTagPress],
+    [handlePressBulletin, handleTagPress, handleAvatarPress],
   );
 
   const keyExtractor = useCallback((item) => item.hash, []);
@@ -173,13 +194,14 @@ export default function BulletinListScreen({
           >
             <Ionicons name="arrow-back" size={22} color={ICON_MUTED} />
           </TouchableOpacity>
-          <Ionicons name={icon} size={20} color={ACCENT} />
+          {headerIcon || <Ionicons name={icon} size={20} color={ACCENT} />}
           <Text
             className="text-lg font-bold text-text-primary flex-1"
             numberOfLines={1}
           >
             {title}
           </Text>
+          {headerRight}
         </View>
         {headerExtra}
         <Text className="text-xs text-text-secondary/70 mt-1">
@@ -203,7 +225,13 @@ export default function BulletinListScreen({
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.3}
         ListEmptyComponent={
-          <EmptyState icon={emptyIcon} title={emptyTitle} hint={hint} />
+          hasLoaded ? (
+            <EmptyState icon={emptyIcon} title={emptyTitle} hint={hint} />
+          ) : (
+            <View className="flex-1 items-center justify-center py-16">
+              <ActivityIndicator size="large" color={ACCENT} />
+            </View>
+          )
         }
         ListFooterComponent={<ListFooter loading={hasMore} />}
       />

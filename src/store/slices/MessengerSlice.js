@@ -31,6 +31,9 @@ const MessengerSlice = createSlice({
     AddressBulletinList: [],
     AddressBulletinPage: 1,
     AddressBulletinTotalPage: 1,
+    // true while FetchAddressBulletinChain is pulling the address's bulletin
+    // chain from the server (seq1 → chain end); UI shows a loading spinner.
+    AddressBulletinPulling: false,
 
     FollowBulletinList: [],
     FollowBulletinPage: 1,
@@ -149,6 +152,9 @@ const MessengerSlice = createSlice({
       state.AddressBulletinTotalPage = action.payload.TotalPage;
       state.AddressBulletinList = action.payload.List;
     },
+    setAddressBulletinPulling: (state, action) => {
+      state.AddressBulletinPulling = action.payload;
+    },
 
     setFollowBulletinList: (state, action) => {
       state.FollowBulletinPage = action.payload.Page;
@@ -253,6 +259,7 @@ export const {
 
   setBulletinAddress,
   setAddressBulletinList,
+  setAddressBulletinPulling,
 
   setFollowBulletinList,
   setBookmarkBulletinList,

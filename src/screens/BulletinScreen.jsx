@@ -6,6 +6,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
@@ -48,19 +49,34 @@ export default function BulletinScreen({ navigation }) {
 
   // Locally accumulated bulletin list (across pages)
   const [allBulletins, setAllBulletins] = useState([]);
-  const [localPage, setLocalPage] = useState(0);
+  const [loadedPage, setLoadedPage] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Sync Redux page-1 data into local state whenever Redux updates
+  // Distinguish "initial load in flight" from "loaded but empty".
+  // The saga always dispatches a NEW array reference, so a reference change
+  // is a reliable "first response arrived" signal (initial Redux state and
+  // "loaded empty" both have list: [], so we can't tell them apart by length).
+  const initialListRef = useRef(null);
+  if (initialListRef.current === null) {
+    initialListRef.current = reduxBulletins;
+  }
+  const hasLoaded = reduxBulletins !== initialListRef.current;
+
+  // Sync Redux page data into local state whenever Redux updates
   useEffect(() => {
-    if (reduxPage === 1 && reduxBulletins.length > 0) {
+    if (reduxBulletins.length === 0) return;
+    if (reduxPage === 1) {
+      // Initial load or pull-to-refresh — reset to page 1
       setAllBulletins(reduxBulletins);
-    } else if (reduxPage > 1 && reduxBulletins.length > 0) {
-      // Append new page data
+      setLoadedPage(1);
+    } else if (reduxPage > loadedPage) {
+      // A newer page arrived — append it
       setAllBulletins((prev) => [...prev, ...reduxBulletins]);
-      setLocalPage(reduxPage);
+      setLoadedPage(reduxPage);
     }
-  }, [reduxBulletins, reduxPage]);
+    setLoadingMore(false);
+  }, [reduxBulletins, reduxPage, loadedPage]);
 
   // Load initial page when connected
   useFocusEffect(
@@ -74,7 +90,7 @@ export default function BulletinScreen({ navigation }) {
   const handleRefresh = useCallback(() => {
     if (refreshing) return;
     setRefreshing(true);
-    setLocalPage(0);
+    setLoadedPage(0);
     dispatch(LoadPortalBulletin({ page: 1 }));
     setTimeout(() => {
       setRefreshing(false);
@@ -82,11 +98,13 @@ export default function BulletinScreen({ navigation }) {
   }, [dispatch, refreshing]);
 
   const handleLoadMore = useCallback(() => {
-    const nextPage = localPage >= reduxPage ? reduxPage + 1 : localPage + 1;
+    if (loadingMore) return;
+    const nextPage = loadedPage + 1;
     if (nextPage <= totalPage) {
+      setLoadingMore(true);
       dispatch(LoadPortalBulletin({ page: nextPage }));
     }
-  }, [dispatch, localPage, reduxPage, totalPage]);
+  }, [dispatch, loadingMore, loadedPage, totalPage]);
 
   const handlePressBulletin = useCallback(
     (bulletin) => {
@@ -108,20 +126,30 @@ export default function BulletinScreen({ navigation }) {
     [navigation],
   );
 
+  const handleAvatarPress = useCallback(
+    (address) => {
+      // AddressBulletins is in RootStack, above the tab stack.
+      navigation
+        .getParent()
+        ?.getParent()
+        ?.navigate("AddressBulletins", { address });
+    },
+    [navigation],
+  );
+
   const renderItem = useCallback(
     ({ item }) => (
       <BulletinCard
         bulletin={item}
         onPress={() => handlePressBulletin(item)}
         onTagPress={handleTagPress}
+        onAvatarPress={handleAvatarPress}
       />
     ),
-    [handlePressBulletin, handleTagPress],
+    [handlePressBulletin, handleTagPress, handleAvatarPress],
   );
 
   const keyExtractor = useCallback((item) => item.hash, []);
-
-  const hasMore = reduxPage < totalPage || localPage < totalPage;
 
   // Publish modal state & handlers
   const showPublishModal = useSelector(
@@ -229,13 +257,19 @@ export default function BulletinScreen({ navigation }) {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.3}
         ListEmptyComponent={
-          <EmptyState
-            icon="document-text-outline"
-            title={t("ui.no_posts_yet")}
-            hint={t("ui.feed_empty")}
-          />
+          hasLoaded ? (
+            <EmptyState
+              icon="document-text-outline"
+              title={t("ui.no_posts_yet")}
+              hint={t("ui.feed_empty")}
+            />
+          ) : (
+            <View className="flex-1 items-center justify-center py-16">
+              <ActivityIndicator size="large" color={ACCENT} />
+            </View>
+          )
         }
-        ListFooterComponent={<ListFooter loading={hasMore} />}
+        ListFooterComponent={<ListFooter loading={loadingMore} />}
       />
 
       {/* Floating Action Button — publish */}

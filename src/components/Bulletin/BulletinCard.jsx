@@ -20,14 +20,31 @@ import { selectContactMap, selectUserAddress } from "../../selectors";
 /* Shared HTML config for react-native-render-html — text color must follow
  * the theme (hardcoded #1a1a2e was invisible on the dark surface-card). */
 function bulletinPreviewStyles(isDark) {
+  const color = isDark ? "#f0ead6" : "#1a1a2e";
   return {
     document: {
       style: {
         fontSize: 14,
         lineHeight: 20,
-        color: isDark ? "#f0ead6" : "#1a1a2e",
+        color,
       },
     },
+    p: { style: { color } },
+    li: { style: { color } },
+    ol: { style: { color } },
+    ul: { style: { color } },
+    strong: { style: { color } },
+    em: { style: { color } },
+    code: { style: { color } },
+    pre: { style: { color } },
+    blockquote: { style: { color } },
+    h1: { style: { color } },
+    h2: { style: { color } },
+    h3: { style: { color } },
+    h4: { style: { color } },
+    h5: { style: { color } },
+    h6: { style: { color } },
+    a: { style: { color } },
   };
 }
 
@@ -38,11 +55,13 @@ function bulletinPreviewStyles(isDark) {
  *   hash, address, sequence, content, tag[], file[], quote[], signed_at, is_marked, json
  * @param {function} onPress - called when card body is tapped (navigate to detail)
  * @param {function} onTagPress - called when a tag is tapped (filter by tag)
+ * @param {function} onAvatarPress - called when the avatar is tapped (open address bulletins)
  */
 export default React.memo(function BulletinCard({
   bulletin,
   onPress,
   onTagPress,
+  onAvatarPress,
 }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -89,6 +108,14 @@ export default React.memo(function BulletinCard({
     [dispatch, bulletin],
   );
 
+  const handleAvatarPress = React.useCallback(
+    (e) => {
+      e.stopPropagation();
+      onAvatarPress?.(bulletin.address);
+    },
+    [onAvatarPress, bulletin.address],
+  );
+
   const {
     isMarkdown: isMd,
     html,
@@ -105,13 +132,19 @@ export default React.memo(function BulletinCard({
       className="bg-surface-card rounded-xl border border-secondary-light/30 mb-3 overflow-hidden"
     >
       {/* Header row */}
-      <View className="flex-row items-center px-3 pt-3 gap-2">
-        {/* Avatar — loads from local file system or shows initials */}
-        <AvatarImage
-          address={bulletin.address}
-          nickname={displayName}
-          size={36}
-        />
+      <View className="flex-row items-center px-3 pt-1 gap-2">
+        {/* Avatar — tap to open this address's bulletin list */}
+        <TouchableOpacity
+          onPress={handleAvatarPress}
+          activeOpacity={0.6}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <AvatarImage
+            address={bulletin.address}
+            nickname={displayName}
+            size={36}
+          />
+        </TouchableOpacity>
 
         {/* Nickname / address + timestamp */}
         <View className="flex-1 min-w-0">
@@ -173,11 +206,11 @@ export default React.memo(function BulletinCard({
       </View>
 
       {/* Divider */}
-      <View className="h-px bg-secondary-light/30 mx-3 mt-2" />
+      <View className="h-px bg-secondary-light/30 mx-3 mt-1" />
 
       {/* Tag chips row — tap to filter by tag (wraps to multiple lines) */}
       {bulletin.tag && bulletin.tag.length > 0 && (
-        <View className="px-3 pt-2 flex flex-row flex-wrap">
+        <View className="px-3 pt-1 flex flex-row flex-wrap">
           {bulletin.tag.map((tag, i) => (
             <TouchableOpacity
               key={`${tag}-${i}`}
@@ -195,10 +228,11 @@ export default React.memo(function BulletinCard({
       )}
 
       {/* Content preview — rendered as markdown when possible */}
-      <View className="px-3 py-2">
+      <View className="px-3 py-1">
         {isMd ? (
           <RenderHTML
             source={{ html }}
+            baseStyle={{ color: isDark ? "#f0ead6" : "#1a1a2e" }}
             tagsStyles={bulletinPreviewStyles(isDark)}
             defaultTextProps={{
               style: { color: isDark ? "#f0ead6" : "#1a1a2e" },

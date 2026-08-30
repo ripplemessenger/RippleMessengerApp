@@ -36,6 +36,7 @@ import {
   ComposeMemberDel as ComposeMemberDelAction,
   LoadFollowBulletin as LoadFollowBulletinAction,
   LoadAddressBulletin as LoadAddressBulletinAction,
+  FetchAddressBulletinChain as FetchAddressBulletinChainAction,
   RequestRandomBulletin as RequestRandomBulletinAction,
   SendFile as SendFileAction,
   SaveBulletinFile as SaveBulletinFileAction,
@@ -72,6 +73,7 @@ import {
   LoadBookmarkBulletin as LoadBookmarkBulletinHandler,
   LoadFollowBulletin as LoadFollowBulletinHandler,
   LoadAddressBulletin as LoadAddressBulletinHandler,
+  FetchAddressBulletinChain as FetchAddressBulletinChainHandler,
   RequestRandomBulletin as RequestRandomBulletinHandler,
   BulletinFileAdd as BulletinFileAddHandler,
   BulletinFileDel as BulletinFileDelHandler,
@@ -223,6 +225,12 @@ export function* watchMessenger() {
 
   // Load address bulletins from local DB
   yield takeEvery(LoadAddressBulletinAction.type, LoadAddressBulletinHandler);
+
+  // Pull the full bulletin chain for an address from the server (seq1 → chain end)
+  yield takeEvery(
+    FetchAddressBulletinChainAction.type,
+    FetchAddressBulletinChainHandler,
+  );
 
   // Request random bulletins from server
   yield takeEvery(

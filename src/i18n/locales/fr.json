@@ -384,6 +384,7 @@
     "no_contacts": "Aucun contact pour l'instant",
     "posts_loaded": "{{count}} bulletins chargés",
     "address_no_posts": "Cette adresse n'a pas de bulletins ou ils n'ont pas encore été synchronisés.",
+    "load_all": "Tous les bulletins depuis le serveur",
     "no_address": "Aucune adresse spécifiée.",
     "bookmarked_count": "{{count}} bulletins enregistrés",
     "no_bookmarks": "Aucun marque-page pour l'instant",

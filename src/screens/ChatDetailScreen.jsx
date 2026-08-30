@@ -28,8 +28,7 @@ import InlineImage from "../components/InlineImage";
 import InlineVideo from "../components/InlineVideo";
 import ImageViewer from "../components/ImageViewer";
 import VideoPlayer from "../components/VideoPlayer";
-import ModalShell from "../components/common/ModalShell";
-import useDarkMode from "../hooks/useDarkMode";
+import JsonViewer from "../components/common/JsonViewer";
 import {
   selectCurrentSession,
   selectCurrentSessionMessages,
@@ -648,7 +647,6 @@ function ChatInfoModal({ visible, session, mode, onClose, onGroupDeleted }) {
  */
 export default function ChatDetailScreen({ route, navigation }) {
   const { t } = useTranslation();
-  const { isDark } = useDarkMode();
   const { session } = route.params;
   const dispatch = useDispatch();
 
@@ -995,23 +993,12 @@ export default function ChatDetailScreen({ route, navigation }) {
       />
 
       {/* JSON Viewer Modal */}
-      <ModalShell
+      <JsonViewer
         visible={showJsonModal}
         onClose={() => setShowJsonModal(false)}
         title={t("ui.message_json")}
-      >
-        <ScrollView style={{ maxHeight: "60%" }}>
-          <Text
-            style={{
-              fontSize: 12,
-              fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-              color: isDark ? "#c8c8d0" : "#333",
-            }}
-          >
-            {jsonContent}
-          </Text>
-        </ScrollView>
-      </ModalShell>
+        content={jsonContent}
+      />
 
       {/* Full-screen image viewer */}
       <ImageViewer

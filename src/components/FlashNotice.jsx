@@ -48,12 +48,8 @@ export default function FlashNotice() {
       }}
     >
       <View
+        className="bg-surface-card border border-secondary-light/40 rounded-xl py-3 px-4 items-center"
         style={{
-          backgroundColor: "rgba(26,26,46,0.92)",
-          borderRadius: 12,
-          paddingVertical: 12,
-          paddingHorizontal: 16,
-          alignItems: "center",
           elevation: 8,
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 3 },
@@ -62,7 +58,7 @@ export default function FlashNotice() {
         }}
       >
         <Text
-          style={{ color: "#fff", fontSize: 14, textAlign: "center" }}
+          className="text-text-primary text-sm text-center"
           numberOfLines={3}
         >
           {text}

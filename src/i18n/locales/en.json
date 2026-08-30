@@ -398,6 +398,7 @@
     "no_contacts": "No contacts yet",
     "posts_loaded": "{{count}} bulletins loaded",
     "address_no_posts": "This address has no bulletins or they have not been synced yet.",
+    "load_all": "Load all bulletins from server",
     "no_address": "No address specified.",
     "bookmarked_count": "{{count}} bulletins bookmarked",
     "no_bookmarks": "No bookmarks yet",

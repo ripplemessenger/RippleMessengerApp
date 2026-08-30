@@ -396,6 +396,7 @@
     "no_contacts": "暂无联系人",
     "posts_loaded": "已加载 {{count}} 条公告",
     "address_no_posts": "该地址没有公告或尚未同步。",
+    "load_all": "从服务器加载全部公告",
     "no_address": "未指定地址。",
     "bookmarked_count": "已收藏 {{count}} 条公告",
     "no_bookmarks": "暂无收藏",

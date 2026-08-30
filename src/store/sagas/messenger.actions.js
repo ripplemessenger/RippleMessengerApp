@@ -14,6 +14,9 @@ export const ServerToggle = createAction('ServerToggle')
 export const LoadPortalBulletin = createAction('LoadPortalBulletin')
 export const RefreshPortalBulletin = createAction('RefreshPortalBulletin')
 export const LoadAddressBulletin = createAction('LoadAddressBulletin')
+// Pull the full bulletin chain for an address from the server, starting at
+// seq1 and filling gaps (one BulletinRequest per sequence until the chain ends).
+export const FetchAddressBulletinChain = createAction('FetchAddressBulletinChain')
 export const LoadFollowBulletin = createAction('LoadFollowBulletin')
 export const LoadBookmarkBulletin = createAction('LoadBookmarkBulletin')
 export const LoadBulletin = createAction('LoadBulletin')
