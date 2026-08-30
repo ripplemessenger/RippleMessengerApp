@@ -248,7 +248,14 @@
     "no_address_available": "Keine Adresse verfügbar",
     "account_deleted": "Konto gelöscht",
     "failed_to_set_avatar": "Avatar konnte nicht gesetzt werden",
-    "active": "{{count}} aktiv"
+    "active": "{{count}} aktiv",
+    "qr_code": "QR-Code",
+    "scan": "QR scannen",
+    "scan_qr": "QR-Code scannen",
+    "scan_hint": "Kamera auf einen QR-Code richten",
+    "no_camera": "Keine Kamera verfügbar",
+    "camera_denied": "Kamerazugriff verweigert",
+    "retry": "Erneut versuchen"
   },
   "ui": {
     "no_sessions": "Keine Sitzungen",

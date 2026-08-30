@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
-import { selectContactMap } from "../../selectors";
+import { selectContactMap, selectUserAddress } from "../../selectors";
 import { shortenAddress } from "../../lib/format";
 
 import {
@@ -53,7 +53,11 @@ export default function PublishModal({ visible, onClose }) {
   const { isDark } = useDarkMode();
   const dispatch = useDispatch();
   const publishTags = useSelector((state) => state.Messenger.PublishTagList);
+  const currentSeq = useSelector(
+    (state) => state.Messenger.CurrentBulletinSequence,
+  );
   const contactMap = useSelector(selectContactMap);
+  const selfAddress = useSelector(selectUserAddress);
   const publishFiles = useSelector((state) => state.Messenger.PublishFileList);
   const publishQuotes = useSelector(
     (state) => state.Messenger.PublishQuoteList,
@@ -63,6 +67,19 @@ export default function PublishModal({ visible, onClose }) {
   const s = styles(isDark);
   const [tagInput, setTagInput] = useState("");
   const contentRef = useRef(null);
+
+  // Quote chip display name — same AvatarName logic as BulletinCard:
+  // self → "Me", contact nickname → nickname, else shortened address
+  const quoteDisplayName = useCallback(
+    (quote) => {
+      let name;
+      if (quote.Address === selfAddress) name = t("common.me");
+      else if (contactMap?.[quote.Address]) name = contactMap[quote.Address];
+      else name = shortenAddress(quote.Address);
+      return `${name}#${quote.Sequence}`;
+    },
+    [selfAddress, contactMap, t],
+  );
 
   // Track keyboard height manually. KeyboardAvoidingView's `behavior` is
   // unreliable inside a Modal on Android (adjustResize is activity-level and
@@ -205,7 +222,9 @@ export default function PublishModal({ visible, onClose }) {
 
             {/* Header */}
             <View style={s.header}>
-              <Text style={s.headerTitle}>{t("ui.new_bulletin")}</Text>
+              <Text style={s.headerTitle}>
+                {t("ui.new_bulletin")} #{(currentSeq || 0) + 1}
+              </Text>
               <TouchableOpacity onPress={handleClose} hitSlop={10}>
                 <Text style={s.closeBtn}>{t("common.cancel")}</Text>
               </TouchableOpacity>
@@ -297,10 +316,7 @@ export default function PublishModal({ visible, onClose }) {
                         activeOpacity={0.6}
                       >
                         <Text style={s.chipText} numberOfLines={1}>
-                          🔗{" "}
-                          {contactMap?.[quote.Address]
-                            ? `${contactMap[quote.Address]}#${quote.Sequence}`
-                            : `${shortenAddress(quote.Address)}#${quote.Sequence}`}
+                          🔗 {quoteDisplayName(quote)}
                         </Text>
                         <Text style={s.chipRemove}> ✕</Text>
                       </TouchableOpacity>
@@ -416,6 +432,7 @@ const styles = (isDark) =>
       fontSize: 16,
       textAlignVertical: "top",
       backgroundColor: isDark ? "#1e1e28" : "#fffdf5",
+      color: isDark ? "#f0ead6" : "#1a1a2e",
     },
     charCount: {
       position: "absolute",
@@ -473,6 +490,7 @@ const styles = (isDark) =>
       paddingHorizontal: 12,
       paddingVertical: 8,
       fontSize: 14,
+      color: isDark ? "#f0ead6" : "#1a1a2e",
     },
     tagAddBtn: {
       justifyContent: "center",

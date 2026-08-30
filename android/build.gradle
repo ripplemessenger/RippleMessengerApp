@@ -18,4 +18,13 @@ allprojects {
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
     }
+
+    // RN 0.75 marks some internal APIs (e.g. getJavaScriptContextHolder) with
+    // @FrameworkAPI (@RequiresOptIn(ERROR)). vision-camera uses them without
+    // opting in, so allow it globally for all Kotlin modules.
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += ["-opt-in=com.facebook.react.common.annotations.FrameworkAPI"]
+        }
+    }
 }

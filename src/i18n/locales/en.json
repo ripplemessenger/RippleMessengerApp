@@ -261,7 +261,14 @@
     "file_name": "Name",
     "file_refs": "Refs",
     "already_saved": "Already saved",
-    "download_chunks": "Downloaded {cursor}/{total} chunks — click to download"
+    "download_chunks": "Downloaded {cursor}/{total} chunks — click to download",
+    "qr_code": "QR Code",
+    "scan": "Scan QR",
+    "scan_qr": "Scan QR Code",
+    "scan_hint": "Point your camera at a QR code",
+    "no_camera": "No camera available",
+    "camera_denied": "Camera permission denied",
+    "retry": "Retry"
   },
   "ui": {
     "no_sessions": "No sessions",

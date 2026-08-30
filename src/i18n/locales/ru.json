@@ -248,7 +248,14 @@
     "no_address_available": "Нет доступного адреса",
     "account_deleted": "Аккаунт удалён",
     "failed_to_set_avatar": "Не удалось установить аватар",
-    "active": "{{count}} активно"
+    "active": "{{count}} активно",
+    "qr_code": "QR-код",
+    "scan": "Сканировать QR",
+    "scan_qr": "Сканировать QR-код",
+    "scan_hint": "Наведите камеру на QR-код",
+    "no_camera": "Камера недоступна",
+    "camera_denied": "Доступ к камере запрещён",
+    "retry": "Повторить"
   },
   "ui": {
     "no_sessions": "Нет сессий",

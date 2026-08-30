@@ -10,6 +10,7 @@ import { formatTime, shortenAddress } from "../../lib/format";
 import {
   BulletinMarkToggle,
   ShowForwardBulletin,
+  BulletinQuote,
 } from "../../store/sagas/messenger.actions";
 import AvatarImage from "../AvatarImage";
 import useDarkMode from "../../hooks/useDarkMode";
@@ -74,6 +75,20 @@ export default React.memo(function BulletinCard({
     [dispatch, bulletin],
   );
 
+  const handleQuote = React.useCallback(
+    (e) => {
+      e.stopPropagation();
+      dispatch(
+        BulletinQuote({
+          Address: bulletin.address,
+          Sequence: bulletin.sequence,
+          Hash: bulletin.hash,
+        }),
+      );
+    },
+    [dispatch, bulletin],
+  );
+
   const {
     isMarkdown: isMd,
     html,
@@ -108,7 +123,7 @@ export default React.memo(function BulletinCard({
             </View>
             {bulletin.quote?.length > 0 && (
               <Text className="text-xs text-text-secondary/70">
-                📎{bulletin.quote.length}
+                🔗{bulletin.quote.length}
               </Text>
             )}
             {bulletin.file?.length > 0 && (
@@ -121,6 +136,16 @@ export default React.memo(function BulletinCard({
             {formatTime(bulletin.signed_at)}
           </Text>
         </View>
+
+        {/* Quote button — adds this bulletin as a quote in the publish composer */}
+        <TouchableOpacity
+          onPress={handleQuote}
+          activeOpacity={0.5}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          className="w-7 h-7 items-center justify-center shrink-0"
+        >
+          <Ionicons name="link-outline" size={20} color="#a89f85" />
+        </TouchableOpacity>
 
         {/* Forward button — opens contact selector modal */}
         <TouchableOpacity

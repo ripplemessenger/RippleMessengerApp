@@ -260,7 +260,14 @@
     "no_address_available": "无可用地址",
     "account_deleted": "账号已删除",
     "failed_to_set_avatar": "设置头像失败",
-    "active": "{{count}} 在线"
+    "active": "{{count}} 在线",
+    "qr_code": "二维码",
+    "scan": "扫码",
+    "scan_qr": "扫描二维码",
+    "scan_hint": "将相机对准二维码",
+    "no_camera": "无可用相机",
+    "camera_denied": "相机权限被拒绝",
+    "retry": "重试"
   },
   "ui": {
     "no_sessions": "暂无会话",

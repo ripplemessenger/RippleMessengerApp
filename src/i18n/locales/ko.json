@@ -248,7 +248,14 @@
     "no_address_available": "사용 가능한 주소 없음",
     "account_deleted": "계정 삭제됨",
     "failed_to_set_avatar": "아바타 설정 실패",
-    "active": "{{count}}개 활성"
+    "active": "{{count}}개 활성",
+    "qr_code": "QR 코드",
+    "scan": "QR 스캔",
+    "scan_qr": "QR 코드 스캔",
+    "scan_hint": "카메라를 QR 코드로 향하게 하세요",
+    "no_camera": "카메라가 없습니다",
+    "camera_denied": "카메라 권한이 거부되었습니다",
+    "retry": "다시 시도"
   },
   "ui": {
     "no_sessions": "세션이 없습니다",

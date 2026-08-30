@@ -34,6 +34,8 @@ import {
   AccountDel,
 } from "../store/sagas/messenger.actions";
 import { FileHash, base64ToUint8Array } from "../lib/MessengerUtil";
+import QRCode from "qrcode";
+import { DefaultServer } from "../lib/MessengerConst";
 import {
   getSettingBool,
   getSettingString,
@@ -128,6 +130,66 @@ function Divider() {
   return <View className="h-px bg-secondary-light/40 mx-4" />;
 }
 
+// QR code rendered as run-length-encoded rows (pure JS via `qrcode` create,
+// no canvas/native dependency — safe in React Native).
+function QrCodeView({ value, size = 300, dark = false }) {
+  const rows = React.useMemo(() => {
+    const { modules } = QRCode.create(value, { errorCorrectionLevel: "M" });
+    const n = modules.size;
+    const cell = size / n;
+    const out = [];
+    for (let r = 0; r < n; r++) {
+      const segs = [];
+      let start = 0;
+      while (start < n) {
+        let end = start + 1;
+        while (
+          end < n &&
+          modules.data[r * n + end] === modules.data[r * n + start]
+        ) {
+          end++;
+        }
+        if (modules.data[r * n + start]) {
+          segs.push({ width: (end - start) * cell, dark: true });
+        } else {
+          segs.push({ width: (end - start) * cell, dark: false });
+        }
+        start = end;
+      }
+      out.push(segs);
+    }
+    return out;
+  }, [value, size]);
+  const cell = size / rows.length;
+  const bg = dark ? "#2A2A34" : "#FFFFFF";
+  const fg = dark ? "#F0EAD6" : "#1A1A2E";
+  return (
+    <View
+      style={{
+        width: size + 16,
+        height: size + 16,
+        backgroundColor: bg,
+        padding: 8,
+      }}
+    >
+      {rows.map((segs, r) => (
+        <View key={r} style={{ flexDirection: "row", height: cell }}>
+          {segs.map((s, i) => (
+            <View
+              key={i}
+              style={{
+                width: s.width,
+                height: cell,
+                backgroundColor: s.dark ? fg : "transparent",
+              }}
+            />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // SettingScreen — mobile settings list (single scroll, sections, sub-screens)
 // ---------------------------------------------------------------------------
@@ -136,11 +198,13 @@ export default function SettingScreen({ navigation }) {
   const dispatch = useDispatch();
   const { Address, Nickname, Seed } = useSelector(selectUserTabMe);
   const connectedCount = useSelector(selectConnectedServerCount);
+  const ServerList = useSelector((state) => state.Messenger.ServerList);
   const { isDark, toggle } = useDarkMode();
 
   // --- Nickname edit ---
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [nicknameInput, setNicknameInput] = useState("");
+  const [showQrModal, setShowQrModal] = useState(false);
   // Keyboard height (measured via Keyboard events) so the dialog is pushed
   // above the keyboard. adjustResize does not reliably reach RN Modals on
   // Android, so we measure the keyboard ourselves.
@@ -415,6 +479,14 @@ export default function SettingScreen({ navigation }) {
               </TouchableOpacity>
             ) : null}
           </View>
+          <TouchableOpacity
+            onPress={() => setShowQrModal(true)}
+            activeOpacity={0.7}
+            hitSlop={8}
+            className="w-10 h-10 rounded-lg bg-primary/10 items-center justify-center"
+          >
+            <Ionicons name="qr-code-outline" size={22} color={ACCENT} />
+          </TouchableOpacity>
         </View>
 
         {/* Preferences */}
@@ -620,6 +692,22 @@ export default function SettingScreen({ navigation }) {
       </BottomSheet>
 
       {/* Nickname edit modal */}
+      {/* QR code: address@default server */}
+      <ModalShell
+        visible={showQrModal}
+        onClose={() => setShowQrModal(false)}
+        title={t("setting.qr_code")}
+      >
+        <View className="items-center gap-3">
+          {Address ? (
+            <QrCodeView
+              value={`${Address}@${ServerList[0]?.url || DefaultServer}`}
+              dark={isDark}
+            />
+          ) : null}
+        </View>
+      </ModalShell>
+
       <ModalShell
         visible={showNicknameModal}
         onClose={() => setShowNicknameModal(false)}

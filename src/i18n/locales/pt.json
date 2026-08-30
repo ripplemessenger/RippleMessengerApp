@@ -248,7 +248,8 @@
     "no_address_available": "Nenhum endereço disponível",
     "account_deleted": "Conta excluída",
     "failed_to_set_avatar": "Falha ao definir o avatar",
-    "active": "{{count}} ativo(s)"
+    "active": "{{count}} ativo(s)",
+    "retry": "Tentar novamente"
   },
   "ui": {
     "no_sessions": "Nenhuma sessão",

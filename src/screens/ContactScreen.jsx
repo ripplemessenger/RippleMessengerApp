@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -13,8 +7,16 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  StyleSheet,
+  Modal,
+  Pressable,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import {
+  Camera,
+  useCameraDevice,
+  useCodeScanner,
+} from "react-native-vision-camera";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
@@ -104,12 +106,181 @@ function ContactCard({ contact, onOpenDetail, onViewBulletins, onStartChat }) {
 }
 
 // ---------------------------------------------------------------------------
+// QR Scanner
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse a scanned QR value into a contact address.
+ * QR encodes `address@server` (or just `address`). Returns the address part.
+ */
+function parseScannedQr(value) {
+  const v = (value || "").trim();
+  if (!v) return "";
+  if (v.includes("@")) {
+    return v.split("@")[0].trim();
+  }
+  return v;
+}
+
+/**
+ * QrScannerModal — full-screen camera QR scanner.
+ *
+ * Opens the back camera, detects QR codes in real time (including inverted
+ * QRs via checkInverted), and calls onScan(rawValue) on the first detection.
+ */
+function QrScannerModal({ visible, onClose, onScan }) {
+  const { t } = useTranslation();
+  const device = useCameraDevice("back");
+  const [scanned, setScanned] = useState(false);
+  const [permission, setPermission] = useState(null);
+
+  // Built-in code scanner (platform-native, no frame processor needed).
+  // onCodeScanned fires for each frame with a detected code; we only act once.
+  const codeScanner = useCodeScanner({
+    codeTypes: ["qr"],
+    onCodeScanned: (codes) => {
+      if (codes.length > 0 && !scanned) {
+        const value = codes[0].value;
+        if (value) {
+          setScanned(true);
+          onScan(value);
+        }
+      }
+    },
+  });
+
+  // Request camera permission + reset scan state each time the scanner opens
+  const requestPermission = useCallback(() => {
+    setScanned(false);
+    setPermission(null);
+    Camera.requestCameraPermission()
+      .then((p) => setPermission(p === "granted"))
+      .catch(() => setPermission(false));
+  }, []);
+
+  useEffect(() => {
+    if (visible) requestPermission();
+  }, [visible, requestPermission]);
+
+  if (!visible) return null;
+
+  const showCamera = device && permission;
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: "#000" }}>
+        {showCamera ? (
+          <Camera
+            style={StyleSheet.absoluteFill}
+            device={device}
+            isActive={true}
+            codeScanner={codeScanner}
+          />
+        ) : (
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 32,
+            }}
+          >
+            <Ionicons name="camera-outline" size={48} color="#888" />
+            <Text style={{ color: "#ccc", marginTop: 12, textAlign: "center" }}>
+              {device ? t("setting.camera_denied") : t("setting.no_camera")}
+            </Text>
+            {device && (
+              <TouchableOpacity
+                onPress={requestPermission}
+                style={{
+                  marginTop: 16,
+                  paddingHorizontal: 20,
+                  paddingVertical: 10,
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: "#fff", fontSize: 14 }}>
+                  {t("setting.retry")}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Overlay: top bar + scan frame + hint */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              paddingHorizontal: 16,
+              paddingTop: 48,
+              paddingBottom: 12,
+              backgroundColor: "rgba(0,0,0,0.4)",
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 18, fontWeight: "600" }}>
+              {t("setting.scan_qr")}
+            </Text>
+            <Pressable
+              onPress={onClose}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: "rgba(255,255,255,0.2)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="close" size={22} color="#fff" />
+            </Pressable>
+          </View>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <View
+              style={{
+                width: 240,
+                height: 240,
+                borderWidth: 2,
+                borderColor: "rgba(255,255,255,0.85)",
+                borderRadius: 16,
+              }}
+            />
+          </View>
+          <View style={{ alignItems: "center", paddingBottom: 60 }}>
+            <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 14 }}>
+              {t("setting.scan_hint")}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Add Contact Modal
 // ---------------------------------------------------------------------------
-function AddContactModal({ visible, onClose, onAdd }) {
+function AddContactModal({ visible, onClose, onAdd, scanResult }) {
   const { t } = useTranslation();
   const [address, setAddress] = useState("");
   const [nickname, setNickname] = useState("");
+
+  // Sync a freshly-scanned address into the field (scanResult is a new object
+  // each scan, so this fires even when the same address is scanned twice)
+  useEffect(() => {
+    if (scanResult && scanResult.address) {
+      setAddress(scanResult.address);
+    }
+  }, [scanResult]);
 
   const handleAdd = () => {
     const trimmed = address.trim();
@@ -121,19 +292,25 @@ function AddContactModal({ visible, onClose, onAdd }) {
   };
 
   return (
-    <ModalShell visible={visible} onClose={onClose} title={t("ui.add_contact")}>
+    <ModalShell
+      visible={visible}
+      onClose={onClose}
+      title={t("common.add_contact")}
+    >
       <View className="gap-1">
         <Text className="text-sm text-text-secondary">
           {t("ui.xrpl_address")}
         </Text>
-        <TextInput
-          value={address}
-          onChangeText={setAddress}
-          placeholder="r..."
-          placeholderTextColor={PLACEHOLDER}
-          autoCapitalize="none"
-          className="bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm font-mono"
-        />
+        <View className="flex-row items-center gap-2">
+          <TextInput
+            value={address}
+            onChangeText={setAddress}
+            placeholder="r..."
+            placeholderTextColor={PLACEHOLDER}
+            autoCapitalize="none"
+            className="flex-1 bg-surface border border-secondary-light rounded-xl px-4 py-3 text-text-primary text-sm font-mono"
+          />
+        </View>
       </View>
 
       <View className="gap-1">
@@ -172,6 +349,19 @@ export default function ContactScreen({ navigation }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+
+  // Handle a scanned QR: parse the address, store it, close the scanner,
+  // and open the Add Contact modal with the address pre-filled.
+  const handleScanResult = useCallback((value) => {
+    const addr = parseScannedQr(value);
+    if (addr) {
+      setScanResult({ address: addr, token: Date.now() });
+      setShowAddModal(true);
+    }
+    setShowScanner(false);
+  }, []);
 
   // Auto-close invite modal when list becomes empty
   useEffect(() => {
@@ -320,6 +510,13 @@ export default function ContactScreen({ navigation }) {
             <Ionicons name="person-add" size={20} color={ACCENT} />
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={() => setShowScanner(true)}
+            activeOpacity={0.7}
+            className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+          >
+            <Ionicons name="qr-code-outline" size={20} color={ACCENT} />
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => setShowCreateGroupModal(true)}
             activeOpacity={0.7}
             className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
@@ -370,6 +567,14 @@ export default function ContactScreen({ navigation }) {
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAdd={handleAdd}
+        scanResult={scanResult}
+      />
+
+      {/* QR Scanner (rendered after AddContactModal so it appears on top) */}
+      <QrScannerModal
+        visible={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScan={handleScanResult}
       />
 
       {/* Create Group Modal */}

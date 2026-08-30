@@ -248,7 +248,14 @@
     "no_address_available": "利用可能なアドレスがありません",
     "account_deleted": "アカウントを削除しました",
     "failed_to_set_avatar": "アバターの設定に失敗しました",
-    "active": "{{count}} 件アクティブ"
+    "active": "{{count}} 件アクティブ",
+    "qr_code": "QRコード",
+    "scan": "QRスキャン",
+    "scan_qr": "QRコードをスキャン",
+    "scan_hint": "カメラをQRコードに向けます",
+    "no_camera": "カメラがありません",
+    "camera_denied": "カメラのアクセスが拒否されました",
+    "retry": "再試行"
   },
   "ui": {
     "no_sessions": "セッションがありません",

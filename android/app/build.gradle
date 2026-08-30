@@ -77,4 +77,5 @@ dependencies {
     implementation project(':react-native-nitro-modules')
     implementation project(':react-native-vector-icons')
     implementation project(':react-native-video')
+    implementation project(':react-native-vision-camera')
 }
