@@ -1,6 +1,7 @@
 {
   "common": {
     "loading": "Chargement...",
+    "verifying": "Vérification...",
     "cancel": "Annuler",
     "confirm": "Confirmer",
     "delete": "Supprimer",

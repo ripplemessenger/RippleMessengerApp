@@ -1,6 +1,7 @@
 {
   "common": {
     "loading": "Загрузка...",
+    "verifying": "Проверка...",
     "cancel": "Отмена",
     "confirm": "Подтвердить",
     "delete": "Удалить",

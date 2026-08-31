@@ -38,6 +38,7 @@ import InlineImage from "../components/InlineImage";
 import useDarkMode from "../hooks/useDarkMode";
 import { ACCENT } from "../lib/theme";
 import { formatTime, shortenAddress } from "../lib/format";
+import { MessageObjectType } from "../lib/MessengerConst";
 import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
 
 /* Shared HTML config for react-native-render-html — text color must follow
@@ -172,7 +173,14 @@ export default function BulletinDetailScreen({ route, navigation }) {
     (e) => {
       e?.stopPropagation();
       if (bulletin) {
-        dispatch(ShowForwardBulletin(bulletin));
+        dispatch(
+          ShowForwardBulletin({
+            ObjectType: MessageObjectType.Bulletin,
+            Address: bulletin.address,
+            Sequence: bulletin.sequence,
+            Hash: bulletin.hash,
+          }),
+        );
       }
     },
     [dispatch, bulletin],
@@ -446,7 +454,9 @@ export default function BulletinDetailScreen({ route, navigation }) {
               {bulletin.file.map((f, i) => {
                 const progress = fileProgressMap[f.Hash];
                 const saved = fileSavedMap[f.Hash];
-                const isDownloading = progress && !saved;
+                const isVerifying =
+                  progress && progress.cursor === progress.length && !saved;
+                const isDownloading = progress && !saved && !isVerifying;
                 return (
                   <View key={i} className="mb-1">
                     {/* Inline preview for image attachments */}
@@ -472,6 +482,13 @@ export default function BulletinDetailScreen({ route, navigation }) {
                         {(f.Size / 1024).toFixed(1)} KB
                       </Text>
                       {(() => {
+                        if (isVerifying) {
+                          return (
+                            <Text className="text-xs text-primary-dark font-medium">
+                              {t("common.verifying")}
+                            </Text>
+                          );
+                        }
                         if (isDownloading) {
                           return (
                             <Text className="text-xs text-primary-dark font-medium">

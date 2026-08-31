@@ -1,6 +1,7 @@
 {
   "common": {
     "loading": "로딩 중...",
+    "verifying": "검증 중...",
     "cancel": "취소",
     "confirm": "확인",
     "delete": "삭제",

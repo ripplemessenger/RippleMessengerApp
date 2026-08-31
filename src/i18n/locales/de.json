@@ -1,6 +1,7 @@
 {
   "common": {
     "loading": "Laden...",
+    "verifying": "Prüfen...",
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "delete": "Löschen",

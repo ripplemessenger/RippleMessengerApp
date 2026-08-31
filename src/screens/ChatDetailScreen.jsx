@@ -22,6 +22,7 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { useFocusEffect } from "@react-navigation/native";
 
 import AvatarImage from "../components/AvatarImage";
 import InlineImage from "../components/InlineImage";
@@ -48,6 +49,7 @@ import {
   ResumeChatFiles,
 } from "../store/sagas/messenger.actions";
 import { setFlashNoticeMessage } from "../store/slices/CommonSlice";
+import { setCurrentSession } from "../store/slices/MessengerSlice";
 import { pickFile } from "../services/mediaPicker";
 import { SessionType } from "../lib/AppConst";
 import { MessageObjectType } from "../lib/MessengerConst";
@@ -172,11 +174,18 @@ const MessageBubble = React.memo(function MessageBubble({
   const fileProgress = useSelector((state) =>
     fileHash ? (state.Messenger.FileProgressMap?.[fileHash] ?? null) : null,
   );
+  const isVerifying =
+    fileProgress &&
+    fileProgress.cursor === fileProgress.length &&
+    !savedToken &&
+    !dbFileSaved;
   const fileStatus =
     savedToken || dbFileSaved
       ? "saved"
-      : fileDownloadStatus?.[getMessageKey(message)] ||
-        (fileProgress ? "downloading" : undefined);
+      : isVerifying
+        ? "verifying"
+        : fileDownloadStatus?.[getMessageKey(message)] ||
+          (fileProgress ? "downloading" : undefined);
 
   return (
     <View className={`flex-row ${isSelf ? "flex-row-reverse" : ""} mb-3`}>
@@ -302,6 +311,11 @@ const MessageBubble = React.memo(function MessageBubble({
                           {fileProgress && fileProgress.length > 0
                             ? `(${fileProgress.cursor}/${fileProgress.length})`
                             : t("common.loading")}
+                        </Text>
+                      )}
+                      {fileStatus === "verifying" && (
+                        <Text className="text-xs text-primary">
+                          {t("common.verifying")}
                         </Text>
                       )}
                     </View>
@@ -700,10 +714,18 @@ export default function ChatDetailScreen({ route, navigation }) {
   // Use currentSession (which may be updated by saga) or fall back to route param
   const activeSession = currentSession || session;
 
-  // Load session when screen mounts
-  useEffect(() => {
-    dispatch(LoadCurrentSession(session));
-  }, [dispatch, session]);
+  // Keep CurrentSession in sync with screen focus:
+  // - On focus: (re)load the session so sending/refreshing works
+  // - On focus loss / unmount: clear it, so incoming messages are saved as
+  //   UNREAD and the unread badge shows on the Chat tab + session avatar
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(LoadCurrentSession(session));
+      return () => {
+        dispatch(setCurrentSession(null));
+      };
+    }, [dispatch, session]),
+  );
 
   // Resume incomplete file downloads when session is loaded
   useEffect(() => {

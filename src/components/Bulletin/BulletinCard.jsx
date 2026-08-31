@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { parseBulletinMarkdown } from "../../lib/markdown";
 import { RenderHTML } from "react-native-render-html";
 import { formatTime, shortenAddress } from "../../lib/format";
+import { MessageObjectType } from "../../lib/MessengerConst";
 
 import {
   BulletinMarkToggle,
@@ -89,7 +90,14 @@ export default React.memo(function BulletinCard({
   const handleForward = React.useCallback(
     (e) => {
       e.stopPropagation();
-      dispatch(ShowForwardBulletin(bulletin));
+      dispatch(
+        ShowForwardBulletin({
+          ObjectType: MessageObjectType.Bulletin,
+          Address: bulletin.address,
+          Sequence: bulletin.sequence,
+          Hash: bulletin.hash,
+        }),
+      );
     },
     [dispatch, bulletin],
   );

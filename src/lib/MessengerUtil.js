@@ -130,6 +130,35 @@ function FileHash(buffer) {
  return hash;
 }
 
+/**
+ * Create a new incremental SHA-512 hash state.
+ * Feed chunks with updateFileHash(), then call finalizeFileHash() to get the result.
+ * This avoids reading the whole file at the end (which froze the JS main thread).
+ * @returns {import('crypto-js').Algo.SHA512} Hash state
+ */
+function createFileHash() {
+ return CryptoJS.algo.SHA512.create();
+}
+
+/**
+ * Update an incremental SHA-512 hash state with a chunk of data.
+ * @param {import('crypto-js').Algo.SHA512} state - Hash state from createFileHash()
+ * @param {Uint8Array} buffer - Chunk data (the exact bytes appended to the file)
+ */
+function updateFileHash(state, buffer) {
+ state.update(CryptoJS.lib.WordArray.create(buffer));
+}
+
+/**
+ * Finalize an incremental SHA-512 hash state and return the Quarter SHA-512 hash.
+ * Equivalent to FileHash() over the concatenation of all fed chunks.
+ * @param {import('crypto-js').Algo.SHA512} state - Hash state from createFileHash()
+ * @returns {string} 32-character uppercase hex hash
+ */
+function finalizeFileHash(state) {
+ return state.finalize().toString().toUpperCase().substring(0, 32);
+}
+
 // ==================== Signature verification ====================
 
 /**
@@ -324,6 +353,9 @@ export {
  Sign,
  VerifyJsonSignature,
  FileHash,
+ createFileHash,
+ updateFileHash,
+ finalizeFileHash,
  Uint32ToBuffer,
  ArrayBufferToUint32,
  getMemberIndex,

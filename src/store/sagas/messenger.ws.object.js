@@ -5,11 +5,7 @@ import * as rippleKeyPairs from "ripple-keypairs";
 import Elliptic from "elliptic";
 import { call, fork, put, select } from "redux-saga/effects";
 import { dbAPI } from "../../db";
-import {
-  FLASH_DURATION_MS,
-  SessionType,
-  DefaultPartition,
-} from "../../lib/AppConst";
+import { SessionType, DefaultPartition } from "../../lib/AppConst";
 import {
   AesDecrypt,
   genAESKey,
@@ -32,7 +28,6 @@ import {
   setTagBulletinList,
   setRandomBulletinList,
 } from "../slices/MessengerSlice";
-import { setFlashNoticeMessage } from "../slices/CommonSlice";
 import { showPushNotification } from "../../services/notificationService";
 import { playNotificationSound } from "../../lib/SoundUtil";
 import {
@@ -578,13 +573,6 @@ function* processPrivateMessage(json, address, ob_address) {
         yield call(RefreshPrivateMessageList);
       }
       yield call(LoadSessionList);
-      // Mobile adaptation: replace Tauri invoke('start_message_flash') with Redux action
-      yield put(
-        setFlashNoticeMessage({
-          message: "New message",
-          duration: FLASH_DURATION_MS,
-        }),
-      );
       // Push notification for private messages — title "New message", body = contact nickname or address
       const notifBody = json.Nickname || remote;
       showPushNotification("New message", notifBody);
@@ -811,13 +799,6 @@ function* handleGroupMessageListObject(json, address, seed) {
           yield call(RefreshGroupMessageList);
         }
         yield call(LoadSessionList);
-        // Mobile adaptation: replace Tauri invoke('start_message_flash') with Redux action
-        yield put(
-          setFlashNoticeMessage({
-            message: "New group message",
-            duration: FLASH_DURATION_MS,
-          }),
-        );
         // Push notification for group messages — title "Group message", body = group name + sender
         const groupNotifBody = `${group.Name}: ${shortenAddress(msg_address)}`;
         showPushNotification("Group message", groupNotifBody);

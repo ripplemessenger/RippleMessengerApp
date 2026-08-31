@@ -11,6 +11,9 @@ import { FileRequestType } from "../../lib/MessengerConst";
 import {
   DHSequence,
   FileHash,
+  createFileHash,
+  updateFileHash,
+  finalizeFileHash,
   getMemberByIndex,
   ArrayBufferToUint32,
   uint8ArrayToBase64,
@@ -27,6 +30,11 @@ import {
   setAvatarSavedToken,
 } from "../slices/MessengerSlice";
 import { FILE_REQUEST_TTL_MS } from "../../lib/AppConst";
+
+// Incremental SHA-512 hash states, keyed by file hash.
+// Updated per chunk as chunks are appended, so the final hash doesn't need to
+// read the whole file back (which froze the JS main thread for large files).
+const fileHashStates = new Map();
 
 // ---------- Binary message handlers (file chunk reception) ----------
 
@@ -177,6 +185,17 @@ function* receiveFileChunk({
     file.chunk_cursor < file.chunk_length &&
     file.chunk_cursor + 1 === request.ChunkCursor
   ) {
+    // Update incremental hash state with this chunk (the exact bytes appended to the file).
+    // Created on chunk 1; if the state is missing (e.g. after a reconnect) the final
+    // verification falls back to reading the file.
+    if (request.ChunkCursor === 1) {
+      fileHashStates.set(request.Hash, createFileHash());
+    }
+    const hashState = fileHashStates.get(request.Hash);
+    if (hashState) {
+      updateFileHash(hashState, content);
+    }
+
     // Append chunk to file on disk
     yield call(() => fileService.writeFile(filePath, content, true));
 
@@ -205,10 +224,16 @@ function* receiveFileChunk({
       // More chunks needed — request next one
       yield call(fetchNext, { payload: fetchNextPayload });
     } else {
-      // All chunks received — verify hash
-      const verifiedHash = FileHash(
-        yield call(() => fileService.readFile(filePath)),
-      );
+      // All chunks received — verify hash (incremental, no full-file read)
+      const hashState = fileHashStates.get(request.Hash);
+      fileHashStates.delete(request.Hash);
+      let verifiedHash = hashState ? finalizeFileHash(hashState) : null;
+      if (!verifiedHash) {
+        // Fallback: incremental state missing — read the file and compute the hash
+        verifiedHash = FileHash(
+          yield call(() => fileService.readFile(filePath)),
+        );
+      }
       if (verifiedHash === request.Hash) {
         yield call(() => dbAPI.remoteFileSaved(request.Hash, Date.now()));
         yield put(

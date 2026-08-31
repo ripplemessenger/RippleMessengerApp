@@ -1,6 +1,7 @@
 {
   "common": {
     "loading": "加载中...",
+    "verifying": "验证中...",
     "cancel": "取消",
     "confirm": "确认",
     "delete": "删除",

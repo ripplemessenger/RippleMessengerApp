@@ -1,5 +1,5 @@
 import React from "react";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSelector } from "react-redux";
@@ -118,6 +118,9 @@ function ContactTab() {
 function MainTabNav() {
   const { isDark } = useDarkMode();
   const isConnected = useSelector(selectMessengerConnStatus);
+  const newMsgCount = useSelector(
+    (state) => state.Messenger.SessionNewMsgCount || 0,
+  );
 
   const connColor = isConnected ? "#4caf50" : "#f44336";
 
@@ -141,6 +144,38 @@ function MainTabNav() {
           // Setting tab color reflects connection status
           if (route.name === "Setting") {
             return <Ionicons name={iconName} size={size} color={connColor} />;
+          }
+          // Chat tab shows total unread badge (same style as session list avatar badge)
+          if (route.name === "Chat" && newMsgCount > 0) {
+            return (
+              <View style={{ position: "relative" }}>
+                <Ionicons name={iconName} size={size} color={color} />
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -4,
+                    right: -8,
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    backgroundColor: "#d4555a",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingHorizontal: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: "bold",
+                      color: "#ffffff",
+                    }}
+                  >
+                    {newMsgCount > 99 ? "99+" : newMsgCount}
+                  </Text>
+                </View>
+              </View>
+            );
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
