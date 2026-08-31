@@ -431,60 +431,6 @@ function Bool2Int(boolVal) {
  return Number(boolVal);
 }
 
-/**
- * Encrypt a binary buffer using AES-CBC via Web Crypto API (native, fast).
- * Drop-in async replacement for AesEncryptBuffer.
- * @param {Uint8Array} buffer - Binary data to encrypt
- * @param {Uint8Array} aes_key - 48-byte key+IV (32-byte key + 16-byte IV)
- * @returns {Promise<Uint8Array>} Encrypted ciphertext
- */
-async function AesEncryptBufferAsync(buffer, aes_key) {
- const { key, iv } = splitAesKeyIv(aes_key);
- const cryptoKey = await crypto.subtle.importKey(
-  "raw",
-  key,
-  { name: "AES-CBC" },
-  false,
-  ["encrypt"],
- );
- const encrypted = await crypto.subtle.encrypt(
-  { name: "AES-CBC", iv: iv },
-  cryptoKey,
-  buffer,
- );
- return new Uint8Array(encrypted);
-}
-
-/**
- * Decrypt a binary buffer using AES-CBC via Web Crypto API (native, fast).
- * Drop-in async replacement for AesDecryptBuffer.
- * @param {Uint8Array} buffer - Encrypted ciphertext
- * @param {Uint8Array} aes_key - 48-byte key+IV (32-byte key + 16-byte IV)
- * @returns {Promise<Uint8Array>} Decrypted plaintext
- * @throws {Error} If decryption fails
- */
-async function AesDecryptBufferAsync(buffer, aes_key) {
- const { key, iv } = splitAesKeyIv(aes_key);
- const cryptoKey = await crypto.subtle.importKey(
-  "raw",
-  key,
-  { name: "AES-CBC" },
-  false,
-  ["decrypt"],
- );
- try {
-  const decrypted = await crypto.subtle.decrypt(
-   { name: "AES-CBC", iv: iv },
-   cryptoKey,
-   buffer,
-  );
-  return new Uint8Array(decrypted);
- } catch (error) {
-  Logger.error(String(error));
-  throw error;
- }
-}
-
 export {
  ConsoleWarn,
  ConsoleError,
@@ -504,8 +450,6 @@ export {
  genAESKey,
  AesEncryptBuffer,
  AesDecryptBuffer,
- AesEncryptBufferAsync,
- AesDecryptBufferAsync,
  Int2Bool,
  Bool2Int,
 };
