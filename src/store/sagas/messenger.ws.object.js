@@ -573,10 +573,12 @@ function* processPrivateMessage(json, address, ob_address) {
         yield call(RefreshPrivateMessageList);
       }
       yield call(LoadSessionList);
-      // Push notification for private messages — title "New message", body = contact nickname or address
-      const notifBody = json.Nickname || remote;
-      showPushNotification("New message", notifBody);
-      playNotificationSound();
+      // Push notification + sound only for UNREAD messages — no attention-grab if the user is already in this chat.
+      if (!is_readed) {
+        const notifBody = json.Nickname || remote;
+        showPushNotification("New message", notifBody);
+        playNotificationSound();
+      }
     }
   } catch (e) {
     Logger.error("[processPrivateMessage] failed:", e.message);
@@ -799,10 +801,12 @@ function* handleGroupMessageListObject(json, address, seed) {
           yield call(RefreshGroupMessageList);
         }
         yield call(LoadSessionList);
-        // Push notification for group messages — title "Group message", body = group name + sender
-        const groupNotifBody = `${group.Name}: ${shortenAddress(msg_address)}`;
-        showPushNotification("Group message", groupNotifBody);
-        playNotificationSound();
+        // Push notification + sound only for UNREAD messages — no attention-grab if the user is already in this chat.
+        if (!is_readed) {
+          const groupNotifBody = `${group.Name}: ${shortenAddress(msg_address)}`;
+          showPushNotification("Group message", groupNotifBody);
+          playNotificationSound();
+        }
       }
     }
 
