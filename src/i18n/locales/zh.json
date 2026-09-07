@@ -419,7 +419,8 @@
     "add_friends_first": "请先添加好友以转发帖子。",
     "valid_bulletin": "✓ 有效帖子 — 可以保存",
     "tags_max": "标签（最多 {{max}} 个）",
-    "bookmarks": "收藏"
+    "bookmarks": "收藏",
+    "about": "关于"
   },
   "auth": {
     "open_account": "打开账户",
@@ -455,7 +456,26 @@
     "invalid_seed": "种子格式无效",
     "seed_required": "请输入种子",
     "temp_login_desc": "临时登录不会保存账户，种子不会被存储。",
-    "remove_account_confirm": "删除已保存的账户 {{address}}？您将继续保持登录状态。"
+    "remove_account_confirm": "删除已保存的账户 {{address}}？您将继续保持登录状态。",
+    "qr_scan_hint": "将摄像头对准 Client 上的二维码",
+    "qr_import": "扫码导入",
+    "qr_scanned": "二维码已扫描",
+    "qr_rescan": "重新扫描",
+    "qr_wrong_password": "密码错误 — 解密失败",
+    "qr_address_mismatch": "地址不匹配 — seed 与二维码不符",
+    "camera_permission_denied": "摄像头权限被拒绝。请在设置中启用摄像头访问。"
+  },
+  "sync": {
+    "title": "局域网同步",
+    "desc": "与局域网内的 Client 同步数据",
+    "client_ip": "Client IP 地址",
+    "test": "测试",
+    "account": "账户",
+    "start": "开始同步",
+    "syncing": "同步中...",
+    "done": "同步完成",
+    "error": "同步失败",
+    "discovering": "正在发现 Client..."
   },
   "storage": {
     "files": "文件",

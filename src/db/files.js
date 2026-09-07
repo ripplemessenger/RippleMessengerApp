@@ -236,11 +236,9 @@ export const api = {
           ELSE 'orphan'
         END AS category,
         (
-          SELECT COUNT(*) FROM bulletin_files WHERE file_hash = f.hash
-          +
-          SELECT COUNT(*) FROM private_chat_files WHERE hash = f.hash
-          +
-          SELECT COUNT(*) FROM group_chat_files WHERE hash = f.hash
+          (SELECT COUNT(*) FROM bulletin_files WHERE file_hash = f.hash) +
+          (SELECT COUNT(*) FROM private_chat_files WHERE hash = f.hash) +
+          (SELECT COUNT(*) FROM group_chat_files WHERE hash = f.hash)
         ) AS ref_count
       FROM files f
       LEFT JOIN bulletin_files ON bulletin_files.file_hash = f.hash

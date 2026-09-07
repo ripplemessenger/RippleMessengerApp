@@ -421,7 +421,8 @@
     "add_friends_first": "Add friends first to forward bulletins.",
     "valid_bulletin": "✓ Valid bulletin — ready to save",
     "tags_max": "Tags (max {{max}})",
-    "bookmarks": "Bookmarks"
+    "bookmarks": "Bookmarks",
+    "about": "About"
   },
   "auth": {
     "open_account": "Open Account",
@@ -457,7 +458,26 @@
     "invalid_seed": "Invalid seed format",
     "seed_required": "Seed is required",
     "temp_login_desc": "Log in without saving your account. Your seed will not be stored.",
-    "remove_account_confirm": "Remove saved account {{address}}? You will stay logged in."
+    "remove_account_confirm": "Remove saved account {{address}}? You will stay logged in.",
+    "qr_scan_hint": "Point camera at the QR code from Client",
+    "qr_import": "Scan QR Code",
+    "qr_scanned": "QR Code Scanned",
+    "qr_rescan": "Scan Again",
+    "qr_wrong_password": "Wrong password — decryption failed",
+    "qr_address_mismatch": "Address mismatch — seed does not match QR code",
+    "camera_permission_denied": "Camera permission denied. Please enable camera access in settings."
+  },
+  "sync": {
+    "title": "LAN Sync",
+    "desc": "Sync data with Client on the local network",
+    "client_ip": "Client IP Address",
+    "test": "Test",
+    "account": "Account",
+    "start": "Start Sync",
+    "syncing": "Syncing...",
+    "done": "Sync Complete",
+    "error": "Sync Failed",
+    "discovering": "Discovering Client..."
   },
   "storage": {
     "files": "Files",

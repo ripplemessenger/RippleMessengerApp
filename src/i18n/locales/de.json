@@ -406,7 +406,8 @@
     "try_different_search": "Versuche einen anderen Suchbegriff.",
     "add_friends_first": "Füge zuerst Freunde hinzu, um Beiträge weiterzuleiten.",
     "valid_bulletin": "✓ Gültiger Beitrag — bereit zum Speichern",
-    "tags_max": "Tags (max. {{max}})"
+    "tags_max": "Tags (max. {{max}})",
+    "about": "Über"
   },
   "auth": {
     "open_account": "Konto öffnen",
@@ -442,7 +443,26 @@
     "invalid_seed": "Ungültiges Seed-Format",
     "seed_required": "Seed ist erforderlich",
     "temp_login_desc": "Melde dich an, ohne dein Konto zu speichern. Dein Seed wird nicht gespeichert.",
-    "remove_account_confirm": "Gespeichertes Konto {{address}} entfernen? Sie bleiben angemeldet."
+    "remove_account_confirm": "Gespeichertes Konto {{address}} entfernen? Sie bleiben angemeldet.",
+    "qr_scan_hint": "Kamera auf den QR-Code im Client richten",
+    "qr_import": "QR scannen",
+    "qr_scanned": "QR-Code gescannt",
+    "qr_rescan": "Erneut scannen",
+    "qr_wrong_password": "Falsches Passwort — Entschlüsselung fehlgeschlagen",
+    "qr_address_mismatch": "Adressen stimmen nicht überein — Seed passt nicht zum QR-Code",
+    "camera_permission_denied": "Kamerazugriff verweigert. Bitte Kamerazugang in den Einstellungen aktivieren."
+  },
+  "sync": {
+    "title": "LAN-Synchronisation",
+    "desc": "Daten mit Client im lokalen Netzwerk synchronisieren",
+    "client_ip": "Client-IP-Adresse",
+    "test": "Test",
+    "account": "Konto",
+    "start": "Synchronisation starten",
+    "syncing": "Synchronisiere...",
+    "done": "Synchronisation abgeschlossen",
+    "error": "Synchronisation fehlgeschlagen",
+    "discovering": "Client wird gesucht..."
   },
   "storage": {
     "files": "Dateien",

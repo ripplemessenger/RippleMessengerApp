@@ -69,20 +69,18 @@ const SCHEMAS: string[] = [
 
   `CREATE TABLE IF NOT EXISTS follows (
     local TEXT NOT NULL, remote TEXT NOT NULL, updated_at INTEGER NOT NULL,
+    is_deleted INTEGER DEFAULT 0,
     PRIMARY KEY (local, remote));`,
 
   `CREATE TABLE IF NOT EXISTS friends (
     local TEXT NOT NULL, remote TEXT NOT NULL, updated_at INTEGER NOT NULL,
+    is_deleted INTEGER DEFAULT 0,
     PRIMARY KEY (local, remote));`,
 
   `CREATE TABLE IF NOT EXISTS avatar_files (
     address TEXT PRIMARY KEY, hash TEXT NOT NULL, size INTEGER NOT NULL,
     signed_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
     json TEXT, is_saved INTEGER DEFAULT 0, image_base64 TEXT);`,
-
-  `CREATE TABLE IF NOT EXISTS channels (
-    name TEXT NOT NULL, created_by TEXT NOT NULL, speaker TEXT NOT NULL,
-    created_at INTEGER NOT NULL, PRIMARY KEY (name, created_by));`,
 
   `CREATE TABLE IF NOT EXISTS files (
     hash TEXT PRIMARY KEY, size INTEGER NOT NULL, updated_at INTEGER NOT NULL,
@@ -206,6 +204,24 @@ function initDB(): void {
       DB_NAME,
       "ALTER TABLE groups ADD COLUMN cleared_at INTEGER",
     );
+  }
+
+  // Migration: add is_deleted column to follows/friends if missing.
+  for (const table of ["follows", "friends"]) {
+    const colInfo = NitroSQLite.execute(
+      DB_NAME,
+      `SELECT COUNT(*) AS cnt FROM pragma_table_info("${table}") WHERE name = "is_deleted"`,
+    );
+    const colCount =
+      colInfo.rows && colInfo.rows._array && colInfo.rows._array.length > 0
+        ? colInfo.rows._array[0].cnt
+        : 0;
+    if (colCount === 0) {
+      NitroSQLite.execute(
+        DB_NAME,
+        `ALTER TABLE ${table} ADD COLUMN is_deleted INTEGER DEFAULT 0`,
+      );
+    }
   }
   Logger.info("[DB-DEBUG] initDB done");
 }

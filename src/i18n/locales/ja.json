@@ -406,7 +406,8 @@
     "try_different_search": "別の検索語をお試しください。",
     "add_friends_first": "まずフレンドを追加して投稿を転送してください。",
     "valid_bulletin": "✓ 有効な投稿 — 保存できます",
-    "tags_max": "タグ（最大 {{max}} 件）"
+    "tags_max": "タグ（最大 {{max}} 件）",
+    "about": "について"
   },
   "auth": {
     "open_account": "アカウントを開く",
@@ -442,7 +443,26 @@
     "invalid_seed": "シードの形式が無効です",
     "seed_required": "シードが必要です",
     "temp_login_desc": "アカウントを保存せずにログインします。シードは保存されません。",
-    "remove_account_confirm": "保存済みのアカウント {{address}} を削除しますか？ログイン状態は維持されます。"
+    "remove_account_confirm": "保存済みのアカウント {{address}} を削除しますか？ログイン状態は維持されます。",
+    "qr_scan_hint": "Client の QR コードにカメラを向けてください",
+    "qr_import": "QR スキャン",
+    "qr_scanned": "QR コードをスキャンしました",
+    "qr_rescan": "再スキャン",
+    "qr_wrong_password": "パスワードが違います — 復号に失敗しました",
+    "qr_address_mismatch": "アドレスが一致しません — シードが QR コードと一致しません",
+    "camera_permission_denied": "カメラのアクセスが拒否されました。設定でカメラアクセスを有効にしてください。"
+  },
+  "sync": {
+    "title": "LAN 同期",
+    "desc": "ローカルネットワークの Client とデータを同期",
+    "client_ip": "Client IP アドレス",
+    "test": "テスト",
+    "account": "アカウント",
+    "start": "同期を開始",
+    "syncing": "同期中...",
+    "done": "同期完了",
+    "error": "同期失敗",
+    "discovering": "Client を検索中..."
   },
   "storage": {
     "files": "ファイル",

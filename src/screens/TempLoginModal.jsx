@@ -42,22 +42,17 @@ export default function TempLoginModal({ visible, onClose, onLogin }) {
 
     try {
       const wallet = getWallet(trimmed);
-      setAddress(wallet.classicAddress);
+      const addr = wallet.classicAddress;
+      setAddress(addr);
+      // Auto-login: valid seed pasted → login immediately
+      setTimeout(() => {
+        Keyboard.dismiss();
+        onLogin({ seed: trimmed, address: addr });
+      }, 300);
     } catch (e) {
       Logger.debug("[TempLogin] invalid seed:", e);
       setError(t("auth.invalid_seed"));
     }
-  };
-
-  const handleTempLogin = () => {
-    Keyboard.dismiss();
-    if (!seed.trim()) {
-      setError(t("auth.seed_required"));
-      return;
-    }
-
-    // Address already derived by handleSeedChange — only reach here with valid seed
-    onLogin({ seed, address });
   };
 
   if (!visible) return null;
@@ -112,13 +107,7 @@ export default function TempLoginModal({ visible, onClose, onLogin }) {
         </View>
       )}
 
-      {/* Buttons */}
-      <ConfirmButtonRow
-        onConfirm={handleTempLogin}
-        confirmText={t("auth.login_temporarily")}
-        confirmDisabled={seed.trim() === "" || error !== null}
-        showCancel={false}
-      />
+      {/* Auto-login on valid seed paste — no button needed */}
     </ModalShell>
   );
 }

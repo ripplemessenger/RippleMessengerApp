@@ -195,6 +195,16 @@ export default function LoginScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
 
+            {/* Scan QR */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ScanQR")}
+              className="bg-surface-card border border-secondary py-3 rounded-xl items-center mb-3"
+            >
+              <Text className="text-base font-medium text-text-primary">
+                {t("auth.qr_import")}
+              </Text>
+            </TouchableOpacity>
+
             {/* Temporary Login */}
             <TouchableOpacity
               onPress={() => setShowTempLogin(true)}
@@ -230,6 +240,16 @@ export default function LoginScreen({ navigation }) {
             >
               <Text className="text-base font-medium text-text-primary">
                 {t("auth.import_existing")}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Scan QR */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ScanQR")}
+              className="w-full bg-surface-card border border-secondary py-3 rounded-xl items-center mb-3"
+            >
+              <Text className="text-base font-medium text-text-primary">
+                {t("auth.qr_import")}
               </Text>
             </TouchableOpacity>
 

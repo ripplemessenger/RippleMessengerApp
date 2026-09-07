@@ -4,6 +4,19 @@ import { groupMessage2Display } from "../lib/MessengerUtil";
 import { getDB } from "./core";
 
 export const api = {
+  /**
+   * Get all distinct group hashes where the address is a member (for LAN sync push).
+   * Returns an array of group hash strings.
+   */
+  async getAllGroupHashes(addr) {
+    const dbInstance = await getDB();
+    const rows = await dbInstance.select(
+      "SELECT DISTINCT group_hash FROM group_messages WHERE address = $1",
+      [addr],
+    );
+    return rows.map((r) => r.group_hash);
+  },
+
   async getGroups() {
     const dbInstance = await getDB();
     let groups = await dbInstance.select(
@@ -11,10 +24,22 @@ export const api = {
     );
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
-      groups[i].member = JSON.parse(group.member);
-      groups[i].create_json = JSON.parse(group.create_json);
+      try {
+        groups[i].member = JSON.parse(group.member);
+      } catch {
+        groups[i].member = [];
+      }
+      try {
+        groups[i].create_json = JSON.parse(group.create_json);
+      } catch {
+        groups[i].create_json = {};
+      }
       if (group.delete_json) {
-        groups[i].delete_json = JSON.parse(group.delete_json);
+        try {
+          groups[i].delete_json = JSON.parse(group.delete_json);
+        } catch {
+          groups[i].delete_json = null;
+        }
       }
       groups[i].is_accepted = Int2Bool(group.is_accepted);
     }
@@ -29,10 +54,22 @@ export const api = {
     );
     if (groups.length > 0) {
       let group = groups[0];
-      group.member = JSON.parse(group.member);
-      group.create_json = JSON.parse(group.create_json);
+      try {
+        group.member = JSON.parse(group.member);
+      } catch {
+        group.member = [];
+      }
+      try {
+        group.create_json = JSON.parse(group.create_json);
+      } catch {
+        group.create_json = {};
+      }
       if (group.delete_json) {
-        group.delete_json = JSON.parse(group.delete_json);
+        try {
+          group.delete_json = JSON.parse(group.delete_json);
+        } catch {
+          group.delete_json = null;
+        }
       }
       group.is_accepted = Int2Bool(group.is_accepted);
       return group;
@@ -116,6 +153,18 @@ export const api = {
       msgs[i] = groupMessage2Display(msgs[i]);
     }
     return msgs;
+  },
+
+  /**
+   * Raw group session rows (no display transform) — for LAN sync push.
+   * Keeps is_confirmed/is_marked/is_readed/is_object as integers and content as raw string.
+   */
+  async getGroupSessionRaw(group_hash) {
+    const dbInstance = await getDB();
+    return await dbInstance.select(
+      "SELECT * FROM group_messages WHERE group_hash = $1 ORDER BY sequence ASC",
+      [group_hash],
+    );
   },
 
   async getGroupNewMessageCount(group_hash) {

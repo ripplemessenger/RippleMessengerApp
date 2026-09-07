@@ -406,7 +406,8 @@
     "try_different_search": "Essayez un autre terme de recherche.",
     "add_friends_first": "Ajoutez d'abord des amis pour transférer des messages.",
     "valid_bulletin": "✓ Message valide — prêt à être enregistré",
-    "tags_max": "Tags (max. {{max}})"
+    "tags_max": "Tags (max. {{max}})",
+    "about": "À propos"
   },
   "auth": {
     "open_account": "Ouvrir un compte",
@@ -442,7 +443,26 @@
     "invalid_seed": "Format de seed invalide",
     "seed_required": "Le seed est requis",
     "temp_login_desc": "Connectez-vous sans enregistrer votre compte. Votre seed ne sera pas stocké.",
-    "remove_account_confirm": "Supprimer le compte {{address}} ? Vous resterez connecté."
+    "remove_account_confirm": "Supprimer le compte {{address}} ? Vous resterez connecté.",
+    "qr_scan_hint": "Pointez la caméra vers le code QR du Client",
+    "qr_import": "Scanner QR",
+    "qr_scanned": "Code QR scanné",
+    "qr_rescan": "Rescanner",
+    "qr_wrong_password": "Mot de passe incorrect — échec du déchiffrement",
+    "qr_address_mismatch": "Adresse non correspondante — le seed ne correspond pas au code QR",
+    "camera_permission_denied": "Accès à la caméra refusé. Veuillez activer l'accès à la caméra dans les paramètres."
+  },
+  "sync": {
+    "title": "Synchronisation LAN",
+    "desc": "Synchroniser les données avec le Client sur le réseau local",
+    "client_ip": "Adresse IP du Client",
+    "test": "Tester",
+    "account": "Compte",
+    "start": "Démarrer la synchronisation",
+    "syncing": "Synchronisation...",
+    "done": "Synchronisation terminée",
+    "error": "Échec de la synchronisation",
+    "discovering": "Recherche du Client..."
   },
   "storage": {
     "files": "Fichiers",

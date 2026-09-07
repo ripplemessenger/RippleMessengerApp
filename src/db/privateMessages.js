@@ -4,6 +4,19 @@ import { privateMessage2Display } from "../lib/MessengerUtil";
 import { getDB } from "./core";
 
 export const api = {
+  /**
+   * Get all distinct peers for an address (for LAN sync push).
+   * Returns an array of peer addresses.
+   */
+  async getAllPrivatePeers(addr) {
+    const dbInstance = await getDB();
+    const rows = await dbInstance.select(
+      "SELECT DISTINCT peer FROM (SELECT dest AS peer FROM private_messages WHERE sour = $1 UNION SELECT sour AS peer FROM private_messages WHERE dest = $1)",
+      [addr],
+    );
+    return rows.map((r) => r.peer);
+  },
+
   async getPrivateSession(sour, dest) {
     const dbInstance = await getDB();
     let msgs = await dbInstance.select(
@@ -14,6 +27,18 @@ export const api = {
       msgs[i] = privateMessage2Display(msgs[i]);
     }
     return msgs;
+  },
+
+  /**
+   * Raw private session rows (no display transform) — for LAN sync push.
+   * Keeps is_confirmed/is_marked/is_readed/is_object as integers and content as raw string.
+   */
+  async getPrivateSessionRaw(sour, dest) {
+    const dbInstance = await getDB();
+    return await dbInstance.select(
+      "SELECT * FROM private_messages WHERE (sour = $1 AND dest = $2) OR (sour = $2 AND dest = $1) ORDER BY sequence ASC",
+      [sour, dest],
+    );
   },
 
   async getPrivateNewMessageCount(sour, dest) {

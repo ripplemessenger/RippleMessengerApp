@@ -573,6 +573,16 @@ export default function SettingScreen({ navigation }) {
           />
         </View>
 
+        {/* LAN Sync */}
+        <SectionHeader icon="sync-outline" label={t("sync.title")} />
+        <View className="bg-surface-card rounded-2xl mx-4 border border-secondary-light overflow-hidden mb-4">
+          <NavRow
+            icon="sync-outline"
+            label={t("sync.desc")}
+            onPress={() => navigation.navigate("Sync")}
+          />
+        </View>
+
         {/* About */}
         <SectionHeader
           icon="information-circle-outline"

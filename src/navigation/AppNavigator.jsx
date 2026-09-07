@@ -14,6 +14,7 @@ import FlashNotice from "../components/FlashNotice";
 import LoginScreen from "../screens/LoginScreen";
 import GenerateAccountScreen from "../screens/GenerateAccountScreen";
 import ImportAccountScreen from "../screens/ImportAccountScreen";
+import ScanQRScreen from "../screens/ScanQRScreen";
 import BulletinScreen from "../screens/BulletinScreen";
 import BulletinDetailScreen from "../screens/BulletinDetailScreen";
 import TagBulletinsScreen from "../screens/TagBulletinsScreen";
@@ -28,6 +29,7 @@ import BulletinManagementTab from "../components/BulletinManagementTab";
 import StorageManagementTab from "../components/StorageManagementTab";
 import ServerManagementTab from "../components/ServerManagementTab";
 import ServerAddressScreen from "../screens/ServerAddressScreen";
+import SyncScreen from "../screens/SyncScreen";
 import FollowedBulletinsScreen from "../screens/FollowedBulletinsScreen";
 import RandomBulletinsScreen from "../screens/RandomBulletinsScreen";
 import AddressBulletinsScreen from "../screens/AddressBulletinsScreen";
@@ -49,6 +51,11 @@ function AuthStack() {
         name="ImportAccount"
         component={ImportAccountScreen}
         options={{ presentation: "card", title: "Import Account" }}
+      />
+      <Stack.Screen
+        name="ScanQR"
+        component={ScanQRScreen}
+        options={{ presentation: "card", title: "Scan QR" }}
       />
     </Stack.Navigator>
   );
@@ -84,6 +91,11 @@ function SettingTab() {
       <Stack.Screen name="StorageManagement" component={StorageManagementTab} />
       <Stack.Screen name="ServerManagement" component={ServerManagementTab} />
       <Stack.Screen name="ServerAddress" component={ServerAddressScreen} />
+      <Stack.Screen
+        name="Sync"
+        component={SyncScreen}
+        options={{ title: "LAN Sync" }}
+      />
       <Stack.Screen name="About" component={AboutScreen} />
     </Stack.Navigator>
   );

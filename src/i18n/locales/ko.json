@@ -406,7 +406,8 @@
     "try_different_search": "다른 검색어를 시도해 보세요.",
     "add_friends_first": "먼저 친구를 추가하여 게시물을 전달하세요.",
     "valid_bulletin": "✓ 유효한 게시물 — 저장할 수 있음",
-    "tags_max": "태그 (최대 {{max}}개)"
+    "tags_max": "태그 (최대 {{max}}개)",
+    "about": "정보"
   },
   "auth": {
     "open_account": "계정 열기",
@@ -442,7 +443,26 @@
     "invalid_seed": "시드 형식이 잘못되었습니다",
     "seed_required": "시드가 필요합니다",
     "temp_login_desc": "계정을 저장하지 않고 로그인합니다. 시드는 저장되지 않습니다.",
-    "remove_account_confirm": "저장된 계정 {{address}}을(를) 삭제할까요? 로그인 상태는 유지됩니다."
+    "remove_account_confirm": "저장된 계정 {{address}}을(를) 삭제할까요? 로그인 상태는 유지됩니다.",
+    "qr_scan_hint": "Client의 QR 코드를 카메라로 비추세요",
+    "qr_import": "QR 스캔",
+    "qr_scanned": "QR 코드 스캔 완료",
+    "qr_rescan": "다시 스캔",
+    "qr_wrong_password": "비밀번호가 잘못되었습니다 — 복호화 실패",
+    "qr_address_mismatch": "주소 불일치 — 시드가 QR 코드와 일치하지 않습니다",
+    "camera_permission_denied": "카메라 권한이 거부되었습니다. 설정에서 카메라 접근을 활성화하세요."
+  },
+  "sync": {
+    "title": "LAN 동기화",
+    "desc": "로컬 네트워크의 Client와 데이터를 동기화",
+    "client_ip": "Client IP 주소",
+    "test": "테스트",
+    "account": "계정",
+    "start": "동기화 시작",
+    "syncing": "동기화 중...",
+    "done": "동기화 완료",
+    "error": "동기화 실패",
+    "discovering": "Client 검색 중..."
   },
   "storage": {
     "files": "파일",
