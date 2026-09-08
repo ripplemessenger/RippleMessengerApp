@@ -14,10 +14,12 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { dbAPI } from "../db";
 
 import { selectUserAddress, selectContactMap } from "../selectors";
-import { ACCENT, ICON_MUTED } from "../lib/theme";
+import { ACCENT, ICON_MUTED, DANGER } from "../lib/theme";
 import { formatTime, shortenAddress } from "../lib/format";
 import EmptyState from "./common/EmptyState";
 import BottomSheet from "./common/BottomSheet";
+import FilterChips from "./common/FilterChips";
+import Pager from "./common/Pager";
 import AvatarImage from "./AvatarImage";
 
 const BULLETIN_PAGE_SIZE = 20;
@@ -339,7 +341,9 @@ export default function BulletinManagementTab() {
           numberOfLines={1}
         >
           {selectedHashes.length > 0
-            ? `${selectedHashes.length} selected`
+            ? t("bulletin.selected_count", {
+                count: selectedHashes.length,
+              })
             : t("setting.bulletin_cache")}
         </Text>
         {/* Select All / Deselect All */}
@@ -394,39 +398,21 @@ export default function BulletinManagementTab() {
           <Ionicons
             name="trash-outline"
             size={22}
-            color={selectedHashes.length > 0 ? "#ef4444" : ICON_MUTED}
+            color={selectedHashes.length > 0 ? DANGER : ICON_MUTED}
           />
         </TouchableOpacity>
       </View>
 
       {/* Filter chips */}
-      <View className="flex-row bg-surface-card rounded-xl p-1 border border-secondary-light">
-        {FILTER_OPTIONS.map((opt) => {
-          const isActive = filter === opt.key;
-          return (
-            <TouchableOpacity
-              key={opt.key}
-              onPress={() => setFilter(opt.key)}
-              className={`flex-1 py-2 rounded-lg items-center ${
-                isActive ? "bg-primary/15" : ""
-              }`}
-            >
-              <Ionicons
-                name={isActive ? opt.icon : `${opt.icon}-outline`}
-                size={14}
-                color={isActive ? ACCENT : ICON_MUTED}
-              />
-              <Text
-                className={`text-[10px] font-medium mt-0.5 ${
-                  isActive ? "text-primary" : "text-text-secondary"
-                }`}
-              >
-                {t(opt.labelKey)}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <FilterChips
+        options={FILTER_OPTIONS.map((o) => ({
+          key: o.key,
+          label: t(o.labelKey),
+          icon: o.icon,
+        }))}
+        activeKey={filter}
+        onSelect={setFilter}
+      />
 
       {/* Bulletin list */}
       {bulletins.length > 0 ? (
@@ -442,41 +428,13 @@ export default function BulletinManagementTab() {
       )}
 
       {/* Page indicator */}
-      {
-        <View className="flex-row items-center justify-between px-2">
-          <TouchableOpacity
-            onPress={() => handlePageChange(page - 1)}
-            disabled={page <= 1 || loading}
-            className={`py-2 px-4 rounded-lg ${
-              page > 1
-                ? "bg-surface-card border border-secondary-light"
-                : "opacity-30"
-            }`}
-          >
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="chevron-back" size={14} color={ICON_MUTED} />
-              <Text className="text-xs text-text-secondary">
-                {t("common.prev")}
-              </Text>
-            </View>
-          </TouchableOpacity>
-          <Text className="text-xs text-text-secondary/60">
-            {t("bulletin.page_indicator", { count: page })}
-          </Text>
-          <TouchableOpacity
-            onPress={() => handlePageChange(page + 1)}
-            disabled={loading}
-            className="py-2 px-4 rounded-lg bg-surface-card border border-secondary-light"
-          >
-            <View className="flex-row items-center gap-1">
-              <Text className="text-xs text-text-secondary">
-                {t("common.next")}
-              </Text>
-              <Ionicons name="chevron-forward" size={14} color={ICON_MUTED} />
-            </View>
-          </TouchableOpacity>
-        </View>
-      }
+      <Pager
+        page={page}
+        onPrev={() => handlePageChange(page - 1)}
+        onNext={() => handlePageChange(page + 1)}
+        centerLabel={t("bulletin.page_indicator", { count: page })}
+        loading={loading}
+      />
 
       {/* Tag Picker Modal */}
       <BottomSheet

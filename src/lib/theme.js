@@ -29,3 +29,11 @@ export const SWITCH_TRACK_OFF = "#d4c8a8";
 
 /** Switch "off" track color (ServerManagement variant). */
 export const SWITCH_TRACK_OFF_ALT = "#555";
+
+/** Destructive action (delete) — matches tailwind `status-error`. */
+export const DANGER = "#d4555a";
+
+/** Storage category colors (semantic, per file category). */
+export const CAT_BULLETIN = "#3b82f6";
+export const CAT_CHAT = "#10b981";
+export const CAT_GROUP = "#a855f7";

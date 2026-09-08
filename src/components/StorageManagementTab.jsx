@@ -9,8 +9,17 @@ import { dbAPI } from "../db";
 import * as fileService from "../services/fileService";
 import { filesize_format } from "../lib/AppUtil";
 import { formatTime } from "../lib/format";
-import { ACCENT, ICON_MUTED } from "../lib/theme";
+import {
+  ACCENT,
+  ICON_MUTED,
+  DANGER,
+  CAT_BULLETIN,
+  CAT_CHAT,
+  CAT_GROUP,
+} from "../lib/theme";
 import EmptyState from "./common/EmptyState";
+import FilterChips from "./common/FilterChips";
+import Pager from "./common/Pager";
 
 const STORAGE_PAGE_SIZE = 20;
 
@@ -23,22 +32,22 @@ const CATEGORY_CHIPS = [
 
 const CATEGORY_META = {
   bulletin: {
-    color: "#3b82f6",
+    color: CAT_BULLETIN,
     bgColor: "bg-blue-500/20",
     icon: "document-outline",
   },
   private_chat: {
-    color: "#10b981",
+    color: CAT_CHAT,
     bgColor: "bg-green-500/20",
     icon: "chatbubble-outline",
   },
   group_chat: {
-    color: "#a855f7",
+    color: CAT_GROUP,
     bgColor: "bg-purple-500/20",
     icon: "people-outline",
   },
   orphaned: {
-    color: "#ef4444",
+    color: DANGER,
     bgColor: "bg-red-500/20",
     icon: "warning-outline",
   },
@@ -404,7 +413,7 @@ export default function StorageManagementTab() {
               onPress={() => handleDeleteFile(f)}
               className="p-1"
             >
-              <Ionicons name="trash-outline" size={18} color="#ef4444" />
+              <Ionicons name="trash-outline" size={18} color={DANGER} />
             </TouchableOpacity>
           )}
         </TouchableOpacity>
@@ -460,7 +469,7 @@ export default function StorageManagementTab() {
         </Text>
         <View className="flex-row flex-wrap gap-x-4 gap-y-1.5">
           <View className="flex-row items-center gap-1.5">
-            <Ionicons name="document-outline" size={14} color="#3b82f6" />
+            <Ionicons name="document-outline" size={14} color={CAT_BULLETIN} />
             <Text className="text-xs text-text-secondary">
               {t("storage.sum_bulletins")}{" "}
               <Text className="font-medium">
@@ -469,7 +478,7 @@ export default function StorageManagementTab() {
             </Text>
           </View>
           <View className="flex-row items-center gap-1.5">
-            <Ionicons name="chatbubble-outline" size={14} color="#10b981" />
+            <Ionicons name="chatbubble-outline" size={14} color={CAT_CHAT} />
             <Text className="text-xs text-text-secondary">
               {t("storage.sum_chat")}{" "}
               <Text className="font-medium">
@@ -478,7 +487,7 @@ export default function StorageManagementTab() {
             </Text>
           </View>
           <View className="flex-row items-center gap-1.5">
-            <Ionicons name="image-outline" size={14} color="#a855f7" />
+            <Ionicons name="image-outline" size={14} color={CAT_GROUP} />
             <Text className="text-xs text-text-secondary">
               {t("storage.sum_avatars")}{" "}
               <Text className="font-medium">
@@ -487,7 +496,7 @@ export default function StorageManagementTab() {
             </Text>
           </View>
           <View className="flex-row items-center gap-1.5">
-            <Ionicons name="warning-outline" size={14} color="#ef4444" />
+            <Ionicons name="warning-outline" size={14} color={DANGER} />
             <Text className="text-xs text-text-secondary">
               {t("storage.sum_orphaned")}{" "}
               <Text className="font-medium">
@@ -503,7 +512,7 @@ export default function StorageManagementTab() {
             onPress={handleClearAvatars}
             className="flex-row items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-status-error/10 border border-status-error/30 self-start"
           >
-            <Ionicons name="trash-outline" size={14} color="#ef4444" />
+            <Ionicons name="trash-outline" size={14} color={DANGER} />
             <Text className="text-xs font-medium text-status-error">
               {t("storage.clear_avatar_title")}
             </Text>
@@ -540,44 +549,31 @@ export default function StorageManagementTab() {
       )}
 
       {/* Category filter chips + select toggle */}
-      <View className="flex-row bg-surface-card rounded-xl p-1 border border-secondary-light">
-        {CATEGORY_CHIPS.map((chip) => {
-          const isActive = categoryFilter === chip.key;
-          return (
-            <TouchableOpacity
-              key={chip.key}
-              onPress={() => handleFilterChange(chip.key)}
-              className={`flex-1 py-2 rounded-lg items-center ${
-                isActive ? "bg-primary/15" : ""
-              }`}
-            >
-              <Text
-                className={`text-[10px] font-medium ${
-                  isActive ? "text-primary" : "text-text-secondary"
-                }`}
-              >
-                {t(chip.labelKey)}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-        {/* Select toggle */}
-        <TouchableOpacity
-          onPress={() => {
-            if (selectMode) exitSelectMode();
-            else enterSelectMode();
-          }}
-          className={`py-2 px-3 rounded-lg items-center ${
-            selectMode ? "bg-primary/15" : ""
-          }`}
-        >
-          <Ionicons
-            name={selectMode ? "checkmark-done" : "checkmark-circle-outline"}
-            size={16}
-            color={selectMode ? ACCENT : ICON_MUTED}
-          />
-        </TouchableOpacity>
-      </View>
+      <FilterChips
+        options={CATEGORY_CHIPS.map((c) => ({
+          key: c.key,
+          label: t(c.labelKey),
+        }))}
+        activeKey={categoryFilter}
+        onSelect={handleFilterChange}
+        trailing={
+          <TouchableOpacity
+            onPress={() => {
+              if (selectMode) exitSelectMode();
+              else enterSelectMode();
+            }}
+            className={`py-2 px-3 rounded-lg items-center ${
+              selectMode ? "bg-primary/15" : ""
+            }`}
+          >
+            <Ionicons
+              name={selectMode ? "checkmark-done" : "checkmark-circle-outline"}
+              size={16}
+              color={selectMode ? ACCENT : ICON_MUTED}
+            />
+          </TouchableOpacity>
+        }
+      />
 
       {/* File list */}
       {filteredFiles.length > 0 ? (
@@ -593,39 +589,13 @@ export default function StorageManagementTab() {
       )}
 
       {/* Page indicator */}
-      <View className="flex-row items-center justify-between px-2">
-        <TouchableOpacity
-          onPress={() => handlePageChange(page - 1)}
-          disabled={page <= 1 || loading}
-          className={`py-2 px-4 rounded-lg ${
-            page > 1
-              ? "bg-surface-card border border-secondary-light"
-              : "opacity-30"
-          }`}
-        >
-          <View className="flex-row items-center gap-1">
-            <Ionicons name="chevron-back" size={14} color={ICON_MUTED} />
-            <Text className="text-xs text-text-secondary">
-              {t("common.prev")}
-            </Text>
-          </View>
-        </TouchableOpacity>
-        <Text className="text-xs text-text-secondary/60">
-          {t("storage.page_indicator", { count: page })}
-        </Text>
-        <TouchableOpacity
-          onPress={() => handlePageChange(page + 1)}
-          disabled={loading}
-          className="py-2 px-4 rounded-lg bg-surface-card border border-secondary-light"
-        >
-          <View className="flex-row items-center gap-1">
-            <Text className="text-xs text-text-secondary">
-              {t("common.next")}
-            </Text>
-            <Ionicons name="chevron-forward" size={14} color={ICON_MUTED} />
-          </View>
-        </TouchableOpacity>
-      </View>
+      <Pager
+        page={page}
+        onPrev={() => handlePageChange(page - 1)}
+        onNext={() => handlePageChange(page + 1)}
+        centerLabel={t("storage.page_indicator", { count: page })}
+        loading={loading}
+      />
 
       {/* Clear orphaned button */}
       {!selectMode && orphanedCount > 0 && (
@@ -634,7 +604,7 @@ export default function StorageManagementTab() {
           className="border-2 border-status-error/50 py-3 rounded-xl items-center"
         >
           <View className="flex-row items-center gap-2">
-            <Ionicons name="trash-outline" size={16} color="#ef4444" />
+            <Ionicons name="trash-outline" size={16} color={DANGER} />
             <Text className="text-base font-semibold text-status-error">
               {t("storage.clear_orphaned_count", { count: orphanedCount })}
             </Text>

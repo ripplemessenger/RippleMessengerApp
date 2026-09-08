@@ -175,13 +175,13 @@ export default function LoginScreen({ navigation }) {
               <View className="flex-1 h-px bg-secondary" />
             </View>
 
-            {/* New Account */}
+            {/* Scan QR */}
             <TouchableOpacity
-              onPress={handleNewAccount}
+              onPress={() => navigation.navigate("ScanQR")}
               className="bg-surface-card border border-secondary py-3 rounded-xl items-center mb-3"
             >
               <Text className="text-base font-medium text-text-primary">
-                {t("auth.generate_new")}
+                {t("auth.qr_import")}
               </Text>
             </TouchableOpacity>
 
@@ -195,23 +195,23 @@ export default function LoginScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
 
-            {/* Scan QR */}
-            <TouchableOpacity
-              onPress={() => navigation.navigate("ScanQR")}
-              className="bg-surface-card border border-secondary py-3 rounded-xl items-center mb-3"
-            >
-              <Text className="text-base font-medium text-text-primary">
-                {t("auth.qr_import")}
-              </Text>
-            </TouchableOpacity>
-
             {/* Temporary Login */}
             <TouchableOpacity
               onPress={() => setShowTempLogin(true)}
-              className="bg-surface-card border border-secondary py-3 rounded-xl items-center"
+              className="bg-surface-card border border-secondary py-3 rounded-xl items-center mb-3"
             >
               <Text className="text-base font-medium text-text-primary">
                 {t("common.temporary_login")}
+              </Text>
+            </TouchableOpacity>
+
+            {/* New Account */}
+            <TouchableOpacity
+              onPress={handleNewAccount}
+              className="bg-surface-card border border-secondary py-3 rounded-xl items-center"
+            >
+              <Text className="text-base font-medium text-text-primary">
+                {t("auth.generate_new")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -223,13 +223,13 @@ export default function LoginScreen({ navigation }) {
               </Text>
             </View>
 
-            {/* New Account */}
+            {/* Scan QR */}
             <TouchableOpacity
-              onPress={handleNewAccount}
-              className="w-full bg-primary py-3 rounded-xl items-center mb-3"
+              onPress={() => navigation.navigate("ScanQR")}
+              className="w-full bg-surface-card border border-secondary py-3 rounded-xl items-center mb-3"
             >
-              <Text className="text-base font-semibold text-text-primary">
-                {t("auth.generate_new")}
+              <Text className="text-base font-medium text-text-primary">
+                {t("auth.qr_import")}
               </Text>
             </TouchableOpacity>
 
@@ -243,23 +243,23 @@ export default function LoginScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
 
-            {/* Scan QR */}
-            <TouchableOpacity
-              onPress={() => navigation.navigate("ScanQR")}
-              className="w-full bg-surface-card border border-secondary py-3 rounded-xl items-center mb-3"
-            >
-              <Text className="text-base font-medium text-text-primary">
-                {t("auth.qr_import")}
-              </Text>
-            </TouchableOpacity>
-
             {/* Temporary Login */}
             <TouchableOpacity
               onPress={() => setShowTempLogin(true)}
-              className="w-full bg-surface-card border border-secondary py-3 rounded-xl items-center"
+              className="w-full bg-surface-card border border-secondary py-3 rounded-xl items-center mb-3"
             >
               <Text className="text-base font-medium text-text-primary">
                 {t("common.temporary_login")}
+              </Text>
+            </TouchableOpacity>
+
+            {/* New Account */}
+            <TouchableOpacity
+              onPress={handleNewAccount}
+              className="w-full bg-surface-card border border-secondary py-3 rounded-xl items-center"
+            >
+              <Text className="text-base font-medium text-text-primary">
+                {t("auth.generate_new")}
               </Text>
             </TouchableOpacity>
           </View>

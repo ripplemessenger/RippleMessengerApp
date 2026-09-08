@@ -54,7 +54,7 @@ import { pickFile } from "../services/mediaPicker";
 import { SessionType } from "../lib/AppConst";
 import { MessageObjectType } from "../lib/MessengerConst";
 import { dbAPI } from "../db";
-import { ACCENT, ICON_MUTED } from "../lib/theme";
+import { ACCENT, ICON_MUTED, DANGER } from "../lib/theme";
 import { formatTime, shortenAddress, formatFileSize } from "../lib/format";
 
 /**
@@ -621,7 +621,7 @@ function ChatInfoModal({ visible, session, mode, onClose, onGroupDeleted }) {
                   activeOpacity={0.7}
                   className="flex-row items-center justify-center gap-2 mt-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30"
                 >
-                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  <Ionicons name="trash-outline" size={18} color={DANGER} />
                   <Text className="text-sm font-medium text-red-500">
                     {t("group.delete_title")}
                   </Text>
