@@ -16,8 +16,8 @@ android {
         applicationId 'app.ripplemessenger'
         minSdkVersion 24
         targetSdkVersion 34
-        versionCode 1
-        versionName "0.1.0"
+        versionCode 2
+        versionName "0.1.1"
         buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", "true"
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"stable\""
         ndk {

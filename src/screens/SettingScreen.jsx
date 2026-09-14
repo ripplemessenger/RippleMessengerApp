@@ -36,6 +36,7 @@ import {
 import { FileHash, base64ToUint8Array } from "../lib/MessengerUtil";
 import QRCode from "qrcode";
 import { DefaultServer } from "../lib/MessengerConst";
+import { APP_VERSION } from "../lib/AppConst";
 import {
   getSettingBool,
   getSettingString,
@@ -49,8 +50,6 @@ import {
   SWITCH_TRACK_OFF,
 } from "../lib/theme";
 import i18n from "../i18n";
-
-const APP_VERSION = "0.1.0";
 
 const LANGUAGE_OPTIONS = [
   { code: "en", label: "English" },

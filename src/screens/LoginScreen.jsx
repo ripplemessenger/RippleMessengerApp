@@ -15,6 +15,7 @@ import { loadAccountListStart, loginStart } from "../store/slices/UserSlice";
 import Logger from "../lib/Logger";
 import { decryptWithPassword } from "../lib/AppUtil";
 import { shortenAddress } from "../lib/format";
+import { APP_VERSION } from "../lib/AppConst";
 import AvatarImage from "../components/AvatarImage";
 import BottomSheet from "../components/common/BottomSheet";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -312,7 +313,7 @@ export default function LoginScreen({ navigation }) {
 
         {/* Footer */}
         <Text className="mt-12 text-xs text-text-secondary">
-          {t("auth.version")}
+          RippleMessenger v{APP_VERSION}
         </Text>
       </View>
     </ScrollView>

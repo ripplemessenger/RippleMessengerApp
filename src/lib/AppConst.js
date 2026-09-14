@@ -1,3 +1,7 @@
+// App version (single source of truth — UI reads this, do not hardcode elsewhere)
+/** @type {string} App version number shown in Settings and Login screens */
+const APP_VERSION = "0.1.1";
+
 // Time constants (milliseconds)
 /** @type {number} Milliseconds in one minute */
 const Minute = 60 * 1000;
@@ -67,6 +71,7 @@ const FLASH_DURATION_MS = 3000;
 const FILE_REQUEST_TTL_MS = 120 * 1000;
 
 export {
+  APP_VERSION,
   Minute,
   Hour,
   Day,
