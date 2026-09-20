@@ -34,6 +34,7 @@
     "paste_bulletin": "게시문 붙여넣기",
     "create_group": "그룹 만들기",
     "add_server": "서버 추가",
+    "add": "추가",
     "view_server_stats": "서버 통계 보기",
     "language": "언어 변경",
     "add_contact": "연락처 추가",
@@ -56,7 +57,12 @@
     "next": "다음",
     "me": "나",
     "sessions_count": "{{count}} sessions",
-    "contacts_count": "{{count}} contacts"
+    "contacts_count": "{{count}} contacts",
+    "done": "완료",
+    "not_found": "찾을 수 없습니다",
+    "remove_friend": "친구 삭제",
+    "start_chat": "채팅 시작",
+    "unfollow": "팔로우 취소"
   },
   "file": {
     "saved_to_download": "파일이 다운로드 디렉토리에 저장되었습니다",
@@ -142,7 +148,10 @@
     "delete_count": "삭제 ({{count}})",
     "total_count": "{{count}}개 게시물",
     "page_indicator": "{{count}}페이지",
-    "not_logged_in": "로그인되어 있지 않음"
+    "not_logged_in": "로그인되어 있지 않음",
+    "delete_selected_title": "선택 항목 삭제",
+    "filter_by_tag": "태그로 필터",
+    "no_bulletins": "게시문이 없습니다"
   },
   "setting": {
     "theme_changed": "테마가 {{value}}(으)로 변경되었습니다",
@@ -407,7 +416,10 @@
     "add_friends_first": "먼저 친구를 추가하여 게시물을 전달하세요.",
     "valid_bulletin": "✓ 유효한 게시물 — 저장할 수 있음",
     "tags_max": "태그 (최대 {{max}}개)",
-    "about": "정보"
+    "about": "정보",
+    "bookmarks": "북마크",
+    "tag": "태그",
+    "view_bulletins": "게시문 보기"
   },
   "auth": {
     "open_account": "계정 열기",
@@ -449,7 +461,9 @@
     "qr_rescan": "다시 스캔",
     "qr_wrong_password": "비밀번호가 잘못되었습니다 — 복호화 실패",
     "qr_address_mismatch": "주소 불일치 — 시드가 QR 코드와 일치하지 않습니다",
-    "camera_permission_denied": "카메라 권한이 거부되었습니다. 설정에서 카메라 접근을 활성화하세요."
+    "camera_permission_denied": "카메라 권한이 거부되었습니다. 설정에서 카메라 접근을 활성화하세요.",
+    "generate_failed": "계정 생성 실패",
+    "password_required": "비밀번호가 필요합니다"
   },
   "sync": {
     "title": "LAN 동기화",
@@ -501,7 +515,11 @@
     "sum_orphaned": "고아 파일:",
     "clear_orphaned_count": "고아 파일 정리 ({{count}})",
     "cat_private_chat": "채팅",
-    "cat_group_chat": "그룹"
+    "cat_group_chat": "그룹",
+    "delete_count": "삭제 ({{count}})",
+    "no_files": "파일이 없습니다",
+    "page_indicator": "{{count}} 페이지",
+    "selected_count": "{{count}}개 선택됨"
   },
   "group": {
     "group_name": "그룹 이름:",
@@ -526,7 +544,8 @@
     "members_suffix": "명",
     "disbanded": "그룹이 해체되었습니다",
     "clear_data_title": "그룹 데이터 삭제",
-    "clear_data_confirm": "이 그룹의 모든 메시지를 삭제하고 세션 목록에서 제거합니다. 이 작업은 되돌릴 수 없으며 다른 멤버에는 영향을 주지 않습니다. 계속할까요?"
+    "clear_data_confirm": "이 그룹의 모든 메시지를 삭제하고 세션 목록에서 제거합니다. 이 작업은 되돌릴 수 없으며 다른 멤버에는 영향을 주지 않습니다. 계속할까요?",
+    "no_contacts": "연락처가 없습니다"
   },
   "network": {
     "url": "URL:"
@@ -573,6 +592,7 @@
     "just_now": "방금",
     "m_ago": "{{count}}분 전",
     "h_ago": "{{count}}시간 전",
-    "d_ago": "{{count}}일 전"
+    "d_ago": "{{count}}일 전",
+    "yesterday": "어제"
   }
 }

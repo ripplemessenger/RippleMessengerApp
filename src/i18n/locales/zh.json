@@ -34,6 +34,7 @@
     "paste_bulletin": "粘贴公告",
     "create_group": "创建群组",
     "add_server": "添加服务器",
+    "add": "添加",
     "view_server_stats": "查看服务器统计",
     "language": "切换语言",
     "add_contact": "添加联系人",
@@ -59,7 +60,9 @@
     "unfollow": "取消关注",
     "remove_friend": "删除好友",
     "sessions_count": "{{count}} sessions",
-    "contacts_count": "{{count}} contacts"
+    "contacts_count": "{{count}} contacts",
+    "not_found": "未找到",
+    "start_chat": "开始聊天"
   },
   "file": {
     "saved_to_download": "文件已保存到下载目录",
@@ -420,7 +423,9 @@
     "valid_bulletin": "✓ 有效帖子 — 可以保存",
     "tags_max": "标签（最多 {{max}} 个）",
     "bookmarks": "收藏",
-    "about": "关于"
+    "about": "关于",
+    "tag": "标签",
+    "view_bulletins": "查看公告"
   },
   "auth": {
     "open_account": "打开账户",
@@ -462,7 +467,9 @@
     "qr_rescan": "重新扫描",
     "qr_wrong_password": "密码错误 — 解密失败",
     "qr_address_mismatch": "地址不匹配 — seed 与二维码不符",
-    "camera_permission_denied": "摄像头权限被拒绝。请在设置中启用摄像头访问。"
+    "camera_permission_denied": "摄像头权限被拒绝。请在设置中启用摄像头访问。",
+    "generate_failed": "生成账户失败",
+    "password_required": "请输入密码"
   },
   "sync": {
     "title": "局域网同步",
@@ -544,7 +551,8 @@
     "members_suffix": " 人",
     "disbanded": "群已解散",
     "clear_data_title": "清除群聊数据",
-    "clear_data_confirm": "将删除本群所有消息记录，群将从会话列表移除。此操作不可恢复，且不影响其他成员。确定继续？"
+    "clear_data_confirm": "将删除本群所有消息记录，群将从会话列表移除。此操作不可恢复，且不影响其他成员。确定继续？",
+    "no_contacts": "暂无联系人"
   },
   "network": {
     "url": "URL:"
@@ -591,6 +599,7 @@
     "just_now": "刚刚",
     "m_ago": "{{count}} 分钟前",
     "h_ago": "{{count}} 小时前",
-    "d_ago": "{{count}} 天前"
+    "d_ago": "{{count}} 天前",
+    "yesterday": "昨天"
   }
 }

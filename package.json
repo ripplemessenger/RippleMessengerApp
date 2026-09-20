@@ -46,6 +46,7 @@
     "android": "cd android && ./gradlew assembleDebug",
     "android:release": "cd android && ./gradlew assembleRelease",
     "lint": "eslint src",
+    "i18n-check": "node scripts/i18n-check.js",
     "postinstall": "node scripts/patch-crop-picker.js"
   },
   "private": true,

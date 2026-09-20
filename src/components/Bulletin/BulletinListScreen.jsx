@@ -6,6 +6,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
@@ -176,6 +177,16 @@ export default function BulletinListScreen({
   );
 
   const keyExtractor = useCallback((item) => item.hash, []);
+
+  // Handle Android hardware back button and swipe-back gesture
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      navigation.goBack();
+      return true;
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation]);
 
   const hasMore = paginated && (page < totalPage || localPage < totalPage);
 

@@ -34,6 +34,7 @@
     "paste_bulletin": "Colar boletim",
     "create_group": "Criar grupo",
     "add_server": "Adicionar servidor",
+    "add": "Adicionar",
     "view_server_stats": "Ver estatísticas do servidor",
     "language": "Alterar idioma",
     "add_contact": "Adicionar contato",
@@ -56,7 +57,12 @@
     "next": "Próximo",
     "me": "Eu",
     "sessions_count": "{{count}} sessions",
-    "contacts_count": "{{count}} contacts"
+    "contacts_count": "{{count}} contacts",
+    "done": "Concluído",
+    "not_found": "Não encontrado",
+    "remove_friend": "Remover amigo",
+    "start_chat": "Iniciar chat",
+    "unfollow": "Deixar de seguir"
   },
   "file": {
     "saved_to_download": "Arquivo salvo no diretório de downloads",
@@ -142,7 +148,10 @@
     "delete_count": "Excluir ({{count}})",
     "total_count": "{{count}} boletins",
     "page_indicator": "Página {{count}}",
-    "not_logged_in": "Não conectado"
+    "not_logged_in": "Não conectado",
+    "delete_selected_title": "Excluir selecionados",
+    "filter_by_tag": "Filtrar por tag",
+    "no_bulletins": "Sem boletins"
   },
   "setting": {
     "theme_changed": "Tema alterado para {{value}}",
@@ -250,7 +259,12 @@
     "account_deleted": "Conta excluída",
     "failed_to_set_avatar": "Falha ao definir o avatar",
     "active": "{{count}} ativo(s)",
-    "retry": "Tentar novamente"
+    "retry": "Tentar novamente",
+    "camera_denied": "Permissão de câmera negada",
+    "no_camera": "Nenhuma câmera disponível",
+    "qr_code": "Código QR",
+    "scan_hint": "Aponte a câmera para um código QR",
+    "scan_qr": "Escaneiar código QR"
   },
   "ui": {
     "no_sessions": "Nenhuma sessão",
@@ -401,7 +415,10 @@
     "add_friends_first": "Adicione amigos primeiro para encaminhar publicações.",
     "valid_bulletin": "✓ Publicação válida — pronta para salvar",
     "tags_max": "Tags (máx. {{max}})",
-    "about": "Sobre"
+    "about": "Sobre",
+    "bookmarks": "Marcadores",
+    "tag": "Tag",
+    "view_bulletins": "Ver boletins"
   },
   "auth": {
     "open_account": "Abrir conta",
@@ -443,7 +460,9 @@
     "qr_rescan": "Escanear novamente",
     "qr_wrong_password": "Senha incorreta — falha na descriptografia",
     "qr_address_mismatch": "Endereço não corresponde — a seed não corresponde ao código QR",
-    "camera_permission_denied": "Permissão de câmera negada. Habilite o acesso à câmera nas configurações."
+    "camera_permission_denied": "Permissão de câmera negada. Habilite o acesso à câmera nas configurações.",
+    "generate_failed": "Falha ao gerar a conta",
+    "password_required": "A senha é obrigatória"
   },
   "sync": {
     "title": "Sincronização LAN",
@@ -495,7 +514,11 @@
     "sum_orphaned": "Órfãos:",
     "clear_orphaned_count": "Limpar órfãos ({{count}})",
     "cat_private_chat": "Chat",
-    "cat_group_chat": "Grupo"
+    "cat_group_chat": "Grupo",
+    "delete_count": "Excluir ({{count}})",
+    "no_files": "Sem arquivos",
+    "page_indicator": "Página {{count}}",
+    "selected_count": "{{count}} selecionados"
   },
   "group": {
     "group_name": "Nome do grupo:",
@@ -520,7 +543,8 @@
     "members_suffix": " membros",
     "disbanded": "Grupo dissolvido",
     "clear_data_title": "Limpar dados do grupo",
-    "clear_data_confirm": "Isso apagará todas as mensagens deste grupo e o removerá da sua lista de sessões. Esta ação não pode ser desfeita e não afeta outros membros. Continuar?"
+    "clear_data_confirm": "Isso apagará todas as mensagens deste grupo e o removerá da sua lista de sessões. Esta ação não pode ser desfeita e não afeta outros membros. Continuar?",
+    "no_contacts": "Sem contatos"
   },
   "network": {
     "url": "URL:"
@@ -567,6 +591,7 @@
     "just_now": "agora",
     "m_ago": "há {{count}} min",
     "h_ago": "há {{count}} h",
-    "d_ago": "há {{count}} d"
+    "d_ago": "há {{count}} d",
+    "yesterday": "Ontem"
   }
 }

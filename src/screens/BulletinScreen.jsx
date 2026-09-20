@@ -20,7 +20,7 @@ import EmptyState from "../components/common/EmptyState";
 import ListFooter from "../components/common/ListFooter";
 import ModalShell from "../components/common/ModalShell";
 import ConfirmButtonRow from "../components/common/ConfirmButtonRow";
-import { selectPortalBulletins, selectMessengerConnStatus } from "../selectors";
+import { selectPortalBulletins } from "../selectors";
 import { LoadPortalBulletin } from "../store/sagas/messenger.actions";
 import { ACCENT, PLACEHOLDER } from "../lib/theme";
 import {
@@ -45,7 +45,6 @@ export default function BulletinScreen({ navigation }) {
     page: reduxPage,
     totalPage,
   } = useSelector(selectPortalBulletins);
-  const isConnected = useSelector(selectMessengerConnStatus);
 
   // Locally accumulated bulletin list (across pages)
   const [allBulletins, setAllBulletins] = useState([]);
@@ -78,13 +77,11 @@ export default function BulletinScreen({ navigation }) {
     setLoadingMore(false);
   }, [reduxBulletins, reduxPage, loadedPage]);
 
-  // Load initial page when connected
+  // Load initial page — LoadPortalBulletin reads local DB, no network needed
   useFocusEffect(
     useCallback(() => {
-      if (isConnected) {
-        dispatch(LoadPortalBulletin({ page: 1 }));
-      }
-    }, [dispatch, isConnected]),
+      dispatch(LoadPortalBulletin({ page: 1 }));
+    }, [dispatch]),
   );
 
   const handleRefresh = useCallback(() => {

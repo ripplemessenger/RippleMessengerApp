@@ -34,6 +34,7 @@
     "paste_bulletin": "Pegar boletín",
     "create_group": "Crear grupo",
     "add_server": "Añadir servidor",
+    "add": "Añadir",
     "view_server_stats": "Ver estadísticas del servidor",
     "language": "Cambiar idioma",
     "add_contact": "Añadir contacto",
@@ -56,7 +57,12 @@
     "next": "Siguiente",
     "me": "Yo",
     "sessions_count": "{{count}} sessions",
-    "contacts_count": "{{count}} contacts"
+    "contacts_count": "{{count}} contacts",
+    "done": "Listo",
+    "not_found": "No encontrado",
+    "remove_friend": "Quitar amigo",
+    "start_chat": "Iniciar chat",
+    "unfollow": "Dejar de seguir"
   },
   "file": {
     "saved_to_download": "Archivo guardado en el directorio de descargas",
@@ -142,7 +148,10 @@
     "delete_count": "Eliminar ({{count}})",
     "total_count": "{{count}} boletines",
     "page_indicator": "Página {{count}}",
-    "not_logged_in": "No has iniciado sesión"
+    "not_logged_in": "No has iniciado sesión",
+    "delete_selected_title": "Eliminar seleccionados",
+    "filter_by_tag": "Filtrar por etiqueta",
+    "no_bulletins": "No hay boletines"
   },
   "setting": {
     "theme_changed": "Tema cambiado a {{value}}",
@@ -407,7 +416,10 @@
     "add_friends_first": "Agrega amigos primero para reenviar publicaciones.",
     "valid_bulletin": "✓ Publicación válida — lista para guardar",
     "tags_max": "Etiquetas (máx. {{max}})",
-    "about": "Acerca de"
+    "about": "Acerca de",
+    "bookmarks": "Marcadores",
+    "tag": "Etiqueta",
+    "view_bulletins": "Ver boletines"
   },
   "auth": {
     "open_account": "Abrir cuenta",
@@ -449,7 +461,9 @@
     "qr_rescan": "Escanear de nuevo",
     "qr_wrong_password": "Contraseña incorrecta — fallo en el descifrado",
     "qr_address_mismatch": "Dirección no coincide — el seed no coincide con el código QR",
-    "camera_permission_denied": "Permiso de cámara denegado. Habilita el acceso a la cámara en la configuración."
+    "camera_permission_denied": "Permiso de cámara denegado. Habilita el acceso a la cámara en la configuración.",
+    "generate_failed": "No se pudo generar la cuenta",
+    "password_required": "La contraseña es obligatoria"
   },
   "sync": {
     "title": "Sincronización LAN",
@@ -501,7 +515,11 @@
     "sum_orphaned": "Huérfanos:",
     "clear_orphaned_count": "Limpiar huérfanos ({{count}})",
     "cat_private_chat": "Chat",
-    "cat_group_chat": "Grupo"
+    "cat_group_chat": "Grupo",
+    "delete_count": "Eliminar ({{count}})",
+    "no_files": "No hay archivos",
+    "page_indicator": "Página {{count}}",
+    "selected_count": "{{count}} seleccionados"
   },
   "group": {
     "group_name": "Nombre del grupo:",
@@ -526,7 +544,8 @@
     "members_suffix": " miembros",
     "disbanded": "Grupo disuelto",
     "clear_data_title": "Borrar datos del grupo",
-    "clear_data_confirm": "Esto eliminará todos los mensajes de este grupo y lo quitará de tu lista de sesiones. Esta acción no se puede deshacer y no afecta a otros miembros. ¿Continuar?"
+    "clear_data_confirm": "Esto eliminará todos los mensajes de este grupo y lo quitará de tu lista de sesiones. Esta acción no se puede deshacer y no afecta a otros miembros. ¿Continuar?",
+    "no_contacts": "No hay contactos"
   },
   "network": {
     "url": "URL:"
@@ -573,6 +592,7 @@
     "just_now": "ahora mismo",
     "m_ago": "hace {{count}} min",
     "h_ago": "hace {{count}} h",
-    "d_ago": "hace {{count}} d"
+    "d_ago": "hace {{count}} d",
+    "yesterday": "Ayer"
   }
 }

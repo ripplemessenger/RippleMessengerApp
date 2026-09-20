@@ -34,6 +34,7 @@
     "paste_bulletin": "Coller un bulletin",
     "create_group": "Créer un groupe",
     "add_server": "Ajouter un serveur",
+    "add": "Ajouter",
     "view_server_stats": "Voir les statistiques du serveur",
     "language": "Changer de langue",
     "add_contact": "Ajouter un contact",
@@ -56,7 +57,12 @@
     "next": "Suiv.",
     "me": "Moi",
     "sessions_count": "{{count}} sessions",
-    "contacts_count": "{{count}} contacts"
+    "contacts_count": "{{count}} contacts",
+    "done": "Terminé",
+    "not_found": "Introuvable",
+    "remove_friend": "Retirer l'ami",
+    "start_chat": "Démarrer la discussion",
+    "unfollow": "Ne plus suivre"
   },
   "file": {
     "saved_to_download": "Fichier enregistré dans le répertoire de téléchargement",
@@ -142,7 +148,10 @@
     "delete_count": "Supprimer ({{count}})",
     "total_count": "{{count}} bulletins",
     "page_indicator": "Page {{count}}",
-    "not_logged_in": "Non connecté"
+    "not_logged_in": "Non connecté",
+    "delete_selected_title": "Supprimer la sélection",
+    "filter_by_tag": "Filtrer par tag",
+    "no_bulletins": "Aucun bulletin"
   },
   "setting": {
     "theme_changed": "Thème changé en {{value}}",
@@ -407,7 +416,10 @@
     "add_friends_first": "Ajoutez d'abord des amis pour transférer des messages.",
     "valid_bulletin": "✓ Message valide — prêt à être enregistré",
     "tags_max": "Tags (max. {{max}})",
-    "about": "À propos"
+    "about": "À propos",
+    "bookmarks": "Signets",
+    "tag": "Tag",
+    "view_bulletins": "Voir les bulletins"
   },
   "auth": {
     "open_account": "Ouvrir un compte",
@@ -449,7 +461,9 @@
     "qr_rescan": "Rescanner",
     "qr_wrong_password": "Mot de passe incorrect — échec du déchiffrement",
     "qr_address_mismatch": "Adresse non correspondante — le seed ne correspond pas au code QR",
-    "camera_permission_denied": "Accès à la caméra refusé. Veuillez activer l'accès à la caméra dans les paramètres."
+    "camera_permission_denied": "Accès à la caméra refusé. Veuillez activer l'accès à la caméra dans les paramètres.",
+    "generate_failed": "Échec de la génération du compte",
+    "password_required": "Le mot de passe est requis"
   },
   "sync": {
     "title": "Synchronisation LAN",
@@ -501,7 +515,11 @@
     "sum_orphaned": "Orphelins :",
     "clear_orphaned_count": "Nettoyer les orphelins ({{count}})",
     "cat_private_chat": "Chat",
-    "cat_group_chat": "Groupe"
+    "cat_group_chat": "Groupe",
+    "delete_count": "Supprimer ({{count}})",
+    "no_files": "Aucun fichier",
+    "page_indicator": "Page {{count}}",
+    "selected_count": "{{count}} sélectionnés"
   },
   "group": {
     "group_name": "Nom du groupe :",
@@ -526,7 +544,8 @@
     "members_suffix": " membres",
     "disbanded": "Groupe dissous",
     "clear_data_title": "Effacer les données du groupe",
-    "clear_data_confirm": "Cela supprimera tous les messages de ce groupe et l'enlèvera de votre liste de sessions. Cette action est irréversible et n'affecte pas les autres membres. Continuer ?"
+    "clear_data_confirm": "Cela supprimera tous les messages de ce groupe et l'enlèvera de votre liste de sessions. Cette action est irréversible et n'affecte pas les autres membres. Continuer ?",
+    "no_contacts": "Aucun contact"
   },
   "network": {
     "url": "URL :"
@@ -573,6 +592,7 @@
     "just_now": "à l'instant",
     "m_ago": "il y a {{count}} min",
     "h_ago": "il y a {{count}} h",
-    "d_ago": "il y a {{count}} j"
+    "d_ago": "il y a {{count}} j",
+    "yesterday": "Hier"
   }
 }

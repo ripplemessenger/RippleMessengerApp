@@ -34,6 +34,7 @@
     "paste_bulletin": "ブuletinを貼り付け",
     "create_group": "グループを作成",
     "add_server": "サーバーを追加",
+    "add": "追加",
     "view_server_stats": "サーバー統計を表示",
     "language": "言語を変更",
     "add_contact": "連絡先を追加",
@@ -56,7 +57,12 @@
     "next": "次へ",
     "me": "自分",
     "sessions_count": "{{count}} sessions",
-    "contacts_count": "{{count}} contacts"
+    "contacts_count": "{{count}} contacts",
+    "done": "完了",
+    "not_found": "見つかりません",
+    "remove_friend": "友達を削除",
+    "start_chat": "チャットを開始",
+    "unfollow": "フォロー解除"
   },
   "file": {
     "saved_to_download": "ファイルがダウンロードディレクトリに保存されました",
@@ -142,7 +148,10 @@
     "delete_count": "削除 ({{count}})",
     "total_count": "{{count}}件の公告",
     "page_indicator": "{{count}}ページ",
-    "not_logged_in": "ログインしていません"
+    "not_logged_in": "ログインしていません",
+    "delete_selected_title": "選択を削除",
+    "filter_by_tag": "タグで絞り込み",
+    "no_bulletins": "ブuletinがありません"
   },
   "setting": {
     "theme_changed": "テーマを{{value}}に変更しました",
@@ -407,7 +416,10 @@
     "add_friends_first": "まずフレンドを追加して投稿を転送してください。",
     "valid_bulletin": "✓ 有効な投稿 — 保存できます",
     "tags_max": "タグ（最大 {{max}} 件）",
-    "about": "について"
+    "about": "について",
+    "bookmarks": "ブックマーク",
+    "tag": "タグ",
+    "view_bulletins": "ブuletinを表示"
   },
   "auth": {
     "open_account": "アカウントを開く",
@@ -449,7 +461,9 @@
     "qr_rescan": "再スキャン",
     "qr_wrong_password": "パスワードが違います — 復号に失敗しました",
     "qr_address_mismatch": "アドレスが一致しません — シードが QR コードと一致しません",
-    "camera_permission_denied": "カメラのアクセスが拒否されました。設定でカメラアクセスを有効にしてください。"
+    "camera_permission_denied": "カメラのアクセスが拒否されました。設定でカメラアクセスを有効にしてください。",
+    "generate_failed": "アカウント生成に失敗しました",
+    "password_required": "パスワードを入力してください"
   },
   "sync": {
     "title": "LAN 同期",
@@ -501,7 +515,11 @@
     "sum_orphaned": "孤立ファイル：",
     "clear_orphaned_count": "孤立ファイルを削除 ({{count}})",
     "cat_private_chat": "チャット",
-    "cat_group_chat": "グループ"
+    "cat_group_chat": "グループ",
+    "delete_count": "削除 ({{count}})",
+    "no_files": "ファイルがありません",
+    "page_indicator": "{{count}} ページ目",
+    "selected_count": "{{count}} 件選択"
   },
   "group": {
     "group_name": "グループ名:",
@@ -526,7 +544,8 @@
     "members_suffix": " 人",
     "disbanded": "グループは解散しました",
     "clear_data_title": "グループデータを削除",
-    "clear_data_confirm": "このグループのすべてのメッセージを削除し、セッションリストから削除します。この操作は元に戻せません。他のメンバーには影響しません。続行しますか？"
+    "clear_data_confirm": "このグループのすべてのメッセージを削除し、セッションリストから削除します。この操作は元に戻せません。他のメンバーには影響しません。続行しますか？",
+    "no_contacts": "連絡先がありません"
   },
   "network": {
     "url": "URL:"
@@ -573,6 +592,7 @@
     "just_now": "たった今",
     "m_ago": "{{count}}分前",
     "h_ago": "{{count}}時間前",
-    "d_ago": "{{count}}日前"
+    "d_ago": "{{count}}日前",
+    "yesterday": "昨日"
   }
 }

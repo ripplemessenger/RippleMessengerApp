@@ -36,6 +36,7 @@
     "paste_bulletin": "Paste bulletin",
     "create_group": "Create group",
     "add_server": "Add server",
+    "add": "Add",
     "view_server_stats": "View server statistics",
     "language": "Switch language",
     "add_contact": "Add contact",
@@ -60,7 +61,8 @@
     "me": "Me",
     "done": "Done",
     "sessions_count": "{{count}} sessions",
-    "contacts_count": "{{count}} contacts"
+    "contacts_count": "{{count}} contacts",
+    "not_found": "Not found"
   },
   "file": {
     "saved_to_download": "File saved to download directory",
@@ -422,7 +424,8 @@
     "valid_bulletin": "✓ Valid bulletin — ready to save",
     "tags_max": "Tags (max {{max}})",
     "bookmarks": "Bookmarks",
-    "about": "About"
+    "about": "About",
+    "tag": "Tag"
   },
   "auth": {
     "open_account": "Open Account",
@@ -464,7 +467,9 @@
     "qr_rescan": "Scan Again",
     "qr_wrong_password": "Wrong password — decryption failed",
     "qr_address_mismatch": "Address mismatch — seed does not match QR code",
-    "camera_permission_denied": "Camera permission denied. Please enable camera access in settings."
+    "camera_permission_denied": "Camera permission denied. Please enable camera access in settings.",
+    "generate_failed": "Failed to generate account",
+    "password_required": "Password is required"
   },
   "sync": {
     "title": "LAN Sync",
@@ -546,7 +551,8 @@
     "members_suffix": " members",
     "disbanded": "Group disbanded",
     "clear_data_title": "Clear Group Data",
-    "clear_data_confirm": "This will delete all messages in this group and remove it from your session list. This action cannot be undone and does not affect other members. Continue?"
+    "clear_data_confirm": "This will delete all messages in this group and remove it from your session list. This action cannot be undone and does not affect other members. Continue?",
+    "no_contacts": "No contacts"
   },
   "network": {
     "url": "URL:"
@@ -593,6 +599,7 @@
     "just_now": "just now",
     "m_ago": "{{count}}m ago",
     "h_ago": "{{count}}h ago",
-    "d_ago": "{{count}}d ago"
+    "d_ago": "{{count}}d ago",
+    "yesterday": "Yesterday"
   }
 }
