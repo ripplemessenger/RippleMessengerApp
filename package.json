@@ -38,7 +38,7 @@
     "react-redux": "^9.3.0",
     "redux-saga": "^1.5.0",
     "ripemd160": "^2.0.3",
-    "ripple-keypairs": "^3.0.0",
+    "ripple-keypairs": "^3.1.0",
     "text-encoding": "^0.7.0"
   },
   "scripts": {
