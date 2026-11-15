@@ -53,6 +53,50 @@ class SQLiteDatabase {
 }
 
 /**
+ * Conservative cap on bound parameters per statement.
+ *
+ * SQLite's SQLITE_MAX_VARIABLE_NUMBER defaults to 999 on builds older than
+ * 3.32, so stay comfortably under that. Used by the batching helpers below to
+ * collapse "one statement per row" loops into a handful of multi-row
+ * statements (SQLite executes each statement atomically, which is the only
+ * transaction primitive available here — this plugin exposes no BEGIN/COMMIT
+ * and its connection pool would not honour a cross-call transaction anyway).
+ */
+export const MAX_SQL_VARS = 900;
+
+/**
+ * Split a list into chunks whose multi-row statement stays within the
+ * parameter cap.
+ * @param items - Items to batch
+ * @param varsPerItem - Bound parameters each item contributes
+ */
+export function chunkByVars<T>(items: T[], varsPerItem: number): T[][] {
+  const size = Math.max(1, Math.floor(MAX_SQL_VARS / varsPerItem));
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    out.push(items.slice(i, i + size));
+  }
+  return out;
+}
+
+/**
+ * Build a multi-row placeholder list: `($1, $2), ($3, $4), …`.
+ * @param count - Number of rows
+ * @param varsPerItem - Parameters per row
+ */
+export function valueGroups(count: number, varsPerItem: number): string {
+  const groups: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const tuple: string[] = [];
+    for (let v = 0; v < varsPerItem; v++) {
+      tuple.push(`$${i * varsPerItem + v + 1}`);
+    }
+    groups.push(`(${tuple.join(", ")})`);
+  }
+  return groups.join(", ");
+}
+
+/**
  * All CREATE TABLE schemas for the RippleMessenger database.
  */
 const SCHEMAS: string[] = [
@@ -105,7 +149,8 @@ const SCHEMAS: string[] = [
   `CREATE TABLE IF NOT EXISTS bulletins (
     hash TEXT PRIMARY KEY, address TEXT NOT NULL, sequence INTEGER NOT NULL,
     content TEXT NOT NULL, json TEXT NOT NULL, signed_at INTEGER NOT NULL,
-    pre_hash TEXT NOT NULL, next_hash TEXT, is_marked INTEGER DEFAULT 0);`,
+    pre_hash TEXT NOT NULL, next_hash TEXT, is_marked INTEGER DEFAULT 0,
+    marked_at INTEGER DEFAULT 0);`,
 
   `CREATE TABLE IF NOT EXISTS bulletin_replys (
     bulletin_hash TEXT NOT NULL, reply_hash TEXT NOT NULL,
@@ -137,6 +182,7 @@ const SCHEMAS: string[] = [
     sequence INTEGER NOT NULL, pre_hash TEXT NOT NULL,
     content TEXT NOT NULL, json TEXT NOT NULL, signed_at INTEGER NOT NULL,
     is_confirmed INTEGER DEFAULT 0, is_marked INTEGER DEFAULT 0,
+    marked_at INTEGER DEFAULT 0,
     is_readed INTEGER DEFAULT 0, is_object INTEGER DEFAULT 0,
     object_type INTEGER DEFAULT 0);`,
 
@@ -151,7 +197,8 @@ const SCHEMAS: string[] = [
     address TEXT NOT NULL, sequence INTEGER NOT NULL,
     pre_hash TEXT NOT NULL, content TEXT NOT NULL, json TEXT NOT NULL,
     signed_at INTEGER NOT NULL, is_confirmed INTEGER DEFAULT 0,
-    is_marked INTEGER DEFAULT 0, is_readed INTEGER DEFAULT 0,
+    is_marked INTEGER DEFAULT 0, marked_at INTEGER DEFAULT 0,
+    is_readed INTEGER DEFAULT 0,
     is_object INTEGER DEFAULT 0, object_type INTEGER DEFAULT 0);`,
 ];
 
@@ -223,7 +270,78 @@ function initDB(): void {
       );
     }
   }
+
+  // Migration: add marked_at column to message tables if missing.
+  for (const table of ["bulletins", "private_messages", "group_messages"]) {
+    const colInfo = NitroSQLite.execute(
+      DB_NAME,
+      `SELECT COUNT(*) AS cnt FROM pragma_table_info("${table}") WHERE name = "marked_at"`,
+    );
+    const colCount =
+      colInfo.rows && colInfo.rows._array && colInfo.rows._array.length > 0
+        ? colInfo.rows._array[0].cnt
+        : 0;
+    if (colCount === 0) {
+      NitroSQLite.execute(
+        DB_NAME,
+        `ALTER TABLE ${table} ADD COLUMN marked_at INTEGER DEFAULT 0`,
+      );
+    }
+  }
+  // Create indexes for query performance
+  createIndexes();
+
   Logger.info("[DB-DEBUG] initDB done");
+}
+
+/**
+ * Create all indexes for query performance.
+ * Mirrors the indexes from Client's core.js (added 2024-11-11).
+ */
+function createIndexes(): void {
+  const statements = [
+    // ── bulletins ──
+    // per-address chain walk: last bulletin, by-sequence lookup, gap fill
+    'CREATE INDEX IF NOT EXISTS idx_bulletins_address_sequence ON bulletins(address, sequence)',
+    // portal / followed / bookmark feeds all sort by signed_at
+    'CREATE INDEX IF NOT EXISTS idx_bulletins_signed_at ON bulletins(signed_at)',
+    'CREATE INDEX IF NOT EXISTS idx_bulletins_is_marked_signed_at ON bulletins(is_marked, signed_at)',
+
+    // ── bulletin relations ──
+    'CREATE INDEX IF NOT EXISTS idx_bulletin_replys_hash_signed_at ON bulletin_replys(bulletin_hash, reply_signed_at)',
+    'CREATE INDEX IF NOT EXISTS idx_bulletin_files_file_hash ON bulletin_files(file_hash)',
+    'CREATE INDEX IF NOT EXISTS idx_bulletin_tags_tag_signed_at ON bulletin_tags(tag_id, bulletin_signed_at)',
+
+    // ── private messages ── (two independent directions, so both orders)
+    'CREATE INDEX IF NOT EXISTS idx_private_messages_sour_dest_signed_at ON private_messages(sour, dest, signed_at)',
+    'CREATE INDEX IF NOT EXISTS idx_private_messages_dest_sour_signed_at ON private_messages(dest, sour, signed_at)',
+    'CREATE INDEX IF NOT EXISTS idx_private_messages_sour_dest_sequence ON private_messages(sour, dest, sequence)',
+
+    // ── group messages ──
+    'CREATE INDEX IF NOT EXISTS idx_group_messages_group_signed_at ON group_messages(group_hash, signed_at)',
+    'CREATE INDEX IF NOT EXISTS idx_group_messages_group_address_sequence ON group_messages(group_hash, address, sequence)',
+    'CREATE INDEX IF NOT EXISTS idx_group_messages_group_is_readed ON group_messages(group_hash, is_readed)',
+
+    // ── files / avatars ──
+    'CREATE INDEX IF NOT EXISTS idx_files_is_saved_updated_at ON files(is_saved, updated_at)',
+    'CREATE INDEX IF NOT EXISTS idx_avatar_files_hash ON avatar_files(hash)',
+    'CREATE INDEX IF NOT EXISTS idx_avatar_files_updated_at ON avatar_files(updated_at)',
+    'CREATE INDEX IF NOT EXISTS idx_private_chat_files_hash ON private_chat_files(hash)',
+    'CREATE INDEX IF NOT EXISTS idx_group_chat_files_hash ON group_chat_files(hash)',
+    'CREATE INDEX IF NOT EXISTS idx_group_chat_files_group_hash ON group_chat_files(group_hash)',
+
+    // ── groups ──
+    'CREATE INDEX IF NOT EXISTS idx_groups_is_accepted ON groups(is_accepted)'
+  ];
+
+  for (const sql of statements) {
+    try {
+      NitroSQLite.execute(DB_NAME, sql);
+    } catch (e: any) {
+      // A failed index must not stop the app from starting.
+      Logger.warn('[DB-Index] failed:', sql, e.message || e);
+    }
+  }
 }
 
 /**

@@ -29,6 +29,8 @@ import {
   pushMetadata,
   pushHandshakes,
   pushFile,
+  pushReadState,
+  pushMarkedState,
 } from "../lib/syncClient";
 import { dbAPI } from "../db";
 import { store } from "../store";
@@ -346,6 +348,45 @@ export default function SyncScreen() {
         addLog(`Group msgs push error: ${e.message}`);
       }
 
+      // Push 5.5: Read watermarks — one number per conversation.
+      // Message push is sequence-bounded, so a read flag changed on an
+      // already-synced message never reaches the other device through that path.
+      try {
+        const readPrivate = await dbAPI.getReadWatermarks(addr);
+        const readGroups = await dbAPI.getGroupReadWatermarks();
+        const rsResult = await pushReadState(ip.trim(), addr, {
+          private: readPrivate,
+          groups: readGroups,
+        });
+        if (rsResult.ok) {
+          addLog(
+            `Read state pushed: ${Object.keys(readPrivate).length} peer(s), ${Object.keys(readGroups).length} group(s)`,
+          );
+        } else {
+          addLog(`Read state push failed: ${rsResult.error}`);
+        }
+      } catch (e) {
+        addLog(`Read state push error: ${e.message}`);
+      }
+
+      // Push 5.6: Marked bulletins — per-message flag with timestamp.
+      // Unlike read (monotonic), mark is bidirectional; compare marked_at.
+      try {
+        const markedList = await dbAPI.getMarkedBulletins();
+        if (markedList.length === 0) {
+          addLog("No marked bulletins to push");
+        } else {
+          const msResult = await pushMarkedState(ip.trim(), addr, markedList);
+          if (msResult.ok) {
+            addLog(`Marked state pushed: ${markedList.length} bulletin(s), ${msResult.applied} applied`);
+          } else {
+            addLog(`Marked state push failed: ${msResult.error}`);
+          }
+        }
+      } catch (e) {
+        addLog(`Marked state push error: ${e.message}`);
+      }
+
       // Push 6: Files — hash existence (read from disk, push to Client)
       try {
         const allFiles = await dbAPI.getAllFilesWithUsage();
@@ -480,6 +521,36 @@ export default function SyncScreen() {
           } catch (e) {
             Logger.warn("[Sync] Failed to save handshake:", e.message);
           }
+        }
+      }
+
+      // 5.7: Apply read watermarks pulled from the Client.
+      // Pulled messages go through INSERT OR IGNORE, so an already-present row
+      // keeps this device's stale is_readed; the watermark is what actually
+      // carries "I read this" across devices.
+      if (state.read) {
+        try {
+          const rp = await dbAPI.applyReadWatermarks(
+            addr,
+            state.read.private || {},
+          );
+          const rg = await dbAPI.applyGroupReadWatermarks(
+            state.read.groups || {},
+          );
+          addLog(`Read state applied: ${rp} peer(s), ${rg} group(s)`);
+        } catch (e) {
+          addLog(`Read state apply error: ${e.message}`);
+        }
+      }
+
+      // 5.8: Apply marked bulletins pulled from the Client.
+      // Per-message flag with timestamp; only apply if incoming marked_at is newer.
+      if (state.marked && state.marked.length > 0) {
+        try {
+          const applied = await dbAPI.applyMarkedBulletins(state.marked);
+          addLog(`Marked state applied: ${applied} bulletin(s)`);
+        } catch (e) {
+          addLog(`Marked state apply error: ${e.message}`);
         }
       }
 

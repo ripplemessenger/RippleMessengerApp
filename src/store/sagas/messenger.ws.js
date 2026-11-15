@@ -89,8 +89,24 @@ function handleControlMessage(json) {
     }
   }
 
-  // Unknown MessageCode
-  Logger.warn(`[ServerNotify] Unknown MessageCode: ${msgCode}`, json);
+  // Unhandled MessageCode.
+  //
+  // This client deliberately does not mirror the server's full MessageCode
+  // enum (that would be a 4th hand-maintained copy — see the protocol-audit
+  // notes). But an unrecognised code must never be silent: the server sends
+  // plain `ServerNotify` frames for real rejections — 713 NotAllowed is the
+  // big one, emitted on every whitelist / chat-filter rejection — and a silent
+  // drop looks to the user like "the message sent" when the server discarded it.
+  //
+  // So: any 7xx we don't explicitly handle is still surfaced in the UI, using
+  // the server-supplied ErrorMessage when present and a generic label otherwise.
+  Logger.warn(`[ServerNotify] Unhandled MessageCode: ${msgCode}`, json);
+  if (typeof msgCode === "number" && msgCode >= 700 && msgCode < 800) {
+    return setFlashNoticeMessage({
+      message: msgText || `Server rejected the request (code ${msgCode})`,
+      duration: FLASH_DURATION_MS * 2,
+    });
+  }
   return null;
 }
 

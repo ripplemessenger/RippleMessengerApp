@@ -61,15 +61,31 @@ export const api = {
     )
   },
 
+  /**
+   * Re-rank servers by their current priority/updated_at order.
+   *
+   * Was one UPDATE per server; now a single CASE statement. `$N` is a single
+   * parameter slot, so the CASE and the IN list share the same indices and only
+   * N values are bound.
+   */
   async updateServerPriority() {
     const db = await getDB()
-    const server_list = await db.select('SELECT * FROM servers ORDER BY priority DESC, updated_at DESC')
-    const server_count = server_list.length
-    for (let i = 0; i < server_list.length; i++) {
-      await db.execute(
-        'UPDATE servers SET priority = $1 WHERE url = $2',
-        [server_count - i, server_list[i].url]
-      )
+    const server_list = await db.select(
+      'SELECT url FROM servers ORDER BY priority DESC, updated_at DESC'
+    )
+    const total = server_list.length
+    if (total === 0) return
+
+    const whens = []
+    const params = []
+    for (let i = 0; i < total; i++) {
+      whens.push(`WHEN $${params.length + 1} THEN ${total - i}`)
+      params.push(server_list[i].url)
     }
+    await db.execute(
+      `UPDATE servers SET priority = CASE url ${whens.join(' ')} END
+       WHERE url IN (${server_list.map((_, i) => `$${i + 1}`).join(', ')})`,
+      params
+    )
   },
 }

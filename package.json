@@ -3,6 +3,7 @@
   "version": "0.1.1",
   "main": "index.js",
   "dependencies": {
+    "@ripplemessenger/protocol": "file:./protocol",
     "@react-navigation/bottom-tabs": "^6.6.0",
     "@react-navigation/native": "^6.1.7",
     "@react-navigation/native-stack": "^6.9.14",

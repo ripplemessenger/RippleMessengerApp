@@ -57,7 +57,7 @@ import {
   RefreshPrivateMessageList,
 } from "./messenger.private";
 import { RefreshGroupMessageList, GroupSync } from "./messenger.group";
-import { LoadSessionList } from "./messenger.session";
+import { LoadSessionList, BumpSession } from "./messenger.session";
 import { LoadGroupList, LoadGroupRequestList } from "./MessengerSaga";
 
 // Module-level EC curve singleton — avoids re-initializing on every ECDH handshake.
@@ -572,7 +572,7 @@ function* processPrivateMessage(json, address, ob_address) {
       ) {
         yield call(RefreshPrivateMessageList);
       }
-      yield call(LoadSessionList);
+      yield call(BumpSession, { sessionType: SessionType.Private, key: remote, timestamp: json.Timestamp, unread: !is_readed });
       // Push notification + sound only for UNREAD messages — no attention-grab if the user is already in this chat.
       if (!is_readed) {
         const notifBody = json.Nickname || remote;
@@ -800,7 +800,7 @@ function* handleGroupMessageListObject(json, address, seed) {
         ) {
           yield call(RefreshGroupMessageList);
         }
-        yield call(LoadSessionList);
+        yield call(BumpSession, { sessionType: SessionType.Group, key: json.GroupHash, timestamp: verify_json.Timestamp, unread: !is_readed });
         // Push notification + sound only for UNREAD messages — no attention-grab if the user is already in this chat.
         if (!is_readed) {
           const groupNotifBody = `${group.Name}: ${shortenAddress(msg_address)}`;

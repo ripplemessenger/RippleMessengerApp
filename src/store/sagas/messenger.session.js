@@ -12,73 +12,63 @@ export function* LoadSessionList() {
     }
     let session_list = [];
 
-    // Private sessions: batch all friend queries in parallel
+    // Private sessions: one aggregate query for unread + timestamp, then per-peer last_message
     const friend_list = yield call(() => dbAPI.getMyFriends(address));
     if (friend_list.length > 0) {
-      const friendResults = yield all(
+      const summaries = yield call(() => dbAPI.getPrivateSessionSummaries(address));
+      const lastMsgResults = yield all(
         friend_list.map((friend) =>
-          all([
-            call(() => dbAPI.getPrivateNewMessageCount(address, friend.remote)),
-            call(() =>
-              dbAPI.getLastPrivateMessageSignedAt(address, friend.remote),
-            ),
-            call(() =>
-              dbAPI.getLastPrivateMessageBothDir(address, friend.remote),
-            ),
-          ]),
+          call(() => dbAPI.getLastPrivateMessageBothDir(address, friend.remote)),
         ),
       );
       for (let i = 0; i < friend_list.length; i++) {
-        const [new_msg_count, last_msg_signed_at, last_message] =
-          friendResults[i];
+        const peer = friend_list[i].remote;
+        const summary = summaries[peer];
         session_list.push({
           type: SessionType.Private,
-          address: friend_list[i].remote,
-          new_msg_count,
-          updated_at: last_msg_signed_at,
-          last_message,
+          address: peer,
+          new_msg_count: summary ? summary.unread : 0,
+          updated_at: summary ? summary.last_signed_at : 0,
+          last_message: lastMsgResults[i],
         });
       }
     }
 
-    // Group sessions: batch all group queries in parallel
+    // Group sessions: one aggregate query for unread + timestamp, then per-group last_message
     const group_list = yield select((state) => state.Messenger.GroupList);
     if (group_list.length > 0) {
-      const groupResults = yield all(
-        group_list.map((group) => {
-          if (group.cleared_at !== null && group.cleared_at !== undefined) {
-            return null;
-          }
-          let member = [...group.member];
-          member.push(group.created_by);
-          member = [...new Set(member)];
-          if (!member.includes(address)) {
-            return null;
-          }
-          return all([
-            call(() => dbAPI.getGroupNewMessageCount(group.hash)),
-            call(() => dbAPI.getLastGroupMessageSignedAt(group.hash)),
-            call(() => dbAPI.getLastGroupMessage(group.hash)),
-          ]);
-        }),
-      );
+      const joined_groups = [];
       for (let i = 0; i < group_list.length; i++) {
-        const result = groupResults[i];
-        if (result === null) continue;
-        const [new_msg_count, last_msg_signed_at, last_message] = result;
-        let member = [...group_list[i].member];
-        member.push(group_list[i].created_by);
+        const group = group_list[i];
+        if (group.cleared_at !== null && group.cleared_at !== undefined) continue;
+        let member = [...group.member];
+        member.push(group.created_by);
         member = [...new Set(member)];
-        session_list.push({
-          type: SessionType.Group,
-          hash: group_list[i].hash,
-          name: group_list[i].name,
-          member,
-          new_msg_count,
-          updated_at: last_msg_signed_at,
-          last_message,
-          delete_json: group_list[i].delete_json || null,
-        });
+        if (!member.includes(address)) continue;
+        joined_groups.push({ ...group, member });
+      }
+
+      if (joined_groups.length > 0) {
+        const summaries = yield call(() =>
+          dbAPI.getGroupSessionSummaries(joined_groups.map((g) => g.hash)),
+        );
+        const lastMsgResults = yield all(
+          joined_groups.map((g) => call(() => dbAPI.getLastGroupMessage(g.hash))),
+        );
+        for (let i = 0; i < joined_groups.length; i++) {
+          const group = joined_groups[i];
+          const summary = summaries[group.hash];
+          session_list.push({
+            type: SessionType.Group,
+            hash: group.hash,
+            name: group.name,
+            member: group.member,
+            new_msg_count: summary ? summary.unread : 0,
+            updated_at: summary ? summary.last_signed_at : 0,
+            last_message: lastMsgResults[i],
+            delete_json: group.delete_json || null,
+          });
+        }
       }
     }
 
@@ -88,5 +78,39 @@ export function* LoadSessionList() {
     yield put(setSessionList(session_list));
   } catch (e) {
     Logger.error("[LoadSessionList] failed:", e.message);
+  }
+}
+
+/**
+ * Bump a single session entry in the Redux store — zero DB queries.
+ *
+ * Called after a new private/group message is stored, instead of re-running
+ * the full LoadSessionList (O(n) queries). We just increment the unread count
+ * and update the timestamp for the one affected session, then re-sort.
+ */
+export function* BumpSession({ sessionType, key, timestamp, unread = true }) {
+  try {
+    const session_list = yield select((state) => state.Messenger.SessionList);
+    if (!session_list || session_list.length === 0) {
+      yield call(LoadSessionList);
+      return;
+    }
+
+    const updated = session_list.map((s) => {
+      const isMatch =
+        (sessionType === SessionType.Private && s.type === SessionType.Private && s.address === key) ||
+        (sessionType === SessionType.Group && s.type === SessionType.Group && s.hash === key);
+      if (!isMatch) return s;
+      return {
+        ...s,
+        new_msg_count: unread ? s.new_msg_count + 1 : s.new_msg_count,
+        updated_at: timestamp,
+      };
+    });
+
+    updated.sort((a, b) => b.updated_at - a.updated_at);
+    yield put(setSessionList(updated));
+  } catch (e) {
+    Logger.error("[BumpSession] failed:", e.message);
   }
 }

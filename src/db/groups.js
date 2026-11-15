@@ -176,6 +176,73 @@ export const api = {
     return result ? result.count : 0;
   },
 
+  /**
+   * Aggregate unread count + last signed_at for ALL given group hashes in one query.
+   * Replaces the per-group pair of getGroupNewMessageCount + getLastGroupMessageSignedAt.
+   * @param {string[]} hashes - Array of group hash strings
+   * @returns {Promise<Object>} { [hash]: { unread, last_signed_at } }
+   */
+  async getGroupSessionSummaries(hashes) {
+    if (!hashes || hashes.length === 0) return {};
+    const dbInstance = await getDB();
+    const placeholders = hashes.map((_, i) => `$${i + 1}`).join(',');
+    const rows = await dbInstance.select(
+      `SELECT
+         group_hash,
+         SUM(CASE WHEN is_readed = 0 THEN 1 ELSE 0 END) AS unread,
+         MAX(signed_at) AS last_signed_at
+       FROM group_messages
+       WHERE group_hash IN (${placeholders})
+       GROUP BY group_hash`,
+      hashes,
+    );
+    const summaries = {};
+    for (const row of rows) {
+      summaries[row.group_hash] = { unread: row.unread, last_signed_at: row.last_signed_at };
+    }
+    return summaries;
+  },
+
+  /**
+   * Read watermark per group: the newest signed_at already marked read.
+   * Named with a Group prefix because dbAPI is a flat spread of every module —
+   * a bare `getReadWatermarks` would collide with privateMessages' version
+   * (groups is spread last, so it would silently win).
+   * @returns {Promise<Object<string, number>>} group hash -> signed_at
+   */
+  async getGroupReadWatermarks() {
+    const dbInstance = await getDB();
+    const rows = await dbInstance.select(
+      `SELECT group_hash, MAX(signed_at) AS ts FROM group_messages
+         WHERE is_readed = 1 GROUP BY group_hash`,
+    );
+    const out = {};
+    for (const row of rows) out[row.group_hash] = row.ts;
+    return out;
+  },
+
+  /**
+   * Apply group read watermarks received from another device. Monotonic: only
+   * sets is_readed = 1.
+   * @param {Object<string, number>} map - group hash -> signed_at
+   * @returns {Promise<number>} Number of groups applied
+   */
+  async applyGroupReadWatermarks(map) {
+    if (!map || typeof map !== "object") return 0;
+    const db = await getDB();
+    let applied = 0;
+    for (const [ghash, raw] of Object.entries(map)) {
+      const ts = Number(raw);
+      if (!ghash || !Number.isFinite(ts) || ts <= 0) continue;
+      await db.execute(
+        "UPDATE group_messages SET is_readed = 1 WHERE group_hash = $1 AND signed_at <= $2 AND is_readed = 0",
+        [ghash, ts],
+      );
+      applied++;
+    }
+    return applied;
+  },
+
   async readGroupSession(group_hash) {
     const db = await getDB();
     await db.execute(

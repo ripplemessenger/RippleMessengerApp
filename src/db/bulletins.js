@@ -1,7 +1,7 @@
 import { Bool2Int, Int2Bool } from "../lib/AppUtil";
 import { BulletinPageSize } from "../lib/AppConst";
 import { bulletin2Display } from "../lib/MessengerUtil";
-import { getDB } from "./core";
+import { getDB, chunkByVars, valueGroups } from "./core";
 
 export const api = {
   async getPortalBulletins(page) {
@@ -194,10 +194,33 @@ export const api = {
 
   async toggleBulletinMark(hash, is_marked) {
     const db = await getDB();
-    await db.execute("UPDATE bulletins SET is_marked = $1 WHERE hash = $2", [
+    await db.execute("UPDATE bulletins SET is_marked = $1, marked_at = $2 WHERE hash = $3", [
       Bool2Int(is_marked),
+      Date.now(),
       hash,
     ]);
+  },
+
+  // ── LAN sync: marked state ──
+  async getMarkedBulletins() {
+    const db = await getDB();
+    const rows = await db.select(
+      "SELECT hash, is_marked, marked_at FROM bulletins WHERE marked_at > 0"
+    );
+    return rows.map((r) => ({ hash: r.hash, is_marked: r.is_marked, marked_at: r.marked_at }));
+  },
+
+  async applyMarkedBulletins(markedList) {
+    const db = await getDB();
+    let applied = 0;
+    for (const m of markedList) {
+      const result = await db.execute(
+        "UPDATE bulletins SET is_marked = $1, marked_at = $2 WHERE hash = $3 AND (marked_at IS NULL OR marked_at < $4)",
+        [Bool2Int(m.is_marked), m.marked_at, m.hash, m.marked_at]
+      );
+      if (result && result.changes > 0) applied++;
+    }
+    return applied;
   },
 
   // bulletin reply
@@ -219,19 +242,47 @@ export const api = {
     return result ? result.count : 0;
   },
 
+  /**
+   * Link quoted (parent) bulletins to a new reply.
+   *
+   * Was one INSERT per parent with a swallowed FK error, so a parent not cached
+   * locally was skipped while the rest linked. Here the missing parents (and any
+   * self-quote, which the table's CHECK forbids) are filtered out first, then
+   * one multi-row INSERT links the rest — same "link what we can" behaviour,
+   * one round-trip instead of N.
+   */
   async addReplyToBulletins(bulletins, reply_hash, reply_signed_at) {
     if (!Array.isArray(bulletins) || bulletins.length === 0) return true;
     const db = await getDB();
-    for (const bulletin of bulletins) {
-      try {
-        await db.execute(
-          `INSERT OR IGNORE INTO bulletin_replys (bulletin_hash, reply_hash, reply_signed_at) VALUES ($1, $2, $3)`,
-          [bulletin.Hash, reply_hash, reply_signed_at],
-        );
-      } catch {
-        // FK violation: referenced bulletin not in local DB yet — skip
-      }
+
+    const hashes = [
+      ...new Set(
+        bulletins.map((b) => b && b.Hash).filter((h) => h && h !== reply_hash),
+      ),
+    ];
+    if (hashes.length === 0) return true;
+
+    const existing = new Set();
+    for (const part of chunkByVars(hashes, 1)) {
+      const rows = await db.select(
+        `SELECT hash FROM bulletins WHERE hash IN (${part.map((_, i) => `$${i + 1}`).join(", ")})`,
+        part,
+      );
+      for (const row of rows) existing.add(row.hash);
     }
+
+    const kept = hashes.filter((h) => existing.has(h));
+    if (kept.length === 0) return true;
+
+    for (const part of chunkByVars(kept, 3)) {
+      const params = [];
+      for (const hash of part) params.push(hash, reply_hash, reply_signed_at);
+      await db.execute(
+        `INSERT OR IGNORE INTO bulletin_replys (bulletin_hash, reply_hash, reply_signed_at) VALUES ${valueGroups(part.length, 3)}`,
+        params,
+      );
+    }
+    return true;
   },
 
   // bulletin tag
@@ -253,34 +304,90 @@ export const api = {
     return result ? result.count : 0;
   },
 
+  /**
+   * Link a bulletin to its tags.
+   *
+   * Was 3 statements per tag (insert tag → look up id → insert link) with no
+   * transaction, so a partial failure left the post with only some of its tags —
+   * it then stops appearing under the missing tags' filters with no error shown.
+   * Now: one multi-row statement per phase.
+   */
   async addTagsToBulletin(bulletin_hash, bulletin_signed_at, tagNames) {
     if (!Array.isArray(tagNames) || tagNames.length === 0) return true;
     const db = await getDB();
-    for (const rawName of tagNames) {
-      const name = rawName.trim();
-      if (!name) continue;
-      await db.execute(`INSERT OR IGNORE INTO tags (name) VALUES ($1)`, [name]);
-      const [row] = await db.select("SELECT id FROM tags WHERE name = $1", [
-        name,
-      ]);
-      const tagId = row?.id;
-      if (!tagId) continue;
+
+    const names = [
+      ...new Set(
+        tagNames
+          .map((n) => (typeof n === "string" ? n.trim() : ""))
+          .filter(Boolean),
+      ),
+    ];
+    if (names.length === 0) return true;
+
+    for (const part of chunkByVars(names, 1)) {
       await db.execute(
-        `INSERT OR IGNORE INTO bulletin_tags (bulletin_hash, bulletin_signed_at, tag_id) VALUES ($1, $2, $3)`,
-        [bulletin_hash, bulletin_signed_at, tagId],
+        `INSERT OR IGNORE INTO tags (name) VALUES ${valueGroups(part.length, 1)}`,
+        part,
       );
     }
+
+    const idByName = new Map();
+    for (const part of chunkByVars(names, 1)) {
+      const rows = await db.select(
+        `SELECT id, name FROM tags WHERE name IN (${part.map((_, i) => `$${i + 1}`).join(", ")})`,
+        part,
+      );
+      for (const row of rows) idByName.set(row.name, row.id);
+    }
+    if (idByName.size === 0) return true;
+
+    const linked = names.filter((n) => idByName.has(n));
+    for (const part of chunkByVars(linked, 3)) {
+      const params = [];
+      for (const name of part)
+        params.push(bulletin_hash, bulletin_signed_at, idByName.get(name));
+      await db.execute(
+        `INSERT OR IGNORE INTO bulletin_tags (bulletin_hash, bulletin_signed_at, tag_id) VALUES ${valueGroups(part.length, 3)}`,
+        params,
+      );
+    }
+    return true;
   },
 
+  /**
+   * Link a bulletin to its attachments.
+   *
+   * Only files present locally are linked: the FK on file_hash would otherwise
+   * abort the whole (atomic) multi-row INSERT, whereas the old per-row loop let
+   * the resolvable ones through.
+   */
   async addFilesToBulletin(bulletin_hash, files) {
     if (!Array.isArray(files) || files.length === 0) return true;
     const db = await getDB();
-    for (const file of files) {
+
+    const hashes = [...new Set(files.map((f) => f && f.Hash).filter(Boolean))];
+    if (hashes.length === 0) return true;
+
+    const existing = new Set();
+    for (const part of chunkByVars(hashes, 1)) {
+      const rows = await db.select(
+        `SELECT hash FROM files WHERE hash IN (${part.map((_, i) => `$${i + 1}`).join(", ")})`,
+        part,
+      );
+      for (const row of rows) existing.add(row.hash);
+    }
+
+    const kept = files.filter((f) => f && existing.has(f.Hash));
+    for (const part of chunkByVars(kept, 5)) {
+      const params = [];
+      for (const f of part) params.push(bulletin_hash, f.Hash, f.Size, f.Name, f.Ext);
       await db.execute(
-        `INSERT OR IGNORE INTO bulletin_files (bulletin_hash, file_hash, file_size, file_name, file_ext) VALUES ($1, $2, $3, $4, $5)`,
-        [bulletin_hash, file.Hash, file.Size, file.Name, file.Ext],
+        `INSERT OR IGNORE INTO bulletin_files (bulletin_hash, file_hash, file_size, file_name, file_ext) VALUES ${valueGroups(part.length, 5)}`,
+        params,
       );
     }
+    return true;
   },
 
   // tag
@@ -462,13 +569,30 @@ export const api = {
     return result ? result.count : 0;
   },
 
+  /**
+   * Bulk delete bulletins by hash.
+   *
+   * One statement per chunk instead of one round-trip per hash. The old code
+   * returned a loop counter, so the reported count was the input length
+   * regardless of what actually matched; this pre-counts the rows that exist so
+   * the return value stays truthful. (This plugin's `execute` resolves to void,
+   * so `rowsAffected` is not available here.)
+   */
   async deleteBulletinsByHashes(hashes) {
     if (!Array.isArray(hashes) || hashes.length === 0) return 0;
     const db = await getDB();
     let deleted = 0;
-    for (const hash of hashes) {
-      await db.execute("DELETE FROM bulletins WHERE hash = $1", [hash]);
-      deleted++;
+    for (const part of chunkByVars(hashes, 1)) {
+      const placeholder = part.map((_, i) => `$${i + 1}`).join(", ");
+      const [row] = await db.select(
+        `SELECT COUNT(*) AS c FROM bulletins WHERE hash IN (${placeholder})`,
+        part,
+      );
+      deleted += (row && row.c) || 0;
+      await db.execute(
+        `DELETE FROM bulletins WHERE hash IN (${placeholder})`,
+        part,
+      );
     }
     return deleted;
   },

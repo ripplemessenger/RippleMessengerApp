@@ -13,6 +13,30 @@
 import * as rippleKeypairs from "ripple-keypairs";
 
 const SYNC_PORT = 52343;
+const SYNC_PROTOCOL_VERSION = 2;
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
+
+/**
+ * Fetch with retry on network errors (not on HTTP errors).
+ * Retries up to MAX_RETRIES times with a delay between attempts.
+ */
+async function fetchWithRetry(url, options = {}) {
+  let lastError;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fetch(url, options);
+    } catch (e) {
+      lastError = e;
+      // Only retry on network errors (TypeError: Failed to fetch, etc.)
+      // Don't retry on HTTP errors (those are returned as responses, not thrown)
+      if (attempt < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
 
 /**
  * Generate a random hex string of the given byte length.
@@ -35,17 +59,23 @@ function baseUrl(ip) {
 /**
  * Test connectivity to Client's sync server.
  * @param {string} ip - Client's IP address
- * @returns {Promise<{ok: boolean, accounts?: Array, error?: string}>}
+ * @returns {Promise<{ok: boolean, accounts?: Array, version?: number, error?: string}>}
  */
 export async function testConnection(ip) {
   try {
     const url = `${baseUrl(ip)}/v1/device`;
-    const resp = await fetch(url, { method: "GET", timeout: 5000 });
+    const resp = await fetchWithRetry(url, { method: "GET", timeout: 5000 });
     if (!resp.ok) {
       return { ok: false, error: `HTTP ${resp.status}` };
     }
     const data = await resp.json();
-    return { ok: true, accounts: data.accounts || [] };
+    const serverVersion = data.version;
+    if (serverVersion !== undefined && serverVersion !== SYNC_PROTOCOL_VERSION) {
+      console.warn(
+        `[Sync] Protocol version mismatch: server=${serverVersion}, client=${SYNC_PROTOCOL_VERSION}`,
+      );
+    }
+    return { ok: true, accounts: data.accounts || [], version: serverVersion };
   } catch (e) {
     return { ok: false, error: e.message || String(e) };
   }
@@ -70,7 +100,7 @@ export async function authenticate(ip, address, seed) {
       return { ok: false, error: "no seed" };
     }
     // Get Client's pubkey first (needed to verify Client's signature)
-    const deviceResp = await fetch(`${baseUrl(ip)}/v1/device`, {
+    const deviceResp = await fetchWithRetry(`${baseUrl(ip)}/v1/device`, {
       method: "GET",
       timeout: 5000,
     });
@@ -91,7 +121,7 @@ export async function authenticate(ip, address, seed) {
     const sig = rippleKeypairs.sign(nonce, keypair.privateKey);
 
     const url = `${baseUrl(ip)}/v1/auth`;
-    const resp = await fetch(url, {
+    const resp = await fetchWithRetry(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ account: address, nonce, sig }),
@@ -124,7 +154,7 @@ export async function authenticate(ip, address, seed) {
 export async function getAccountState(ip, addr) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/state`;
-    const resp = await fetch(url, { method: "GET", timeout: 10000 });
+    const resp = await fetchWithRetry(url, { method: "GET", timeout: 10000 });
     if (!resp.ok) {
       return { ok: false, error: `HTTP ${resp.status}` };
     }
@@ -146,7 +176,7 @@ export async function getAccountState(ip, addr) {
 export async function pullPrivateMessages(ip, addr, peer, afterSeq = 0) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/private/${peer}/messages?after_seq=${afterSeq}`;
-    const resp = await fetch(url, { method: "GET", timeout: 30000 });
+    const resp = await fetchWithRetry(url, { method: "GET", timeout: 30000 });
     if (!resp.ok) {
       return { ok: false, error: `HTTP ${resp.status}` };
     }
@@ -173,7 +203,7 @@ export async function pushPrivateMessages(ip, addr, peer, messages) {
       ...m,
       json: typeof m.json === "string" ? JSON.parse(m.json) : m.json,
     }));
-    const resp = await fetch(url, {
+    const resp = await fetchWithRetry(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages: toPush }),
@@ -200,7 +230,7 @@ export async function pushPrivateMessages(ip, addr, peer, messages) {
 export async function pullGroupMessages(ip, addr, groupHash, afterSeq = 0) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/group/${groupHash}/messages?after_seq=${afterSeq}`;
-    const resp = await fetch(url, { method: "GET", timeout: 30000 });
+    const resp = await fetchWithRetry(url, { method: "GET", timeout: 30000 });
     if (!resp.ok) {
       return { ok: false, error: `HTTP ${resp.status}` };
     }
@@ -217,7 +247,7 @@ export async function pullGroupMessages(ip, addr, groupHash, afterSeq = 0) {
 export async function pushGroupMessages(ip, addr, groupHash, messages) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/group/${groupHash}/messages`;
-    const resp = await fetch(url, {
+    const resp = await fetchWithRetry(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages }),
@@ -244,7 +274,7 @@ export async function pushGroupMessages(ip, addr, groupHash, messages) {
 export async function pullGroups(ip, addr) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/groups`;
-    const resp = await fetch(url, { method: "GET", timeout: 10000 });
+    const resp = await fetchWithRetry(url, { method: "GET", timeout: 10000 });
     if (!resp.ok) {
       return { ok: false, error: `HTTP ${resp.status}` };
     }
@@ -261,7 +291,7 @@ export async function pullGroups(ip, addr) {
 export async function pushGroups(ip, addr, groups) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/groups`;
-    const resp = await fetch(url, {
+    const resp = await fetchWithRetry(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ groups }),
@@ -283,12 +313,71 @@ export async function pushGroups(ip, addr, groups) {
 }
 
 /**
+ * Push read watermarks to the Client.
+ *
+ * Message push is sequence-bounded (only messages newer than the peer's max
+ * sequence are sent), so a read flag changed on an already-synced message can
+ * never reach the other device through that path. A watermark is one number per
+ * conversation: "everything at or before this signed_at has been read".
+ *
+ * @param {string} ip - Client's IP
+ * @param {string} addr - Account address
+ * @param {{private?: Object, groups?: Object}} payload - peer/group -> signed_at
+ */
+export async function pushReadState(ip, addr, payload) {
+  try {
+    const url = `${baseUrl(ip)}/v1/account/${addr}/read-state`;
+    const resp = await fetchWithRetry(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {}),
+    });
+    if (!resp.ok) {
+      return { ok: false, error: `HTTP ${resp.status}` };
+    }
+    const data = await resp.json().catch(() => ({}));
+    return { ok: true, applied: data.applied };
+  } catch (e) {
+    return { ok: false, error: e.message || String(e) };
+  }
+}
+
+/**
+ * Push marked bulletin state to the Client.
+ *
+ * Unlike read (monotonic), mark is bidirectional — a message can be marked
+ * and later unmarked. Each entry carries a `marked_at` timestamp; the
+ * receiving side only applies if the incoming timestamp is newer.
+ *
+ * @param {string} ip - Client's IP
+ * @param {string} addr - Account address
+ * @param {Array<{hash: string, is_marked: number, marked_at: number}>} markedList
+ */
+export async function pushMarkedState(ip, addr, markedList) {
+  try {
+    const url = `${baseUrl(ip)}/v1/account/${addr}/marked-state`;
+    const resp = await fetchWithRetry(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ marked: markedList || [] }),
+    });
+    if (!resp.ok) {
+      return { ok: false, error: `HTTP ${resp.status}` };
+    }
+    const data = await resp.json().catch(() => ({}));
+    return { ok: true, applied: data.applied };
+  } catch (e) {
+    return { ok: false, error: e.message || String(e) };
+  }
+}
+
+/**
  * Pull metadata (contacts, friends, follows) from Client.
  */
 export async function pullMetadata(ip, addr) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/metadata`;
-    const resp = await fetch(url, { method: "GET", timeout: 10000 });
+    const resp = await fetchWithRetry(url, { method: "GET", timeout: 10000 });
     if (!resp.ok) {
       return { ok: false, error: `HTTP ${resp.status}` };
     }
@@ -305,7 +394,7 @@ export async function pullMetadata(ip, addr) {
 export async function pushMetadata(ip, addr, metadata) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/metadata`;
-    const resp = await fetch(url, {
+    const resp = await fetchWithRetry(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(metadata),
@@ -332,7 +421,7 @@ export async function pushMetadata(ip, addr, metadata) {
 export async function pullHandshakes(ip, addr) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/handshakes`;
-    const resp = await fetch(url, { method: "GET", timeout: 10000 });
+    const resp = await fetchWithRetry(url, { method: "GET", timeout: 10000 });
     if (!resp.ok) {
       return { ok: false, error: `HTTP ${resp.status}` };
     }
@@ -349,7 +438,7 @@ export async function pullHandshakes(ip, addr) {
 export async function pushHandshakes(ip, addr, handshakes) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/handshakes`;
-    const resp = await fetch(url, {
+    const resp = await fetchWithRetry(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ handshakes }),
@@ -380,7 +469,7 @@ export async function pushHandshakes(ip, addr, handshakes) {
 export async function pullFile(ip, addr, hash) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/file/${hash}`;
-    const resp = await fetch(url, { method: "GET", timeout: 60000 });
+    const resp = await fetchWithRetry(url, { method: "GET", timeout: 60000 });
     if (!resp.ok) {
       return { ok: false, error: `HTTP ${resp.status}` };
     }
@@ -397,7 +486,7 @@ export async function pullFile(ip, addr, hash) {
 export async function pushFile(ip, addr, hash, data) {
   try {
     const url = `${baseUrl(ip)}/v1/account/${addr}/file/${hash}`;
-    const resp = await fetch(url, {
+    const resp = await fetchWithRetry(url, {
       method: "POST",
       headers: { "Content-Type": "application/octet-stream" },
       body: data,

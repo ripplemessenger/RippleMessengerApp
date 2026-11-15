@@ -2,6 +2,9 @@
 /** @type {string} App version number shown in Settings and Login screens */
 const APP_VERSION = "0.1.1";
 
+/** @type {string} Default WebSocket server URL (client-side deployment config) */
+const DefaultServer = "wss://jp.ripplemessenger.com";
+
 // Time constants (milliseconds)
 /** @type {number} Milliseconds in one minute */
 const Minute = 60 * 1000;
@@ -72,6 +75,7 @@ const FILE_REQUEST_TTL_MS = 120 * 1000;
 
 export {
   APP_VERSION,
+  DefaultServer,
   Minute,
   Hour,
   Day,
