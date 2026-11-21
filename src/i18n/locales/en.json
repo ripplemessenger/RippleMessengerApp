@@ -601,5 +601,11 @@
     "h_ago": "{{count}}h ago",
     "d_ago": "{{count}}d ago",
     "yesterday": "Yesterday"
+  },
+  "media_feed": {
+    "title": "Media Feed",
+    "empty": "No media bulletins yet",
+    "not_downloaded": "File not downloaded",
+    "not_supported": "Format not supported"
   }
 }

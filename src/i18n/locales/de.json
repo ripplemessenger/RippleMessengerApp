@@ -594,5 +594,11 @@
     "h_ago": "vor {{count}} Std.",
     "d_ago": "vor {{count}} T.",
     "yesterday": "Gestern"
+  },
+  "media_feed": {
+    "title": "Medien-Feed",
+    "empty": "Noch keine Medien-Bulletins",
+    "not_downloaded": "Datei nicht heruntergeladen",
+    "not_supported": "Format nicht unterstützt"
   }
 }

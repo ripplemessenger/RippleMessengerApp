@@ -593,5 +593,11 @@
     "h_ago": "há {{count}} h",
     "d_ago": "há {{count}} d",
     "yesterday": "Ontem"
+  },
+  "media_feed": {
+    "title": "Feed de mídia",
+    "empty": "Ainda não há boletins de mídia",
+    "not_downloaded": "Arquivo não baixado",
+    "not_supported": "Formato não suportado"
   }
 }

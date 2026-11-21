@@ -601,5 +601,11 @@
     "h_ago": "{{count}} 小时前",
     "d_ago": "{{count}} 天前",
     "yesterday": "昨天"
+  },
+  "media_feed": {
+    "title": "刷视频",
+    "empty": "暂无媒体公告",
+    "not_downloaded": "文件未下载",
+    "not_supported": "格式不支持"
   }
 }

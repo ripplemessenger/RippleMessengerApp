@@ -594,5 +594,11 @@
     "h_ago": "il y a {{count}} h",
     "d_ago": "il y a {{count}} j",
     "yesterday": "Hier"
+  },
+  "media_feed": {
+    "title": "Flux média",
+    "empty": "Aucun bulletin média",
+    "not_downloaded": "Fichier non téléchargé",
+    "not_supported": "Format non pris en charge"
   }
 }

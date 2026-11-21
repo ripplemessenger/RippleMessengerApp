@@ -24,10 +24,11 @@ import { ActionCode, ObjectType, MessageObjectType, MessageCode } from './consta
 const DeclareSchema = {
   type: 'object',
   required: ['Action', 'Timestamp', 'PublicKey', 'Signature'],
-  maxProperties: 5,
+  maxProperties: 6,
   properties: {
     Action: { type: 'number', const: ActionCode.Declare },
     URL: { type: 'string' },
+    SiteURL: { type: 'string' },
     Timestamp: { type: 'number' },
     PublicKey: { type: 'string' },
     Signature: { type: 'string' }
@@ -269,6 +270,19 @@ const RandomBulletinRequestSchema = {
   maxProperties: 4,
   properties: {
     Action: { type: 'number', const: ActionCode.RandomBulletinRequest },
+    Timestamp: { type: 'number' },
+    PublicKey: { type: 'string' },
+    Signature: { type: 'string' }
+  }
+};
+
+const MediaBulletinRequestSchema = {
+  type: 'object',
+  required: ['Action', 'Timestamp', 'PublicKey', 'Signature'],
+  maxProperties: 5,
+  properties: {
+    Action: { type: 'number', const: ActionCode.MediaBulletinRequest },
+    Limit: { type: 'number' },
     Timestamp: { type: 'number' },
     PublicKey: { type: 'string' },
     Signature: { type: 'string' }
@@ -971,6 +985,7 @@ const ActionSchemas = {
   [ActionCode.BulletinRequest]: BulletinRequestSchema,
   [ActionCode.BulletinSubscribe]: BulletinSubscribeSchema,
   [ActionCode.RandomBulletinRequest]: RandomBulletinRequestSchema,
+  [ActionCode.MediaBulletinRequest]: MediaBulletinRequestSchema,
   [ActionCode.ServerAddressRequest]: ServerAddressRequestSchema,
   [ActionCode.ReplyBulletinRequest]: ReplyBulletinRequestSchema,
   [ActionCode.TagBulletinRequest]: TagBulletinRequestSchema,
@@ -1048,6 +1063,7 @@ export {
   BulletinRequestSchema,
   BulletinSubscribeSchema,
   RandomBulletinRequestSchema,
+  MediaBulletinRequestSchema,
   ServerAddressRequestSchema,
   ServerAddressListSchema,
   BulletinAddressListRequestSchema,

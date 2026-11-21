@@ -235,6 +235,15 @@ export default function BulletinScreen({ navigation }) {
           >
             <Ionicons name="search" size={20} color={ACCENT} />
           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.getParent()?.getParent()?.navigate("MediaFeed")
+            }
+            activeOpacity={0.7}
+            className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+          >
+            <Ionicons name="videocam" size={20} color={ACCENT} />
+          </TouchableOpacity>
         </View>
       </View>
 

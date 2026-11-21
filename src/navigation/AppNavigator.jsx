@@ -33,6 +33,7 @@ import SyncScreen from "../screens/SyncScreen";
 import FollowedBulletinsScreen from "../screens/FollowedBulletinsScreen";
 import RandomBulletinsScreen from "../screens/RandomBulletinsScreen";
 import AddressBulletinsScreen from "../screens/AddressBulletinsScreen";
+import MediaFeedScreen from "../screens/MediaFeedScreen";
 import { ACCENT } from "../lib/theme";
 
 const Stack = createNativeStackNavigator();
@@ -270,6 +271,11 @@ function AuthenticatedNav() {
           name="AddressBulletins"
           component={AddressBulletinsScreen}
           options={{ title: "Address Bulletins" }}
+        />
+        <RootStack.Screen
+          name="MediaFeed"
+          component={MediaFeedScreen}
+          options={{ title: "Media Feed" }}
         />
       </RootStack.Navigator>
 

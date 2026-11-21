@@ -685,4 +685,49 @@ export const api = {
     );
     return rows.map((r) => r.name);
   },
+
+  // ---------- Media feed (bulletins with image/video files) ----------
+
+  MEDIA_EXT: ['png','jpg','jpeg','gif','webp','mp4','mov','avi','mkv','webm'],
+
+  async getMediaFeed(page, pageSize = 20) {
+    const dbInstance = await getDB();
+    const offset = (page - 1) * pageSize;
+    const exts = this.MEDIA_EXT;
+    const extPlaceholders = exts.map((_, i) => '$' + (i + 1)).join(', ');
+    const query = `
+      SELECT b.hash, b.address, b.sequence, SUBSTR(b.content, 1, 300) AS content,
+             b.signed_at, b.is_marked,
+             bf.file_hash, bf.file_name, bf.file_ext, bf.file_size,
+             f.is_saved AS file_saved
+      FROM bulletins b
+      INNER JOIN bulletin_files bf ON b.hash = bf.bulletin_hash
+      INNER JOIN files f ON bf.file_hash = f.hash
+      WHERE LOWER(bf.file_ext) IN (${extPlaceholders})
+      ORDER BY b.signed_at DESC
+      LIMIT $${exts.length + 1} OFFSET $${exts.length + 2}
+    `;
+    const params = [...exts, pageSize, offset];
+    const rows = await dbInstance.select(query, params);
+    return rows.map((r) => ({
+      ...r,
+      is_marked: Int2Bool(r.is_marked),
+      file_saved: Int2Bool(r.file_saved),
+    }));
+  },
+
+  async getMediaFeedCount() {
+    const dbInstance = await getDB();
+    const exts = this.MEDIA_EXT;
+    const extPlaceholders = exts.map((_, i) => '$' + (i + 1)).join(', ');
+    const query = `
+      SELECT COUNT(DISTINCT b.hash) AS count
+      FROM bulletins b
+      INNER JOIN bulletin_files bf ON b.hash = bf.bulletin_hash
+      INNER JOIN files f ON bf.file_hash = f.hash
+      WHERE LOWER(bf.file_ext) IN (${extPlaceholders})
+    `;
+    const [result] = await dbInstance.select(query, [...exts]);
+    return result ? result.count : 0;
+  },
 };

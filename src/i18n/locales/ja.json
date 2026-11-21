@@ -594,5 +594,11 @@
     "h_ago": "{{count}}時間前",
     "d_ago": "{{count}}日前",
     "yesterday": "昨日"
+  },
+  "media_feed": {
+    "title": "メディアフィード",
+    "empty": "メディア公告はまだありません",
+    "not_downloaded": "ファイル未ダウンロード",
+    "not_supported": "フォーマット非対応"
   }
 }

@@ -594,5 +594,11 @@
     "h_ago": "{{count}}시간 전",
     "d_ago": "{{count}}일 전",
     "yesterday": "어제"
+  },
+  "media_feed": {
+    "title": "미디어 피드",
+    "empty": "미디어 공지사항이 없습니다",
+    "not_downloaded": "파일 미다운로드",
+    "not_supported": "지원되지 않는 형식"
   }
 }
